@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io/ioutil"
 	"os"
+	"time"
 
 	uuid "github.com/satori/go.uuid"
 )
@@ -15,8 +16,8 @@ type DB struct {
 }
 
 type jsonFile struct {
-	IV   string                   `json:"iv"`
-	Rows []map[string]interface{} `json:"rows"`
+	LastUpdate uint64                   `json:"last_update"`
+	Rows       []map[string]interface{} `json:"rows"`
 }
 
 func rowsToDocuments(rows []map[string]interface{}) []*Document {
@@ -62,7 +63,8 @@ func (db *DB) save(c *Collection) error {
 		docs = append(docs, d.fields)
 	}
 
-	jsonBytes, err := json.Marshal(&jsonFile{Rows: docs})
+	now := uint64(time.Now().UnixNano())
+	jsonBytes, err := json.Marshal(&jsonFile{LastUpdate: now, Rows: docs})
 	if err != nil {
 		return err
 	}

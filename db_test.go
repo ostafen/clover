@@ -70,7 +70,7 @@ func TestEqCriteria(t *testing.T) {
 		require.True(t, db.HasCollection("todos"))
 		require.NotNil(t, db.Query("todos"))
 
-		docs := db.Query("todos").Where(row("completed").Eq(true)).FindAll()
+		docs := db.Query("todos").Where(Row("completed").Eq(true)).FindAll()
 		require.Greater(t, len(docs), 0)
 
 		for _, doc := range docs {
@@ -85,7 +85,7 @@ func TestNeqCriteria(t *testing.T) {
 		require.True(t, db.HasCollection("todos"))
 		require.NotNil(t, db.Query("todos"))
 
-		docs := db.Query("todos").Where(row("userId").Neq(7)).FindAll()
+		docs := db.Query("todos").Where(Row("userId").Neq(7)).FindAll()
 		require.Greater(t, len(docs), 0)
 
 		for _, doc := range docs {
@@ -100,7 +100,7 @@ func TestGtCriteria(t *testing.T) {
 		require.True(t, db.HasCollection("todos"))
 		require.NotNil(t, db.Query("todos"))
 
-		docs := db.Query("todos").Where(row("userId").Gt(4)).FindAll()
+		docs := db.Query("todos").Where(Row("userId").Gt(4)).FindAll()
 		require.Greater(t, len(docs), 0)
 
 		for _, doc := range docs {
@@ -115,7 +115,7 @@ func TestGtEqCriteria(t *testing.T) {
 		require.True(t, db.HasCollection("todos"))
 		require.NotNil(t, db.Query("todos"))
 
-		docs := db.Query("todos").Where(row("userId").GtEq(4)).FindAll()
+		docs := db.Query("todos").Where(Row("userId").GtEq(4)).FindAll()
 		require.Greater(t, len(docs), 0)
 
 		for _, doc := range docs {
@@ -130,7 +130,7 @@ func TestLtCriteria(t *testing.T) {
 		require.True(t, db.HasCollection("todos"))
 		require.NotNil(t, db.Query("todos"))
 
-		docs := db.Query("todos").Where(row("userId").Lt(4)).FindAll()
+		docs := db.Query("todos").Where(Row("userId").Lt(4)).FindAll()
 		require.Greater(t, len(docs), 0)
 		for _, doc := range docs {
 			require.NotNil(t, doc.get("userId"))
@@ -144,7 +144,7 @@ func TestLtEqCriteria(t *testing.T) {
 		require.True(t, db.HasCollection("todos"))
 		require.NotNil(t, db.Query("todos"))
 
-		docs := db.Query("todos").Where(row("userId").LtEq(4)).FindAll()
+		docs := db.Query("todos").Where(Row("userId").LtEq(4)).FindAll()
 		require.Greater(t, len(docs), 0)
 
 		for _, doc := range docs {
@@ -159,7 +159,7 @@ func TestInCriteria(t *testing.T) {
 		require.True(t, db.HasCollection("todos"))
 		require.NotNil(t, db.Query("todos"))
 
-		docs := db.Query("todos").Where(row("userId").In(5, 8)).FindAll()
+		docs := db.Query("todos").Where(Row("userId").In(5, 8)).FindAll()
 
 		require.Greater(t, len(docs), 0)
 
@@ -179,7 +179,7 @@ func TestAndCriteria(t *testing.T) {
 		require.True(t, db.HasCollection("todos"))
 		require.NotNil(t, db.Query("todos"))
 
-		criteria := row("completed").Eq(true).And(row("userId").Gt(2))
+		criteria := Row("completed").Eq(true).And(Row("userId").Gt(2))
 		docs := db.Query("todos").Where(criteria).FindAll()
 
 		require.Greater(t, len(docs), 0)

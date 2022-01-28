@@ -31,15 +31,15 @@ func newCollection(docs []*Document) *Collection {
 	}
 }
 
-type Row struct {
+type row struct {
 	name string
 }
 
-func row(name string) *Row { // must return something else
-	return &Row{name: name}
+func Row(name string) *row {
+	return &row{name: name}
 }
 
-func (r *Row) Eq(value interface{}) *Criteria {
+func (r *row) Eq(value interface{}) *Criteria {
 	return &Criteria{
 		p: func(doc *Document) bool {
 			normValue, err := normalize(value)
@@ -51,71 +51,111 @@ func (r *Row) Eq(value interface{}) *Criteria {
 	}
 }
 
-func compareValues(v1 interface{}, v2 interface{}) int {
-	v1Float, isFloat := v1.(float64)
-	if isFloat {
-		v2Float, isFloat := v2.(float64)
-		if isFloat {
-			return int(v1Float - v2Float)
-		}
+func boolToInt(v bool) int {
+	if v {
+		return 1
 	}
 	return 0
 }
 
-func (r *Row) Gt(value interface{}) *Criteria {
+func compareValues(v1 interface{}, v2 interface{}) (int, bool) {
+	v1Float, isFloat := v1.(float64)
+	if isFloat {
+		v2Float, isFloat := v2.(float64)
+		if isFloat {
+			return int(v1Float - v2Float), true
+		}
+	}
+
+	v1Str, isStr := v1.(string)
+	if isStr {
+		v2Str, isStr := v2.(string)
+		if isStr {
+			return strings.Compare(v1Str, v2Str), true
+		}
+	}
+
+	v1Bool, isBool := v1.(bool)
+	if isBool {
+		v2Bool, isBool := v2.(bool)
+		if isBool {
+			return boolToInt(v1Bool) - boolToInt(v2Bool), true
+		}
+	}
+
+	return 0, false
+}
+
+func (r *row) Gt(value interface{}) *Criteria {
 	return &Criteria{
 		p: func(doc *Document) bool {
 			normValue, err := normalize(value)
 			if err != nil {
 				return false
 			}
-			return compareValues(doc.get(r.name), normValue) > 0
+			v, ok := compareValues(doc.get(r.name), normValue)
+			if !ok {
+				return false
+			}
+			return v > 0
 		},
 	}
 }
 
-func (r *Row) GtEq(value interface{}) *Criteria {
+func (r *row) GtEq(value interface{}) *Criteria {
 	return &Criteria{
 		p: func(doc *Document) bool {
 			normValue, err := normalize(value)
 			if err != nil {
 				return false
 			}
-			return compareValues(doc.get(r.name), normValue) >= 0
+			v, ok := compareValues(doc.get(r.name), normValue)
+			if !ok {
+				return false
+			}
+			return v >= 0
 		},
 	}
 }
 
-func (r *Row) Lt(value interface{}) *Criteria {
+func (r *row) Lt(value interface{}) *Criteria {
 	return &Criteria{
 		p: func(doc *Document) bool {
 			normValue, err := normalize(value)
 			if err != nil {
 				return false
 			}
-			return compareValues(doc.get(r.name), normValue) < 0
+			v, ok := compareValues(doc.get(r.name), normValue)
+			if !ok {
+				return false
+			}
+			return v < 0
 		},
 	}
 }
 
-func (r *Row) LtEq(value interface{}) *Criteria {
+func (r *row) LtEq(value interface{}) *Criteria {
 	return &Criteria{
 		p: func(doc *Document) bool {
 			normValue, err := normalize(value)
 			if err != nil {
 				return false
 			}
-			return compareValues(doc.get(r.name), normValue) <= 0
+			v, ok := compareValues(doc.get(r.name), normValue)
+			if !ok {
+				return false
+			}
+			return v <= 0
 		},
 	}
 }
 
-func (r *Row) Neq(value interface{}) *Criteria {
+func (r *row) Neq(value interface{}) *Criteria {
 	c := r.Eq(value)
 	return c.Not()
 }
 
-func (r *Row) In(values ...interface{}) *Criteria {
+func (r *row) In(values ...interface{}) *Criteria {
 	return &Criteria{
 		p: func(doc *Document) bool {
 			docValue := doc.get(r.name)
