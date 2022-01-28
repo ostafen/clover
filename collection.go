@@ -17,6 +17,7 @@ type Criteria struct {
 }
 
 type Collection struct {
+	db   *DB
 	name string
 	docs []*Document
 }
@@ -29,8 +30,9 @@ func (c *Collection) FindAll() []*Document {
 	return c.docs
 }
 
-func newCollection(docs []*Document) *Collection {
+func newCollection(db *DB, docs []*Document) *Collection {
 	return &Collection{
+		db:   db,
 		docs: docs,
 	}
 }
@@ -219,7 +221,7 @@ func (c *Collection) Where(q *Criteria) *Collection {
 			filtered = append(filtered, doc)
 		}
 	}
-	return newCollection(filtered)
+	return newCollection(c.db, filtered)
 }
 
 func (c *Collection) FindById(id string) *Document {

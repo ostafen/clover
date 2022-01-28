@@ -41,7 +41,7 @@ func (db *DB) readCollection(name string) (*Collection, error) {
 		return nil, err
 	}
 
-	return newCollection(rowsToDocuments(jFile.Rows)), nil
+	return newCollection(db, rowsToDocuments(jFile.Rows)), nil
 }
 
 var ErrCollectionNotExist = errors.New("no such collection")
