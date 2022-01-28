@@ -92,6 +92,16 @@ func TestOpenExisting(t *testing.T) {
 	})
 }
 
+func TestExistsCriteria(t *testing.T) {
+	runCloverTest(t, "test-db", func(t *testing.T, db *DB) {
+		require.True(t, db.HasCollection("todos"))
+		require.NotNil(t, db.Query("todos"))
+
+		docs := db.Query("todos").Where(Row("completed_date").Exists()).FindAll()
+		require.Equal(t, len(docs), 1)
+	})
+}
+
 func TestEqCriteria(t *testing.T) {
 	runCloverTest(t, "test-db", func(t *testing.T, db *DB) {
 		require.True(t, db.HasCollection("todos"))
