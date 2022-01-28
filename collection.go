@@ -6,6 +6,10 @@ import (
 	"strings"
 )
 
+const (
+	idFieldName = "_id"
+)
+
 type predicate func(doc *Document) bool
 
 type Criteria struct {
@@ -220,7 +224,7 @@ func (c *Collection) Where(q *Criteria) *Collection {
 
 func (c *Collection) FindById(id string) *Document {
 	for _, doc := range c.docs {
-		docId := doc.get("_id")
+		docId := doc.get(idFieldName)
 		if docId != nil && docId == id {
 			return doc
 		}

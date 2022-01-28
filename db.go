@@ -115,7 +115,7 @@ func (db *DB) Insert(collectionName string, docs ...*Document) error {
 
 	for _, newDoc := range docs {
 		uuid := uuid.NewV4().String()
-		newDoc.set("_id", uuid)
+		newDoc.set(idFieldName, uuid)
 		c.docs = append(c.docs, newDoc)
 	}
 
@@ -124,7 +124,7 @@ func (db *DB) Insert(collectionName string, docs ...*Document) error {
 
 func (db *DB) InsertOne(collectionName string, doc *Document) (string, error) {
 	err := db.Insert(collectionName, doc)
-	return doc.get("_id").(string), err
+	return doc.get(idFieldName).(string), err
 }
 
 func Open(dir string) (*DB, error) {
