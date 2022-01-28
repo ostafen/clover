@@ -78,7 +78,27 @@ func TestSimpleWhere(t *testing.T) {
 	})
 }
 
-func TestWhereWithAnd(t *testing.T) {
+func TestInCriteria(t *testing.T) {
+	runCloverTest(t, "test-db", func(t *testing.T, db *DB) {
+		require.True(t, db.HasCollection("todos"))
+		require.NotNil(t, db.Query("todos"))
+
+		docs := db.Query("todos").Where(row("userId").In(5, 8)).FindAll()
+
+		require.Greater(t, len(docs), 0)
+
+		for _, doc := range docs {
+			userId := doc.get("userId")
+			require.NotNil(t, userId)
+
+			if userId != float64(5) && userId != float64(8) {
+				require.Fail(t, "userId is not in the correct range")
+			}
+		}
+	})
+}
+
+func TestAndCriteria(t *testing.T) {
 	runCloverTest(t, "test-db", func(t *testing.T, db *DB) {
 		require.True(t, db.HasCollection("todos"))
 		require.NotNil(t, db.Query("todos"))

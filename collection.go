@@ -42,7 +42,10 @@ func row(name string) *Row { // must return something else
 func (r *Row) Eq(value interface{}) *Criteria {
 	return &Criteria{
 		p: func(doc *Document) bool {
-			normValue, _ := normalize(value)
+			normValue, err := normalize(value)
+			if err != nil {
+				return false
+			}
 			return reflect.DeepEqual(doc.get(r.name), normValue)
 		},
 	}
@@ -62,7 +65,10 @@ func compareValues(v1 interface{}, v2 interface{}) int {
 func (r *Row) Gt(value interface{}) *Criteria {
 	return &Criteria{
 		p: func(doc *Document) bool {
-			normValue, _ := normalize(value)
+			normValue, err := normalize(value)
+			if err != nil {
+				return false
+			}
 			return compareValues(doc.get(r.name), normValue) > 0
 		},
 	}
@@ -71,8 +77,57 @@ func (r *Row) Gt(value interface{}) *Criteria {
 func (r *Row) GtEq(value interface{}) *Criteria {
 	return &Criteria{
 		p: func(doc *Document) bool {
-			normValue, _ := normalize(value)
+			normValue, err := normalize(value)
+			if err != nil {
+				return false
+			}
 			return compareValues(doc.get(r.name), normValue) >= 0
+		},
+	}
+}
+
+func (r *Row) Lt(value interface{}) *Criteria {
+	return &Criteria{
+		p: func(doc *Document) bool {
+			normValue, err := normalize(value)
+			if err != nil {
+				return false
+			}
+			return compareValues(doc.get(r.name), normValue) < 0
+		},
+	}
+}
+
+func (r *Row) LtEq(value interface{}) *Criteria {
+	return &Criteria{
+		p: func(doc *Document) bool {
+			normValue, err := normalize(value)
+			if err != nil {
+				return false
+			}
+			return compareValues(doc.get(r.name), normValue) <= 0
+		},
+	}
+}
+
+func (r *Row) Neq(value interface{}) *Criteria {
+	c := r.Eq(value)
+	return c.Not()
+}
+
+func (r *Row) In(values ...interface{}) *Criteria {
+	return &Criteria{
+		p: func(doc *Document) bool {
+			docValue := doc.get(r.name)
+			for _, value := range values {
+				normValue, err := normalize(value)
+				if err == nil {
+					if reflect.DeepEqual(normValue, docValue) {
+						return true
+					}
+				}
+			}
+			return false
 		},
 	}
 }
