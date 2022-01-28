@@ -224,6 +224,12 @@ func (c *Collection) Where(q *Criteria) *Collection {
 	return newCollection(c.db, filtered)
 }
 
+func (c *Collection) Matches(predicate func(doc *Document) bool) *Collection {
+	return c.Where(&Criteria{
+		p: predicate,
+	})
+}
+
 func (c *Collection) FindById(id string) *Document {
 	for _, doc := range c.docs {
 		docId := doc.get(idFieldName)
@@ -231,6 +237,14 @@ func (c *Collection) FindById(id string) *Document {
 			return doc
 		}
 	}
+	return nil
+}
+
+func (c *Collection) Delete() error {
+	if err := c.db.save(c); err != nil {
+		return err
+	}
+	c.db.collections[c.name] = c
 	return nil
 }
 
@@ -265,6 +279,10 @@ func lookupField(name string, fieldMap map[string]interface{}) interface{} {
 		}
 	}
 	return f
+}
+
+func (doc *Document) has(name string) bool {
+	return lookupField(name, doc.fields) != nil
 }
 
 func (doc *Document) get(name string) interface{} {
