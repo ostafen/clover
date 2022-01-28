@@ -41,7 +41,7 @@ func (db *DB) readCollection(name string) (*Collection, error) {
 		return nil, err
 	}
 
-	return newCollection(db, rowsToDocuments(jFile.Rows)), nil
+	return newCollection(db, name, rowsToDocuments(jFile.Rows)), nil
 }
 
 var ErrCollectionNotExist = errors.New("no such collection")
@@ -93,13 +93,20 @@ func (db *DB) CreateCollection(name string) (*Collection, error) {
 		return nil, ErrCollectionExist
 	}
 
-	_, err := os.Create(db.dir + "/" + name + ".json")
-	c := &Collection{
-		name: name,
-		docs: nil,
-	}
+	c := newCollection(db, name, nil)
+	err := db.save(c)
+
 	db.collections[name] = c
 	return c, err
+}
+
+func (db *DB) DropCollection(name string) error {
+	if _, ok := db.collections[name]; !ok {
+		return ErrCollectionNotExist
+	}
+
+	delete(db.collections, name)
+	return os.Remove(db.dir + "/" + name + ".json")
 }
 
 func (db *DB) HasCollection(name string) bool {

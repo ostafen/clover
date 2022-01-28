@@ -30,9 +30,10 @@ func (c *Collection) FindAll() []*Document {
 	return c.docs
 }
 
-func newCollection(db *DB, docs []*Document) *Collection {
+func newCollection(db *DB, name string, docs []*Document) *Collection {
 	return &Collection{
 		db:   db,
+		name: name,
 		docs: docs,
 	}
 }
@@ -229,7 +230,7 @@ func (c *Collection) Where(q *Criteria) *Collection {
 			filtered = append(filtered, doc)
 		}
 	}
-	return newCollection(c.db, filtered)
+	return newCollection(c.db, c.name, filtered)
 }
 
 func (c *Collection) Matches(predicate func(doc *Document) bool) *Collection {
