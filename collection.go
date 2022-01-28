@@ -17,9 +17,10 @@ type Criteria struct {
 }
 
 type Collection struct {
-	db   *DB
-	name string
-	docs []*Document
+	db       *DB
+	name     string
+	docs     []*Document
+	criteria *Criteria
 }
 
 func (c *Collection) Count() int {
@@ -32,9 +33,10 @@ func (c *Collection) FindAll() []*Document {
 
 func newCollection(db *DB, name string, docs []*Document) *Collection {
 	return &Collection{
-		db:   db,
-		name: name,
-		docs: docs,
+		db:       db,
+		name:     name,
+		docs:     docs,
+		criteria: nil,
 	}
 }
 
@@ -230,7 +232,9 @@ func (c *Collection) Where(q *Criteria) *Collection {
 			filtered = append(filtered, doc)
 		}
 	}
-	return newCollection(c.db, c.name, filtered)
+	newColl := newCollection(c.db, c.name, filtered)
+	newColl.criteria = q
+	return newColl
 }
 
 func (c *Collection) Matches(predicate func(doc *Document) bool) *Collection {
@@ -250,10 +254,16 @@ func (c *Collection) FindById(id string) *Document {
 }
 
 func (c *Collection) Delete() error {
-	if err := c.db.save(c); err != nil {
+	newColl := c.db.Query(c.name)
+
+	if c.criteria != nil {
+		newColl = newColl.Where(c.criteria.Not())
+	}
+
+	if err := c.db.save(newColl); err != nil {
 		return err
 	}
-	c.db.collections[c.name] = c
+	c.db.collections[c.name] = newColl
 	return nil
 }
 
