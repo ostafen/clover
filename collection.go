@@ -45,6 +45,14 @@ func Row(name string) *row {
 	return &row{name: name}
 }
 
+func (r *row) Exists() *Criteria {
+	return &Criteria{
+		p: func(doc *Document) bool {
+			return doc.has(r.name)
+		},
+	}
+}
+
 func (r *row) Eq(value interface{}) *Criteria {
 	return &Criteria{
 		p: func(doc *Document) bool {
@@ -258,35 +266,38 @@ func newDocument() *Document {
 	}
 }
 
-func lookupField(name string, fieldMap map[string]interface{}) interface{} {
+func lookupField(name string, fieldMap map[string]interface{}) (interface{}, bool) {
 	fields := strings.Split(name, ".")
 
+	var ok bool
 	var f interface{}
 	currMap := fieldMap
 	for i, field := range fields {
-		f = currMap[field]
+		f, ok = currMap[field]
 
 		if f == nil {
-			return nil
+			return nil, ok
 		}
 
 		if m, ok := f.(map[string]interface{}); ok {
 			currMap = m
 		} else {
 			if i < len(fields)-1 {
-				return nil
+				return nil, false
 			}
 		}
 	}
-	return f
+	return f, ok
 }
 
 func (doc *Document) has(name string) bool {
-	return lookupField(name, doc.fields) != nil
+	_, ok := lookupField(name, doc.fields)
+	return ok
 }
 
 func (doc *Document) get(name string) interface{} {
-	return lookupField(name, doc.fields)
+	v, _ := lookupField(name, doc.fields)
+	return v
 }
 
 func (doc *Document) set(name string, value interface{}) {
