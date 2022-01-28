@@ -4,7 +4,8 @@
       "userId": 1,
       "id": 1,
       "title": "delectus aut autem",
-      "completed": false
+      "completed": false,
+      "completed_date": null
     },
     {
       "userId": 1,
