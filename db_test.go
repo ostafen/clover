@@ -55,6 +55,33 @@ func TestInsert(t *testing.T) {
 	})
 }
 
+func TestInsertAndGet(t *testing.T) {
+	runCloverTest(t, "", func(t *testing.T, db *DB) {
+		c, err := db.CreateCollection("myCollection")
+		require.NoError(t, err)
+
+		nInserts := 100
+		docs := make([]*Document, 0, nInserts)
+		for i := 0; i < nInserts; i++ {
+			doc := newDocument()
+			doc.set("myField", i)
+			docs = append(docs, doc)
+		}
+
+		require.NoError(t, db.Insert("myCollection", docs...))
+		require.Equal(t, nInserts, c.Count())
+
+		n := c.Matches(func(doc *Document) bool {
+			require.True(t, doc.has("myField"))
+
+			v, _ := doc.get("myField").(float64)
+			return int(v)%2 == 0
+		}).Count()
+
+		require.Equal(t, nInserts/2, n)
+	})
+}
+
 func TestOpenExisting(t *testing.T) {
 	runCloverTest(t, "test-db", func(t *testing.T, db *DB) {
 		require.True(t, db.HasCollection("todos"))
