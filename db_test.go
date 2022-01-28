@@ -82,6 +82,31 @@ func TestInsertAndGet(t *testing.T) {
 	})
 }
 
+func TestInsertAndDelete(t *testing.T) {
+	runCloverTest(t, "test-db", func(t *testing.T, db *DB) {
+		c, err := db.CreateCollection("todos-temp")
+		require.NoError(t, err)
+
+		defer func() {
+			require.NoError(t, db.DropCollection("todos-temp"), err)
+		}()
+
+		todos := db.Query("todos").FindAll()
+
+		err = db.Insert("todos-temp", todos...)
+		require.NoError(t, err)
+
+		criteria := Row("completed").Eq(true)
+
+		err = c.Where(criteria).Delete()
+		require.NoError(t, err)
+
+		// since collection is immutable, we don't see changes in old reference
+		c = db.Query("todos-temp")
+		require.Equal(t, c.Count(), c.Where(criteria.Not()).Count())
+	})
+}
+
 func TestOpenExisting(t *testing.T) {
 	runCloverTest(t, "test-db", func(t *testing.T, db *DB) {
 		require.True(t, db.HasCollection("todos"))
