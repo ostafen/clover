@@ -100,14 +100,11 @@ func TestInsertAndDelete(t *testing.T) {
 			require.NoError(t, db.DropCollection("todos-temp"), err)
 		}()
 
-		todos := db.Query("todos").FindAll()
-
-		err = db.Insert("todos-temp", todos...)
-		require.NoError(t, err)
-
 		criteria := Row("completed").Eq(true)
 
 		tempTodos := db.Query("todos-temp")
+		require.Equal(t, tempTodos.Count(), db.Query("todos").Count())
+
 		err = tempTodos.Where(criteria).Delete()
 		require.NoError(t, err)
 
