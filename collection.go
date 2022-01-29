@@ -51,7 +51,7 @@ func Row(name string) *row {
 func (r *row) Exists() *Criteria {
 	return &Criteria{
 		p: func(doc *Document) bool {
-			return doc.has(r.name)
+			return doc.Has(r.name)
 		},
 	}
 }
@@ -63,7 +63,7 @@ func (r *row) Eq(value interface{}) *Criteria {
 			if err != nil {
 				return false
 			}
-			return reflect.DeepEqual(doc.get(r.name), normValue)
+			return reflect.DeepEqual(doc.Get(r.name), normValue)
 		},
 	}
 }
@@ -110,7 +110,7 @@ func (r *row) Gt(value interface{}) *Criteria {
 			if err != nil {
 				return false
 			}
-			v, ok := compareValues(doc.get(r.name), normValue)
+			v, ok := compareValues(doc.Get(r.name), normValue)
 			if !ok {
 				return false
 			}
@@ -126,7 +126,7 @@ func (r *row) GtEq(value interface{}) *Criteria {
 			if err != nil {
 				return false
 			}
-			v, ok := compareValues(doc.get(r.name), normValue)
+			v, ok := compareValues(doc.Get(r.name), normValue)
 			if !ok {
 				return false
 			}
@@ -142,7 +142,7 @@ func (r *row) Lt(value interface{}) *Criteria {
 			if err != nil {
 				return false
 			}
-			v, ok := compareValues(doc.get(r.name), normValue)
+			v, ok := compareValues(doc.Get(r.name), normValue)
 			if !ok {
 				return false
 			}
@@ -158,7 +158,7 @@ func (r *row) LtEq(value interface{}) *Criteria {
 			if err != nil {
 				return false
 			}
-			v, ok := compareValues(doc.get(r.name), normValue)
+			v, ok := compareValues(doc.Get(r.name), normValue)
 			if !ok {
 				return false
 			}
@@ -175,7 +175,7 @@ func (r *row) Neq(value interface{}) *Criteria {
 func (r *row) In(values ...interface{}) *Criteria {
 	return &Criteria{
 		p: func(doc *Document) bool {
-			docValue := doc.get(r.name)
+			docValue := doc.Get(r.name)
 			for _, value := range values {
 				normValue, err := normalize(value)
 				if err == nil {
@@ -245,7 +245,7 @@ func (c *Collection) Matches(predicate func(doc *Document) bool) *Collection {
 
 func (c *Collection) FindById(id string) *Document {
 	for _, doc := range c.docs {
-		docId := doc.get(idFieldName)
+		docId := doc.Get(idFieldName)
 		if docId != nil && docId == id {
 			return doc
 		}
@@ -271,49 +271,54 @@ type Document struct {
 	fields map[string]interface{}
 }
 
-func newDocument() *Document {
+func NewDocument() *Document {
 	return &Document{
 		fields: make(map[string]interface{}),
 	}
 }
 
-func lookupField(name string, fieldMap map[string]interface{}) (interface{}, bool) {
+func lookupField(name string, fieldMap map[string]interface{}, force bool) (map[string]interface{}, interface{}, string) {
 	fields := strings.Split(name, ".")
 
-	var ok bool
+	var exists bool
 	var f interface{}
 	currMap := fieldMap
 	for i, field := range fields {
-		f, ok = currMap[field]
+		f, exists = currMap[field]
 
-		if f == nil {
-			return nil, ok
+		m, isMap := f.(map[string]interface{})
+
+		if force {
+			if (!exists || !isMap) && i < len(fields)-1 {
+				m = make(map[string]interface{})
+				currMap[field] = m
+				f = m
+			}
+		} else if !exists {
+			return nil, nil, ""
 		}
 
-		if m, ok := f.(map[string]interface{}); ok {
+		if i < len(fields)-1 {
 			currMap = m
-		} else {
-			if i < len(fields)-1 {
-				return nil, false
-			}
 		}
 	}
-	return f, ok
+	return currMap, f, fields[len(fields)-1]
 }
 
-func (doc *Document) has(name string) bool {
-	_, ok := lookupField(name, doc.fields)
-	return ok
+func (doc *Document) Has(name string) bool {
+	fieldMap, _, _ := lookupField(name, doc.fields, false)
+	return fieldMap != nil
 }
 
-func (doc *Document) get(name string) interface{} {
-	v, _ := lookupField(name, doc.fields)
+func (doc *Document) Get(name string) interface{} {
+	_, v, _ := lookupField(name, doc.fields, false)
 	return v
 }
 
-func (doc *Document) set(name string, value interface{}) {
+func (doc *Document) Set(name string, value interface{}) {
+	m, _, fieldName := lookupField(name, doc.fields, true)
 	normValue, _ := normalize(value)
-	doc.fields[name] = normValue
+	m[fieldName] = normValue
 }
 
 func normalizeMap(data interface{}) (map[string]interface{}, error) {

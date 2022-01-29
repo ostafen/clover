@@ -23,7 +23,7 @@ type jsonFile struct {
 func rowsToDocuments(rows []map[string]interface{}) []*Document {
 	docs := make([]*Document, 0, len(rows))
 	for _, r := range rows {
-		doc := newDocument()
+		doc := NewDocument()
 		doc.fields = r
 		docs = append(docs, doc)
 	}
@@ -122,7 +122,7 @@ func (db *DB) Insert(collectionName string, docs ...*Document) error {
 
 	for _, newDoc := range docs {
 		uuid := uuid.NewV4().String()
-		newDoc.set(idFieldName, uuid)
+		newDoc.Set(idFieldName, uuid)
 		c.docs = append(c.docs, newDoc)
 	}
 
@@ -131,7 +131,7 @@ func (db *DB) Insert(collectionName string, docs ...*Document) error {
 
 func (db *DB) InsertOne(collectionName string, doc *Document) (string, error) {
 	err := db.Insert(collectionName, doc)
-	return doc.get(idFieldName).(string), err
+	return doc.Get(idFieldName).(string), err
 }
 
 func Open(dir string) (*DB, error) {
