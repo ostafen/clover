@@ -16,7 +16,7 @@ type DB struct {
 }
 
 type jsonFile struct {
-	LastUpdate uint64                   `json:"last_update"`
+	LastUpdate time.Time                `json:"last_update"`
 	Rows       []map[string]interface{} `json:"rows"`
 }
 
@@ -63,8 +63,7 @@ func (db *DB) save(c *Collection) error {
 		docs = append(docs, d.fields)
 	}
 
-	now := uint64(time.Now().UnixNano())
-	jsonBytes, err := json.Marshal(&jsonFile{LastUpdate: now, Rows: docs})
+	jsonBytes, err := json.Marshal(&jsonFile{LastUpdate: time.Now(), Rows: docs})
 	if err != nil {
 		return err
 	}
