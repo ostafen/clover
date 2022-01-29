@@ -2,6 +2,7 @@ package clover
 
 import (
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"testing"
 
@@ -34,8 +35,8 @@ func TestInsertOne(t *testing.T) {
 		_, err := db.CreateCollection("myCollection")
 		require.NoError(t, err)
 
-		doc := newDocument()
-		doc.set("hello", "clover")
+		doc := NewDocument()
+		doc.Set("hello", "clover")
 
 		docId, err := db.InsertOne("myCollection", doc)
 		require.NoError(t, err)
@@ -48,8 +49,8 @@ func TestInsert(t *testing.T) {
 		_, err := db.CreateCollection("myCollection")
 		require.NoError(t, err)
 
-		doc := newDocument()
-		doc.set("hello", "clover")
+		doc := NewDocument()
+		doc.Set("hello", "clover")
 
 		require.NoError(t, db.Insert("myCollection", doc))
 	})
@@ -63,8 +64,8 @@ func TestInsertAndGet(t *testing.T) {
 		nInserts := 100
 		docs := make([]*Document, 0, nInserts)
 		for i := 0; i < nInserts; i++ {
-			doc := newDocument()
-			doc.set("myField", i)
+			doc := NewDocument()
+			doc.Set("myField", i)
 			docs = append(docs, doc)
 		}
 
@@ -72,9 +73,9 @@ func TestInsertAndGet(t *testing.T) {
 		require.Equal(t, nInserts, c.Count())
 
 		n := c.Matches(func(doc *Document) bool {
-			require.True(t, doc.has("myField"))
+			require.True(t, doc.Has("myField"))
 
-			v, _ := doc.get("myField").(float64)
+			v, _ := doc.Get("myField").(float64)
 			return int(v)%2 == 0
 		}).Count()
 
@@ -145,8 +146,8 @@ func TestEqCriteria(t *testing.T) {
 		require.Greater(t, len(docs), 0)
 
 		for _, doc := range docs {
-			require.NotNil(t, doc.get("completed"))
-			require.Equal(t, doc.get("completed"), true)
+			require.NotNil(t, doc.Get("completed"))
+			require.Equal(t, doc.Get("completed"), true)
 		}
 	})
 }
@@ -160,8 +161,8 @@ func TestNeqCriteria(t *testing.T) {
 		require.Greater(t, len(docs), 0)
 
 		for _, doc := range docs {
-			require.NotNil(t, doc.get("userId"))
-			require.NotEqual(t, doc.get("userId"), float64(7))
+			require.NotNil(t, doc.Get("userId"))
+			require.NotEqual(t, doc.Get("userId"), float64(7))
 		}
 	})
 }
@@ -175,8 +176,8 @@ func TestGtCriteria(t *testing.T) {
 		require.Greater(t, len(docs), 0)
 
 		for _, doc := range docs {
-			require.NotNil(t, doc.get("userId"))
-			require.Greater(t, doc.get("userId"), float64(4))
+			require.NotNil(t, doc.Get("userId"))
+			require.Greater(t, doc.Get("userId"), float64(4))
 		}
 	})
 }
@@ -190,8 +191,8 @@ func TestGtEqCriteria(t *testing.T) {
 		require.Greater(t, len(docs), 0)
 
 		for _, doc := range docs {
-			require.NotNil(t, doc.get("userId"))
-			require.GreaterOrEqual(t, doc.get("userId"), float64(4))
+			require.NotNil(t, doc.Get("userId"))
+			require.GreaterOrEqual(t, doc.Get("userId"), float64(4))
 		}
 	})
 }
@@ -204,8 +205,8 @@ func TestLtCriteria(t *testing.T) {
 		docs := db.Query("todos").Where(Row("userId").Lt(4)).FindAll()
 		require.Greater(t, len(docs), 0)
 		for _, doc := range docs {
-			require.NotNil(t, doc.get("userId"))
-			require.Less(t, doc.get("userId"), float64(4))
+			require.NotNil(t, doc.Get("userId"))
+			require.Less(t, doc.Get("userId"), float64(4))
 		}
 	})
 }
@@ -219,8 +220,8 @@ func TestLtEqCriteria(t *testing.T) {
 		require.Greater(t, len(docs), 0)
 
 		for _, doc := range docs {
-			require.NotNil(t, doc.get("userId"))
-			require.LessOrEqual(t, doc.get("userId"), float64(4))
+			require.NotNil(t, doc.Get("userId"))
+			require.LessOrEqual(t, doc.Get("userId"), float64(4))
 		}
 	})
 }
@@ -235,7 +236,7 @@ func TestInCriteria(t *testing.T) {
 		require.Greater(t, len(docs), 0)
 
 		for _, doc := range docs {
-			userId := doc.get("userId")
+			userId := doc.Get("userId")
 			require.NotNil(t, userId)
 
 			if userId != float64(5) && userId != float64(8) {
@@ -255,10 +256,34 @@ func TestAndCriteria(t *testing.T) {
 
 		require.Greater(t, len(docs), 0)
 		for _, doc := range docs {
-			require.NotNil(t, doc.get("completed"))
-			require.NotNil(t, doc.get("userId"))
-			require.Equal(t, doc.get("completed"), true)
-			require.Greater(t, doc.get("userId"), float64(2))
+			require.NotNil(t, doc.Get("completed"))
+			require.NotNil(t, doc.Get("userId"))
+			require.Equal(t, doc.Get("completed"), true)
+			require.Greater(t, doc.Get("userId"), float64(2))
 		}
 	})
+}
+
+func genRandomFieldName() string {
+	const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+	size := rand.Intn(100) + 1
+
+	fName := ""
+	for i := 0; i < size; i++ {
+		fName += "." + string(letters[rand.Intn(len(letters))])
+	}
+	return fName
+}
+
+func TestDocument(t *testing.T) {
+	doc := NewDocument()
+
+	nTests := 1000
+	for i := 0; i < nTests; i++ {
+		fieldName := genRandomFieldName()
+		doc.Set(fieldName, i)
+		require.True(t, doc.Has(fieldName))
+		require.Equal(t, doc.Get(fieldName), float64(i))
+	}
 }
