@@ -23,7 +23,7 @@ import (
 
 ```
 
-## Query an existing database
+### Query an existing database
 
 ```go
 
