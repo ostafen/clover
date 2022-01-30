@@ -46,7 +46,7 @@ log.Println(doc.Get("hello"))
 
 db, _ := c.Open("../test-db/")
 
-// find all completed todos belongin to users with id 5 and 8
+// find all completed todos belonging to users with id 5 and 8
 c := db.Query("todos").Where(c.Row("completed").Eq(true).And(c.Row("userId").In(5, 8)))
 
 todo := &struct {
