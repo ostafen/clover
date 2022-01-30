@@ -27,10 +27,10 @@ import (
 
 ```go
 
-db, _ := clover.Open("clover-db")
+db, _ := c.Open("clover-db")
 db.CreateCollection("myCollection")
 
-doc := clover.NewDocument()
+doc := c.NewDocument()
 doc.Set("hello", "clover!")
 
 docId, _ := db.InsertOne("myCollection", doc)
