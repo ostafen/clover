@@ -60,3 +60,7 @@ for _, doc := range c.FindAll() {
     log.Println(todo)
 }
 ```
+
+# Contributing
+
+CloverDB is still under development. Any contribution, in the form of a suggestion, bug report or pull request, is well accepted.
