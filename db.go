@@ -122,8 +122,8 @@ func (db *DB) Insert(collectionName string, docs ...*Document) error {
 	for _, newDoc := range docs {
 		uuid := uuid.NewV4().String()
 		newDoc.Set(idFieldName, uuid)
-		c.docs = append(c.docs, newDoc)
 	}
+	c.addDocuments(docs...)
 
 	return db.save(c)
 }

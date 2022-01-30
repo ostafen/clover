@@ -19,7 +19,7 @@ type Criteria struct {
 type Collection struct {
 	db       *DB
 	name     string
-	docs     []*Document
+	docs     map[string]*Document
 	criteria *Criteria
 }
 
@@ -28,15 +28,27 @@ func (c *Collection) Count() int {
 }
 
 func (c *Collection) FindAll() []*Document {
-	return c.docs
+	docs := make([]*Document, 0, len(c.docs))
+	for _, doc := range c.docs {
+		docs = append(docs, doc)
+	}
+	return docs
 }
 
 func newCollection(db *DB, name string, docs []*Document) *Collection {
-	return &Collection{
+	c := &Collection{
 		db:       db,
 		name:     name,
-		docs:     docs,
+		docs:     make(map[string]*Document),
 		criteria: nil,
+	}
+	c.addDocuments(docs...)
+	return c
+}
+
+func (c *Collection) addDocuments(docs ...*Document) {
+	for _, doc := range docs {
+		c.docs[doc.Get(idFieldName).(string)] = doc
 	}
 }
 
@@ -244,13 +256,7 @@ func (c *Collection) Matches(predicate func(doc *Document) bool) *Collection {
 }
 
 func (c *Collection) FindById(id string) *Document {
-	for _, doc := range c.docs {
-		docId := doc.Get(idFieldName)
-		if docId != nil && docId == id {
-			return doc
-		}
-	}
-	return nil
+	return c.docs[id]
 }
 
 func (c *Collection) Delete() error {
