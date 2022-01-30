@@ -323,8 +323,7 @@ func (doc *Document) Get(name string) interface{} {
 
 func (doc *Document) Set(name string, value interface{}) {
 	m, _, fieldName := lookupField(name, doc.fields, true)
-	normValue, _ := normalize(value)
-	m[fieldName] = normValue
+	m[fieldName] = value
 }
 
 func normalizeMap(data interface{}) (map[string]interface{}, error) {

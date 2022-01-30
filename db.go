@@ -119,11 +119,24 @@ func (db *DB) Insert(collectionName string, docs ...*Document) error {
 		return ErrCollectionNotExist
 	}
 
-	for _, newDoc := range docs {
+	insertDocs := make([]*Document, 0, len(docs))
+	for _, doc := range docs {
+		insertDoc := NewDocument()
+
+		fields, err := normalizeMap(doc.fields)
+		if err != nil {
+			return err
+		}
+		insertDoc.fields = fields
+
 		uuid := uuid.NewV4().String()
-		newDoc.Set(idFieldName, uuid)
+		insertDoc.Set(idFieldName, uuid)
+		doc.Set(idFieldName, uuid)
+
+		insertDocs = append(insertDocs, insertDoc)
 	}
-	c.addDocuments(docs...)
+
+	c.addDocuments(insertDocs...)
 
 	return db.save(c)
 }

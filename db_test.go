@@ -281,6 +281,6 @@ func TestDocument(t *testing.T) {
 		fieldName := genRandomFieldName()
 		doc.Set(fieldName, i)
 		require.True(t, doc.Has(fieldName))
-		require.Equal(t, doc.Get(fieldName), float64(i))
+		require.Equal(t, doc.Get(fieldName), i)
 	}
 }
