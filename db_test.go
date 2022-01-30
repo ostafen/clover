@@ -284,3 +284,24 @@ func TestDocument(t *testing.T) {
 		require.Equal(t, doc.Get(fieldName), i)
 	}
 }
+
+func TestDocumentUnmarshal(t *testing.T) {
+	runCloverTest(t, "test-db", func(t *testing.T, db *DB) {
+		require.True(t, db.HasCollection("todos"))
+		require.NotNil(t, db.Query("todos"))
+
+		docs := db.Query("todos").FindAll()
+
+		todo := &struct {
+			Completed bool   `json:"completed"`
+			Title     string `json:"title"`
+			UserId    int    `json:"userId"`
+		}{}
+
+		require.Greater(t, len(docs), 0)
+		for _, doc := range docs {
+			err := doc.Unmarshal(todo)
+			require.NoError(t, err)
+		}
+	})
+}

@@ -326,6 +326,14 @@ func (doc *Document) Set(name string, value interface{}) {
 	m[fieldName] = value
 }
 
+func (doc *Document) Unmarshal(value interface{}) error {
+	bytes, err := json.Marshal(doc.fields)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(bytes, value)
+}
+
 func normalizeMap(data interface{}) (map[string]interface{}, error) {
 	m := make(map[string]interface{})
 	bytes, err := json.Marshal(data)
