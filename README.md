@@ -63,4 +63,4 @@ for _, doc := range c.FindAll() {
 
 # Contributing
 
-CloverDB is still under development. Any contribution, in the form of a suggestion, bug report or pull request, is well accepted.
+CloverDB is still under development. Any contribution, in the form of a suggestion, bug report or pull request, is well accepted :blush:
