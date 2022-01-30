@@ -10,3 +10,36 @@ CloverDB is a lightweight NoSQL database designed for being simple and easily ma
 - Written in pure Golang
 - Simple and intuitive api
 - Easily maintenable
+
+# API usage
+
+```go
+import (
+	"log"
+	c "github.com/ostafen/clover"
+)
+
+...
+
+```
+
+## Query an existing database
+
+```go
+
+db, _ := c.Open("../test-db/")
+
+// find all completed todos belongin to users with id 5 and 8
+c := db.Query("todos").Where(c.Row("completed").Eq(true).And(c.Row("userId").In(5, 8)))
+
+todo := &struct {
+    Completed bool   `json:"completed"`
+    Title     string `json:"title"`
+    UserId    int    `json:"userId"`
+}{}
+
+for _, doc := range c.FindAll() {
+    doc.Unmarshal(todo)
+    log.Println(todo)
+}
+```
