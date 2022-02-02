@@ -259,6 +259,24 @@ func (c *Collection) FindById(id string) *Document {
 	return c.docs[id]
 }
 
+func (c *Collection) Update(updateMap map[string]interface{}) error {
+	updatedDocs := make([]*Document, 0, len(c.docs))
+	for _, doc := range c.docs {
+		updateDoc := doc.Copy()
+		for updateField, updateValue := range updateMap {
+			updateDoc.Set(updateField, updateValue)
+		}
+		updatedDocs = append(updatedDocs, updateDoc)
+	}
+
+	// copy collection
+	baseColl := c.db.collections[c.name]
+	for _, doc := range updatedDocs {
+		baseColl.docs[doc.Get(idFieldName).(string)] = doc
+	}
+	return baseColl.db.save(baseColl)
+}
+
 func (c *Collection) Delete() error {
 	newColl := c.db.Query(c.name)
 
@@ -281,6 +299,13 @@ func NewDocument() *Document {
 	return &Document{
 		fields: make(map[string]interface{}),
 	}
+}
+
+func (doc *Document) Copy() *Document {
+	docCopy := NewDocument()
+	fields, _ := normalizeMap(doc.fields)
+	docCopy.fields = fields
+	return docCopy
 }
 
 func lookupField(name string, fieldMap map[string]interface{}, force bool) (map[string]interface{}, interface{}, string) {

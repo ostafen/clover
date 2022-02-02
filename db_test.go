@@ -93,6 +93,27 @@ func copyCollection(db *DB, src, dst string) error {
 	return db.Insert(dst, srcDocs...)
 }
 
+func TestUpdateCollection(t *testing.T) {
+	runCloverTest(t, "test-db", func(t *testing.T, db *DB) {
+		err := copyCollection(db, "todos", "todos-temp")
+		require.NoError(t, err)
+
+		defer func() {
+			require.NoError(t, db.DropCollection("todos-temp"), err)
+		}()
+
+		criteria := Row("completed").Eq(true)
+		updates := make(map[string]interface{})
+		updates["completed"] = false
+
+		err = db.Query("todos-temp").Where(criteria).Update(updates)
+		require.NoError(t, err)
+
+		n := db.Query("todos-temp").Where(criteria).Count()
+		require.Equal(t, n, 0)
+	})
+}
+
 func TestInsertAndDelete(t *testing.T) {
 	runCloverTest(t, "test-db", func(t *testing.T, db *DB) {
 		err := copyCollection(db, "todos", "todos-temp")
