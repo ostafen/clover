@@ -94,7 +94,7 @@ func copyCollection(db *DB, src, dst string) error {
 }
 
 func TestUpdateCollection(t *testing.T) {
-	runCloverTest(t, "test-db", func(t *testing.T, db *DB) {
+	runCloverTest(t, "test-data/todos", func(t *testing.T, db *DB) {
 		err := copyCollection(db, "todos", "todos-temp")
 		require.NoError(t, err)
 
@@ -115,7 +115,7 @@ func TestUpdateCollection(t *testing.T) {
 }
 
 func TestInsertAndDelete(t *testing.T) {
-	runCloverTest(t, "test-db", func(t *testing.T, db *DB) {
+	runCloverTest(t, "test-data/todos", func(t *testing.T, db *DB) {
 		err := copyCollection(db, "todos", "todos-temp")
 		require.NoError(t, err)
 
@@ -138,7 +138,7 @@ func TestInsertAndDelete(t *testing.T) {
 }
 
 func TestOpenExisting(t *testing.T) {
-	runCloverTest(t, "test-db", func(t *testing.T, db *DB) {
+	runCloverTest(t, "test-data/todos", func(t *testing.T, db *DB) {
 		require.True(t, db.HasCollection("todos"))
 		require.NotNil(t, db.Query("todos"))
 
@@ -148,7 +148,7 @@ func TestOpenExisting(t *testing.T) {
 }
 
 func TestExistsCriteria(t *testing.T) {
-	runCloverTest(t, "test-db", func(t *testing.T, db *DB) {
+	runCloverTest(t, "test-data/todos", func(t *testing.T, db *DB) {
 		require.True(t, db.HasCollection("todos"))
 		require.NotNil(t, db.Query("todos"))
 
@@ -158,7 +158,7 @@ func TestExistsCriteria(t *testing.T) {
 }
 
 func TestEqCriteria(t *testing.T) {
-	runCloverTest(t, "test-db", func(t *testing.T, db *DB) {
+	runCloverTest(t, "test-data/todos", func(t *testing.T, db *DB) {
 		require.True(t, db.HasCollection("todos"))
 		require.NotNil(t, db.Query("todos"))
 
@@ -173,7 +173,7 @@ func TestEqCriteria(t *testing.T) {
 }
 
 func TestNeqCriteria(t *testing.T) {
-	runCloverTest(t, "test-db", func(t *testing.T, db *DB) {
+	runCloverTest(t, "test-data/todos", func(t *testing.T, db *DB) {
 		require.True(t, db.HasCollection("todos"))
 		require.NotNil(t, db.Query("todos"))
 
@@ -188,7 +188,7 @@ func TestNeqCriteria(t *testing.T) {
 }
 
 func TestGtCriteria(t *testing.T) {
-	runCloverTest(t, "test-db", func(t *testing.T, db *DB) {
+	runCloverTest(t, "test-data/todos", func(t *testing.T, db *DB) {
 		require.True(t, db.HasCollection("todos"))
 		require.NotNil(t, db.Query("todos"))
 
@@ -203,7 +203,7 @@ func TestGtCriteria(t *testing.T) {
 }
 
 func TestGtEqCriteria(t *testing.T) {
-	runCloverTest(t, "test-db", func(t *testing.T, db *DB) {
+	runCloverTest(t, "test-data/todos", func(t *testing.T, db *DB) {
 		require.True(t, db.HasCollection("todos"))
 		require.NotNil(t, db.Query("todos"))
 
@@ -218,7 +218,7 @@ func TestGtEqCriteria(t *testing.T) {
 }
 
 func TestLtCriteria(t *testing.T) {
-	runCloverTest(t, "test-db", func(t *testing.T, db *DB) {
+	runCloverTest(t, "test-data/todos", func(t *testing.T, db *DB) {
 		require.True(t, db.HasCollection("todos"))
 		require.NotNil(t, db.Query("todos"))
 
@@ -232,7 +232,7 @@ func TestLtCriteria(t *testing.T) {
 }
 
 func TestLtEqCriteria(t *testing.T) {
-	runCloverTest(t, "test-db", func(t *testing.T, db *DB) {
+	runCloverTest(t, "test-data/todos", func(t *testing.T, db *DB) {
 		require.True(t, db.HasCollection("todos"))
 		require.NotNil(t, db.Query("todos"))
 
@@ -247,7 +247,7 @@ func TestLtEqCriteria(t *testing.T) {
 }
 
 func TestInCriteria(t *testing.T) {
-	runCloverTest(t, "test-db", func(t *testing.T, db *DB) {
+	runCloverTest(t, "test-data/todos", func(t *testing.T, db *DB) {
 		require.True(t, db.HasCollection("todos"))
 		require.NotNil(t, db.Query("todos"))
 
@@ -267,7 +267,7 @@ func TestInCriteria(t *testing.T) {
 }
 
 func TestAndCriteria(t *testing.T) {
-	runCloverTest(t, "test-db", func(t *testing.T, db *DB) {
+	runCloverTest(t, "test-data/todos", func(t *testing.T, db *DB) {
 		require.True(t, db.HasCollection("todos"))
 		require.NotNil(t, db.Query("todos"))
 
@@ -280,6 +280,20 @@ func TestAndCriteria(t *testing.T) {
 			require.NotNil(t, doc.Get("userId"))
 			require.Equal(t, doc.Get("completed"), true)
 			require.Greater(t, doc.Get("userId"), float64(2))
+		}
+	})
+}
+
+func TestOrCriteria(t *testing.T) {
+	runCloverTest(t, "test-data/airlines", func(t *testing.T, db *DB) {
+		require.True(t, db.HasCollection("airlines"))
+
+		criteria := Field("Flights.Cancelled").Gt(100).Or(Field("Flights.Total").GtEq(1000))
+		docs := db.Query("airlines").Where(criteria).FindAll()
+
+		for _, doc := range docs {
+			require.Greater(t, doc.Get("Flights.Cancelled"), float64(100))
+			require.GreaterOrEqual(t, doc.Get("Flights.Total"), float64(1000))
 		}
 	})
 }
@@ -309,7 +323,7 @@ func TestDocument(t *testing.T) {
 }
 
 func TestDocumentUnmarshal(t *testing.T) {
-	runCloverTest(t, "test-db", func(t *testing.T, db *DB) {
+	runCloverTest(t, "test-data/todos", func(t *testing.T, db *DB) {
 		require.True(t, db.HasCollection("todos"))
 		require.NotNil(t, db.Query("todos"))
 
