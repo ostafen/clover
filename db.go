@@ -113,6 +113,10 @@ func (db *DB) HasCollection(name string) bool {
 	return ok
 }
 
+func newObjectId() string {
+	return uuid.NewV4().String()
+}
+
 func (db *DB) Insert(collectionName string, docs ...*Document) error {
 	c, ok := db.collections[collectionName]
 	if !ok {
@@ -129,9 +133,9 @@ func (db *DB) Insert(collectionName string, docs ...*Document) error {
 		}
 		insertDoc.fields = fields
 
-		uuid := uuid.NewV4().String()
-		insertDoc.Set(idFieldName, uuid)
-		doc.Set(idFieldName, uuid)
+		objectId := newObjectId()
+		insertDoc.Set(idFieldName, objectId)
+		doc.Set(idFieldName, objectId)
 
 		insertDocs = append(insertDocs, insertDoc)
 	}
