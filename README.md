@@ -59,7 +59,7 @@ for _, doc := range c.FindAll() {
 }
 ```
 
-### Updating or deleting documents
+### Update and delete documents
 
 ```go
 db, _ := c.Open("../test-db/")
