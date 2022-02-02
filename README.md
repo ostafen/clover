@@ -24,7 +24,6 @@ import (
 ```
 
 ### Create a new collection
-
 ```go
 
 db, _ := c.Open("clover-db")
@@ -43,7 +42,6 @@ log.Println(doc.Get("hello"))
 ### Query an existing database
 
 ```go
-
 db, _ := c.Open("../test-db/")
 
 // find all completed todos belonging to users with id 5 and 8
@@ -59,6 +57,21 @@ for _, doc := range c.FindAll() {
     doc.Unmarshal(todo)
     log.Println(todo)
 }
+```
+
+### Updating or deleting documents
+
+```go
+db, _ := c.Open("../test-db/")
+
+// mark all todos belonging to user with id 1 as completed
+updates := make(map[string]interface{})
+updates["completed"] = true
+
+db.Query("todos").Where(c.Row("userId").Eq(1)).Update(updates)
+
+// delete all todos belonging to users with id 5 and 8
+db.Query("todos").Where(c.Row("userId").In(5,8)).Delete()
 ```
 
 # Contributing
