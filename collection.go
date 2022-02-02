@@ -12,10 +12,13 @@ const (
 
 type predicate func(doc *Document) bool
 
+// Criteria represents a predicate for selecting documents.
+// It follows a fluent API style so that you can easily chain together multiple criteria.
 type Criteria struct {
 	p predicate
 }
 
+// Collection represents a set of documents. It contains methods to add, select or delete documents.
 type Collection struct {
 	db       *DB
 	name     string
@@ -23,10 +26,12 @@ type Collection struct {
 	criteria *Criteria
 }
 
+// Count returns the number of documents stored in the given collection.
 func (c *Collection) Count() int {
 	return len(c.docs)
 }
 
+// FindAll returns a slice containing all the documents stored in the collection.
 func (c *Collection) FindAll() []*Document {
 	docs := make([]*Document, 0, len(c.docs))
 	for _, doc := range c.docs {
@@ -52,15 +57,16 @@ func (c *Collection) addDocuments(docs ...*Document) {
 	}
 }
 
-type row struct {
+type field struct {
 	name string
 }
 
-func Row(name string) *row {
-	return &row{name: name}
+// Field represents a document field. It is used to create a new criteria.
+func Field(name string) *field {
+	return &field{name: name}
 }
 
-func (r *row) Exists() *Criteria {
+func (r *field) Exists() *Criteria {
 	return &Criteria{
 		p: func(doc *Document) bool {
 			return doc.Has(r.name)
@@ -68,7 +74,7 @@ func (r *row) Exists() *Criteria {
 	}
 }
 
-func (r *row) Eq(value interface{}) *Criteria {
+func (r *field) Eq(value interface{}) *Criteria {
 	return &Criteria{
 		p: func(doc *Document) bool {
 			normValue, err := normalize(value)
@@ -115,7 +121,7 @@ func compareValues(v1 interface{}, v2 interface{}) (int, bool) {
 	return 0, false
 }
 
-func (r *row) Gt(value interface{}) *Criteria {
+func (r *field) Gt(value interface{}) *Criteria {
 	return &Criteria{
 		p: func(doc *Document) bool {
 			normValue, err := normalize(value)
@@ -131,7 +137,7 @@ func (r *row) Gt(value interface{}) *Criteria {
 	}
 }
 
-func (r *row) GtEq(value interface{}) *Criteria {
+func (r *field) GtEq(value interface{}) *Criteria {
 	return &Criteria{
 		p: func(doc *Document) bool {
 			normValue, err := normalize(value)
@@ -147,7 +153,7 @@ func (r *row) GtEq(value interface{}) *Criteria {
 	}
 }
 
-func (r *row) Lt(value interface{}) *Criteria {
+func (r *field) Lt(value interface{}) *Criteria {
 	return &Criteria{
 		p: func(doc *Document) bool {
 			normValue, err := normalize(value)
@@ -163,7 +169,7 @@ func (r *row) Lt(value interface{}) *Criteria {
 	}
 }
 
-func (r *row) LtEq(value interface{}) *Criteria {
+func (r *field) LtEq(value interface{}) *Criteria {
 	return &Criteria{
 		p: func(doc *Document) bool {
 			normValue, err := normalize(value)
@@ -179,12 +185,12 @@ func (r *row) LtEq(value interface{}) *Criteria {
 	}
 }
 
-func (r *row) Neq(value interface{}) *Criteria {
+func (r *field) Neq(value interface{}) *Criteria {
 	c := r.Eq(value)
 	return c.Not()
 }
 
-func (r *row) In(values ...interface{}) *Criteria {
+func (r *field) In(values ...interface{}) *Criteria {
 	return &Criteria{
 		p: func(doc *Document) bool {
 			docValue := doc.Get(r.name)
@@ -299,12 +305,14 @@ type Document struct {
 	fields map[string]interface{}
 }
 
+// NewDocument creates a new empty document.
 func NewDocument() *Document {
 	return &Document{
 		fields: make(map[string]interface{}),
 	}
 }
 
+// Copy returns a shallow copy of the underlying document.
 func (doc *Document) Copy() *Document {
 	return &Document{
 		fields: copyMap(doc.fields),
@@ -339,27 +347,31 @@ func lookupField(name string, fieldMap map[string]interface{}, force bool) (map[
 	return currMap, f, fields[len(fields)-1]
 }
 
+// Has tells returns true if the document contains a field with the supplied name.
 func (doc *Document) Has(name string) bool {
 	fieldMap, _, _ := lookupField(name, doc.fields, false)
 	return fieldMap != nil
 }
 
+// Get retrieves the value of a field. Nested fields can be accessed using dot.
 func (doc *Document) Get(name string) interface{} {
 	_, v, _ := lookupField(name, doc.fields, false)
 	return v
 }
 
+// Set maps a field to a value. Nested fields can be accessed using dot.
 func (doc *Document) Set(name string, value interface{}) {
 	m, _, fieldName := lookupField(name, doc.fields, true)
 	m[fieldName] = value
 }
 
-func (doc *Document) Unmarshal(value interface{}) error {
+// Unmarshal stores the document in the value pointed by v.
+func (doc *Document) Unmarshal(v interface{}) error {
 	bytes, err := json.Marshal(doc.fields)
 	if err != nil {
 		return err
 	}
-	return json.Unmarshal(bytes, value)
+	return json.Unmarshal(bytes, v)
 }
 
 func normalizeMap(data interface{}) (map[string]interface{}, error) {

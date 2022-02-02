@@ -10,6 +10,7 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
+// DB represents the entry point of each clover database.
 type DB struct {
 	dir         string
 	collections map[string]*Collection
@@ -46,6 +47,7 @@ func (db *DB) readCollection(name string) (*Collection, error) {
 
 var ErrCollectionNotExist = errors.New("no such collection")
 
+// Query simply returns the collection with the supplied name. Use it to initialize a new query.
 func (db *DB) Query(name string) *Collection {
 	c, ok := db.collections[name]
 	if !ok {
@@ -87,6 +89,7 @@ func (db *DB) readCollections() error {
 	return nil
 }
 
+// CreateCollection creates a new empty collection with the given name.
 func (db *DB) CreateCollection(name string) (*Collection, error) {
 	if _, ok := db.collections[name]; ok {
 		return nil, ErrCollectionExist
@@ -99,6 +102,7 @@ func (db *DB) CreateCollection(name string) (*Collection, error) {
 	return c, err
 }
 
+// Drop removes the collection with the given name, deleting any content on disk.
 func (db *DB) DropCollection(name string) error {
 	if _, ok := db.collections[name]; !ok {
 		return ErrCollectionNotExist
@@ -108,6 +112,7 @@ func (db *DB) DropCollection(name string) error {
 	return os.Remove(db.dir + "/" + name + ".json")
 }
 
+// HasCollections returns true if and only if the database contains a collection with the given name.
 func (db *DB) HasCollection(name string) bool {
 	_, ok := db.collections[name]
 	return ok
@@ -117,6 +122,7 @@ func newObjectId() string {
 	return uuid.NewV4().String()
 }
 
+// Insert adds the supplied documents to a collection.
 func (db *DB) Insert(collectionName string, docs ...*Document) error {
 	c, ok := db.collections[collectionName]
 	if !ok {
@@ -145,11 +151,13 @@ func (db *DB) Insert(collectionName string, docs ...*Document) error {
 	return db.save(c)
 }
 
+// InsertOne inserts a single document to an existing collection. It returns the id of the inserted document.
 func (db *DB) InsertOne(collectionName string, doc *Document) (string, error) {
 	err := db.Insert(collectionName, doc)
 	return doc.Get(idFieldName).(string), err
 }
 
+// Open opens a new clover database on the supplied path. If such a folder doesn't exist, it is automatically created.
 func Open(dir string) (*DB, error) {
 	if err := makeDirIfNotExists(dir); err != nil {
 		return nil, err
