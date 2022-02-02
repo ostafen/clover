@@ -43,6 +43,9 @@ func TestInsertOne(t *testing.T) {
 		docId, err := db.InsertOne("myCollection", doc)
 		require.NoError(t, err)
 		require.NotEmpty(t, docId)
+
+		doc = db.Query("myCollection").FindById(docId)
+		require.Equal(t, doc.Get(idFieldName).(string), docId)
 	})
 }
 
@@ -290,7 +293,6 @@ func TestOrCriteria(t *testing.T) {
 
 		criteria := Field("Statistics.Flights.Cancelled").Gt(100).Or(Field("Statistics.Flights.Total").GtEq(1000))
 		docs := db.Query("airlines").Where(criteria).FindAll()
-
 		require.Greater(t, len(docs), 0)
 
 		for _, doc := range docs {
