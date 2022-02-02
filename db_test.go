@@ -14,7 +14,9 @@ func runCloverTest(t *testing.T, dir string, test func(t *testing.T, db *DB)) {
 		var err error
 		dir, err = ioutil.TempDir("", "clover-test")
 		require.NoError(t, err)
-		defer os.RemoveAll(dir)
+		defer func() {
+			require.NoError(t, os.RemoveAll(dir))
+		}()
 	}
 	db, err := Open(dir)
 	require.NoError(t, err)
@@ -83,7 +85,7 @@ func TestInsertAndGet(t *testing.T) {
 	})
 }
 
-func copyCollection(t *testing.T, db *DB, src, dst string) error {
+func copyCollection(db *DB, src, dst string) error {
 	if _, err := db.CreateCollection(dst); err != nil {
 		return err
 	}
@@ -93,7 +95,7 @@ func copyCollection(t *testing.T, db *DB, src, dst string) error {
 
 func TestInsertAndDelete(t *testing.T) {
 	runCloverTest(t, "test-db", func(t *testing.T, db *DB) {
-		err := copyCollection(t, db, "todos", "todos-temp")
+		err := copyCollection(db, "todos", "todos-temp")
 		require.NoError(t, err)
 
 		defer func() {
