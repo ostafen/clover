@@ -277,6 +277,10 @@ func (c *Collection) Update(updateMap map[string]interface{}) error {
 	return baseColl.db.save(baseColl)
 }
 
+func (c *Collection) DeleteById(id string) error {
+	return nil
+}
+
 func (c *Collection) Delete() error {
 	newColl := c.db.Query(c.name)
 
@@ -302,10 +306,9 @@ func NewDocument() *Document {
 }
 
 func (doc *Document) Copy() *Document {
-	docCopy := NewDocument()
-	fields, _ := normalizeMap(doc.fields)
-	docCopy.fields = fields
-	return docCopy
+	return &Document{
+		fields: copyMap(doc.fields),
+	}
 }
 
 func lookupField(name string, fieldMap map[string]interface{}, force bool) (map[string]interface{}, interface{}, string) {
