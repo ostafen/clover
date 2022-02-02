@@ -288,12 +288,18 @@ func TestOrCriteria(t *testing.T) {
 	runCloverTest(t, "test-data/airlines", func(t *testing.T, db *DB) {
 		require.True(t, db.HasCollection("airlines"))
 
-		criteria := Field("Flights.Cancelled").Gt(100).Or(Field("Flights.Total").GtEq(1000))
+		criteria := Field("Statistics.Flights.Cancelled").Gt(100).Or(Field("Statistics.Flights.Total").GtEq(1000))
 		docs := db.Query("airlines").Where(criteria).FindAll()
 
+		require.Greater(t, len(docs), 0)
+
 		for _, doc := range docs {
-			require.Greater(t, doc.Get("Flights.Cancelled"), float64(100))
-			require.GreaterOrEqual(t, doc.Get("Flights.Total"), float64(1000))
+			cancelled := doc.Get("Statistics.Flights.Cancelled").(float64)
+			total := doc.Get("Statistics.Flights.Total").(float64)
+
+			if cancelled <= 100 && total < 1000 {
+				require.Fail(t, "or criteria not satisfied")
+			}
 		}
 	})
 }
