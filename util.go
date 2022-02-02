@@ -47,3 +47,16 @@ func saveToFile(path string, filename string, data []byte) error {
 
 	return os.Rename(file.Name(), path+"/"+filename)
 }
+
+func copyMap(m map[string]interface{}) map[string]interface{} {
+	mapCopy := make(map[string]interface{})
+	for k, v := range m {
+		mapValue, ok := v.(map[string]interface{})
+		if ok {
+			mapCopy[k] = copyMap(mapValue)
+		} else {
+			mapCopy[k] = v
+		}
+	}
+	return mapCopy
+}
