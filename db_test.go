@@ -175,6 +175,37 @@ func TestEqCriteria(t *testing.T) {
 	})
 }
 
+func TestEqCriteriaWithDifferentTypes(t *testing.T) {
+	runCloverTest(t, "test-data/todos", func(t *testing.T, db *DB) {
+		require.True(t, db.HasCollection("todos"))
+		require.NotNil(t, db.Query("todos"))
+
+		count1 := db.Query("todos").Where(Field("userId").Eq(int(1))).Count()
+		count2 := db.Query("todos").Where(Field("userId").Eq(int8(1))).Count()
+		count3 := db.Query("todos").Where(Field("userId").Eq(int16(1))).Count()
+		count4 := db.Query("todos").Where(Field("userId").Eq(int32(1))).Count()
+		count5 := db.Query("todos").Where(Field("userId").Eq(int64(1))).Count()
+
+		count6 := db.Query("todos").Where(Field("userId").Eq(uint(1))).Count()
+		count7 := db.Query("todos").Where(Field("userId").Eq(uint8(1))).Count()
+		count8 := db.Query("todos").Where(Field("userId").Eq(uint16(1))).Count()
+		count9 := db.Query("todos").Where(Field("userId").Eq(uint32(1))).Count()
+		count10 := db.Query("todos").Where(Field("userId").Eq(uint64(1))).Count()
+
+		require.Greater(t, count1, 0)
+
+		require.Equal(t, count1, count2)
+		require.Equal(t, count1, count3)
+		require.Equal(t, count1, count4)
+		require.Equal(t, count1, count5)
+		require.Equal(t, count1, count6)
+		require.Equal(t, count1, count7)
+		require.Equal(t, count1, count8)
+		require.Equal(t, count1, count9)
+		require.Equal(t, count1, count10)
+	})
+}
+
 func TestNeqCriteria(t *testing.T) {
 	runCloverTest(t, "test-data/todos", func(t *testing.T, db *DB) {
 		require.True(t, db.HasCollection("todos"))
