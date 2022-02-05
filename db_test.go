@@ -175,6 +175,14 @@ func TestEqCriteria(t *testing.T) {
 	})
 }
 
+func TestBoolCompare(t *testing.T) {
+	runCloverTest(t, "test-data/todos", func(t *testing.T, db *DB) {
+		n := db.Query("todos").Where(Field("completed").Eq(true)).Count()
+		m := db.Query("todos").Where(Field("completed").Gt(false)).Count()
+		require.Equal(t, n, m)
+	})
+}
+
 func TestEqCriteriaWithDifferentTypes(t *testing.T) {
 	runCloverTest(t, "test-data/todos", func(t *testing.T, db *DB) {
 		require.True(t, db.HasCollection("todos"))
