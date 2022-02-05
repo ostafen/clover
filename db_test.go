@@ -29,6 +29,9 @@ func TestCreateCollection(t *testing.T) {
 		_, err := db.CreateCollection("myCollection")
 		require.NoError(t, err)
 		require.True(t, db.HasCollection("myCollection"))
+
+		_, err = db.CreateCollection("myCollection")
+		require.Equal(t, err, ErrCollectionExist)
 	})
 }
 
