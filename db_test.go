@@ -196,6 +196,22 @@ func TestCompareWithWrongType(t *testing.T) {
 	})
 }
 
+func TestCompareString(t *testing.T) {
+	runCloverTest(t, "test-data/airlines", func(t *testing.T, db *DB) {
+		require.True(t, db.HasCollection("airlines"))
+		require.NotNil(t, db.Query("airlines"))
+
+		docs := db.Query("airlines").Where(Field("Airport.Code").Gt("CLT")).FindAll()
+		require.Greater(t, len(docs), 0)
+
+		for _, doc := range docs {
+			code := doc.Get("Airport.Code").(string)
+			require.NotNil(t, code)
+			require.Greater(t, code, "CLT")
+		}
+	})
+}
+
 func TestEqCriteriaWithDifferentTypes(t *testing.T) {
 	runCloverTest(t, "test-data/todos", func(t *testing.T, db *DB) {
 		require.True(t, db.HasCollection("todos"))
