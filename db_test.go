@@ -32,7 +32,7 @@ func TestCreateCollection(t *testing.T) {
 	})
 }
 
-func TestInsertOne(t *testing.T) {
+func TestInsertOneAndDelete(t *testing.T) {
 	runCloverTest(t, "", func(t *testing.T, db *DB) {
 		_, err := db.CreateCollection("myCollection")
 		require.NoError(t, err)
@@ -46,6 +46,13 @@ func TestInsertOne(t *testing.T) {
 
 		doc = db.Query("myCollection").FindById(docId)
 		require.Equal(t, doc.Get(idFieldName).(string), docId)
+
+		err = db.Query("myCollection").DeleteById(docId)
+		require.NoError(t, err)
+
+		doc = db.Query("myCollection").FindById(docId)
+		require.Nil(t, doc)
+		require.Equal(t, db.Query("myCollection").Count(), 0)
 	})
 }
 

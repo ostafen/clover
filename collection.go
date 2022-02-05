@@ -284,7 +284,7 @@ func (c *Collection) Update(updateMap map[string]interface{}) error {
 }
 
 func (c *Collection) DeleteById(id string) error {
-	return nil
+	return c.Where(Field(idFieldName).Eq(id)).Delete()
 }
 
 func (c *Collection) Delete() error {
