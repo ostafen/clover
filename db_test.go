@@ -187,6 +187,12 @@ func TestCompareWithWrongType(t *testing.T) {
 	runCloverTest(t, "test-data/todos", func(t *testing.T, db *DB) {
 		n := db.Query("todos").Where(Field("completed").Gt("true")).Count()
 		require.Equal(t, n, 0)
+		n = db.Query("todos").Where(Field("completed").GtEq("true")).Count()
+		require.Equal(t, n, 0)
+		n = db.Query("todos").Where(Field("completed").Lt("true")).Count()
+		require.Equal(t, n, 0)
+		n = db.Query("todos").Where(Field("completed").LtEq("true")).Count()
+		require.Equal(t, n, 0)
 	})
 }
 
