@@ -88,16 +88,16 @@ func (q *Query) MatchPredicate(p func(doc *Document) bool) *Query {
 
 // Where returns a new Query which select all the documents fullfilling both the base query and the provided Criteria.
 func (q *Query) Where(c *Criteria) *Query {
-	compositeCriteria := q.criteria
-	if compositeCriteria == nil {
-		compositeCriteria = c
+	newCriteria := q.criteria
+	if newCriteria == nil {
+		newCriteria = c
 	} else {
-		compositeCriteria = compositeCriteria.And(c)
+		newCriteria = newCriteria.And(c)
 	}
 
 	return &Query{
 		collection: q.collection,
-		criteria:   compositeCriteria,
+		criteria:   newCriteria,
 	}
 }
 
