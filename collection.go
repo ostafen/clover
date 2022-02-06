@@ -18,8 +18,8 @@ type Criteria struct {
 	p predicate
 }
 
-// Collection represents a set of documents. It contains methods to add, select or delete documents.
-type Collection struct {
+// collection represents a set of documents. It contains methods to add, select or delete documents.
+type collection struct {
 	db       *DB
 	name     string
 	docs     map[string]*Document
@@ -27,12 +27,12 @@ type Collection struct {
 }
 
 // Count returns the number of documents stored in the given collection.
-func (c *Collection) Count() int {
+func (c *collection) Count() int {
 	return len(c.docs)
 }
 
 // FindAll returns a slice containing all the documents stored in the collection.
-func (c *Collection) FindAll() []*Document {
+func (c *collection) FindAll() []*Document {
 	docs := make([]*Document, 0, len(c.docs))
 	for _, doc := range c.docs {
 		docs = append(docs, doc)
@@ -40,8 +40,8 @@ func (c *Collection) FindAll() []*Document {
 	return docs
 }
 
-func newCollection(db *DB, name string, docs []*Document) *Collection {
-	c := &Collection{
+func newCollection(db *DB, name string, docs []*Document) *collection {
+	c := &collection{
 		db:       db,
 		name:     name,
 		docs:     make(map[string]*Document),
@@ -51,14 +51,14 @@ func newCollection(db *DB, name string, docs []*Document) *Collection {
 	return c
 }
 
-func (c *Collection) addDocuments(docs ...*Document) {
+func (c *collection) addDocuments(docs ...*Document) {
 	for _, doc := range docs {
 		c.docs[doc.Get(idFieldName).(string)] = doc
 	}
 }
 
 type Query struct {
-	collection *Collection
+	collection *collection
 	criteria   *Criteria
 }
 

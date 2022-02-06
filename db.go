@@ -13,7 +13,7 @@ import (
 // DB represents the entry point of each clover database.
 type DB struct {
 	dir         string
-	collections map[string]*Collection
+	collections map[string]*collection
 }
 
 type jsonFile struct {
@@ -31,7 +31,7 @@ func rowsToDocuments(rows []map[string]interface{}) []*Document {
 	return docs
 }
 
-func (db *DB) readCollection(name string) (*Collection, error) {
+func (db *DB) readCollection(name string) (*collection, error) {
 	data, err := ioutil.ReadFile(db.dir + "/" + name + ".json")
 	if err != nil {
 		return nil, err
@@ -58,7 +58,7 @@ func (db *DB) Query(name string) *Query {
 
 var ErrCollectionExist = errors.New("collection already exist")
 
-func (db *DB) save(c *Collection) error {
+func (db *DB) save(c *collection) error {
 	docs := make([]map[string]interface{}, 0, c.Count())
 
 	for _, d := range c.docs {
@@ -165,7 +165,7 @@ func Open(dir string) (*DB, error) {
 
 	db := &DB{
 		dir:         dir,
-		collections: make(map[string]*Collection),
+		collections: make(map[string]*collection),
 	}
 	return db, db.readCollections()
 }
