@@ -44,10 +44,10 @@ log.Println(doc.Get("hello"))
 ### Query an existing database
 
 ```go
-db, _ := c.Open("../test-db/")
+db, _ := c.Open("../test-data/todos")
 
 // find all completed todos belonging to users with id 5 and 8
-c := db.Query("todos").Where(c.Row("completed").Eq(true).And(c.Row("userId").In(5, 8)))
+q := db.Query("todos").Where(c.Row("completed").Eq(true).And(c.Row("userId").In(5, 8)))
 
 todo := &struct {
     Completed bool   `json:"completed"`
@@ -55,7 +55,7 @@ todo := &struct {
     UserId    int    `json:"userId"`
 }{}
 
-for _, doc := range c.FindAll() {
+for _, doc := range q.FindAll() {
     doc.Unmarshal(todo)
     log.Println(todo)
 }
@@ -64,7 +64,7 @@ for _, doc := range c.FindAll() {
 ### Update and delete documents
 
 ```go
-db, _ := c.Open("../test-db/")
+db, _ := c.Open("../test-data/todos")
 
 // mark all todos belonging to user with id 1 as completed
 updates := make(map[string]interface{})
