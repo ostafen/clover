@@ -26,18 +26,18 @@ func runCloverTest(t *testing.T, dir string, test func(t *testing.T, db *DB)) {
 
 func TestCreateCollection(t *testing.T) {
 	runCloverTest(t, "", func(t *testing.T, db *DB) {
-		_, err := db.CreateCollection("myCollection")
+		err := db.CreateCollection("myCollection")
 		require.NoError(t, err)
 		require.True(t, db.HasCollection("myCollection"))
 
-		_, err = db.CreateCollection("myCollection")
+		err = db.CreateCollection("myCollection")
 		require.Equal(t, err, ErrCollectionExist)
 	})
 }
 
 func TestInsertOneAndDelete(t *testing.T) {
 	runCloverTest(t, "", func(t *testing.T, db *DB) {
-		_, err := db.CreateCollection("myCollection")
+		err := db.CreateCollection("myCollection")
 		require.NoError(t, err)
 
 		doc := NewDocument()
@@ -61,7 +61,7 @@ func TestInsertOneAndDelete(t *testing.T) {
 
 func TestInsert(t *testing.T) {
 	runCloverTest(t, "", func(t *testing.T, db *DB) {
-		_, err := db.CreateCollection("myCollection")
+		err := db.CreateCollection("myCollection")
 		require.NoError(t, err)
 
 		doc := NewDocument()
@@ -73,7 +73,7 @@ func TestInsert(t *testing.T) {
 
 func TestInsertAndGet(t *testing.T) {
 	runCloverTest(t, "", func(t *testing.T, db *DB) {
-		_, err := db.CreateCollection("myCollection")
+		err := db.CreateCollection("myCollection")
 		require.NoError(t, err)
 
 		nInserts := 100
@@ -99,7 +99,7 @@ func TestInsertAndGet(t *testing.T) {
 }
 
 func copyCollection(db *DB, src, dst string) error {
-	if _, err := db.CreateCollection(dst); err != nil {
+	if err := db.CreateCollection(dst); err != nil {
 		return err
 	}
 	srcDocs := db.Query(src).FindAll()

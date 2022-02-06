@@ -90,16 +90,16 @@ func (db *DB) readCollections() error {
 }
 
 // CreateCollection creates a new empty collection with the given name.
-func (db *DB) CreateCollection(name string) (*Collection, error) {
+func (db *DB) CreateCollection(name string) error {
 	if _, ok := db.collections[name]; ok {
-		return nil, ErrCollectionExist
+		return ErrCollectionExist
 	}
 
 	c := newCollection(db, name, nil)
 	err := db.save(c)
 
 	db.collections[name] = c
-	return c, err
+	return err
 }
 
 // Drop removes the collection with the given name, deleting any content on disk.
