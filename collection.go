@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	idFieldName = "_id"
+	objectIdField = "_id"
 )
 
 type predicate func(doc *Document) bool
@@ -53,7 +53,7 @@ func newCollection(db *DB, name string, docs []*Document) *collection {
 
 func (c *collection) addDocuments(docs ...*Document) {
 	for _, doc := range docs {
-		c.docs[doc.Get(idFieldName).(string)] = doc
+		c.docs[doc.Get(objectIdField).(string)] = doc
 	}
 }
 
@@ -130,7 +130,7 @@ func (q *Query) Update(updateMap map[string]interface{}) error {
 			for updateField, updateValue := range updateMap {
 				updateDoc.Set(updateField, updateValue)
 			}
-			q.collection.docs[updateDoc.Get(idFieldName).(string)] = updateDoc
+			q.collection.docs[updateDoc.Get(objectIdField).(string)] = updateDoc
 		}
 	}
 	return q.collection.db.save(q.collection)
@@ -140,7 +140,7 @@ func (q *Query) Update(updateMap map[string]interface{}) error {
 func (q *Query) DeleteById(id string) error {
 	doc, ok := q.collection.docs[id]
 	if ok && q.satisfy(doc) {
-		delete(q.collection.docs, doc.Get(idFieldName).(string))
+		delete(q.collection.docs, doc.Get(objectIdField).(string))
 		return q.collection.db.save(q.collection)
 	}
 	return nil
@@ -150,7 +150,7 @@ func (q *Query) DeleteById(id string) error {
 func (q *Query) Delete() error {
 	for _, doc := range q.collection.docs {
 		if q.satisfy(doc) {
-			delete(q.collection.docs, doc.Get(idFieldName).(string))
+			delete(q.collection.docs, doc.Get(objectIdField).(string))
 		}
 	}
 	return q.collection.db.save(q.collection)
@@ -348,7 +348,7 @@ type Document struct {
 
 // ObjectId returns the id of the document, provided that the document belongs to some collection. Otherwise, it returns the empty string.
 func (doc *Document) ObjectId() string {
-	id := doc.Get(idFieldName)
+	id := doc.Get(objectIdField)
 	if id == nil {
 		return ""
 	}

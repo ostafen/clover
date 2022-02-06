@@ -140,8 +140,8 @@ func (db *DB) Insert(collectionName string, docs ...*Document) error {
 		insertDoc.fields = fields
 
 		objectId := newObjectId()
-		insertDoc.Set(idFieldName, objectId)
-		doc.Set(idFieldName, objectId)
+		insertDoc.Set(objectIdField, objectId)
+		doc.Set(objectIdField, objectId)
 
 		insertDocs = append(insertDocs, insertDoc)
 	}
@@ -154,7 +154,7 @@ func (db *DB) Insert(collectionName string, docs ...*Document) error {
 // InsertOne inserts a single document to an existing collection. It returns the id of the inserted document.
 func (db *DB) InsertOne(collectionName string, doc *Document) (string, error) {
 	err := db.Insert(collectionName, doc)
-	return doc.Get(idFieldName).(string), err
+	return doc.Get(objectIdField).(string), err
 }
 
 // Open opens a new clover database on the supplied path. If such a folder doesn't exist, it is automatically created.
