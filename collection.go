@@ -57,6 +57,7 @@ func (c *collection) addDocuments(docs ...*Document) {
 	}
 }
 
+// Query represents a generic query which is submitted to a specific collection.
 type Query struct {
 	collection *collection
 	criteria   *Criteria
@@ -69,6 +70,7 @@ func (q *Query) satisfy(doc *Document) bool {
 	return q.criteria.p(doc)
 }
 
+// Count returns the number of documents which satisfy the query (i.e. len(q.FindAll()) == q.Count()).
 func (q *Query) Count() int {
 	n := 0
 	for _, doc := range q.collection.docs {
@@ -79,10 +81,12 @@ func (q *Query) Count() int {
 	return n
 }
 
+// MatchPredicate selects all the documents which satisfy the supplied predicate function.
 func (q *Query) MatchPredicate(p func(doc *Document) bool) *Query {
 	return q.Where(&Criteria{p})
 }
 
+// Where returns a new Query which select all the documents fullfilling both the base query and the provided Criteria.
 func (q *Query) Where(c *Criteria) *Query {
 	compositeCriteria := q.criteria
 	if compositeCriteria == nil {
@@ -97,6 +101,7 @@ func (q *Query) Where(c *Criteria) *Query {
 	}
 }
 
+// FindById returns the document with the given id, if such a document exists and satifies the underlying query, or null.
 func (q *Query) FindById(id string) *Document {
 	doc, ok := q.collection.docs[id]
 	if ok && q.satisfy(doc) {
@@ -105,6 +110,7 @@ func (q *Query) FindById(id string) *Document {
 	return nil
 }
 
+// FindAll selects all the documents satisfying q.
 func (q *Query) FindAll() []*Document {
 	docs := make([]*Document, 0)
 	for _, doc := range q.collection.docs {
@@ -115,6 +121,8 @@ func (q *Query) FindAll() []*Document {
 	return docs
 }
 
+// Update updates all the document selected by q using the provided updateMap.
+// Each update is specified by a mapping fieldName -> newValue.
 func (q *Query) Update(updateMap map[string]interface{}) error {
 	for _, doc := range q.collection.docs {
 		if q.criteria.p(doc) {
@@ -128,6 +136,7 @@ func (q *Query) Update(updateMap map[string]interface{}) error {
 	return q.collection.db.save(q.collection)
 }
 
+// DeleteById removes the document with the given id from the underlying collection, provided that such a document exists and satifies the underlying query.
 func (q *Query) DeleteById(id string) error {
 	doc, ok := q.collection.docs[id]
 	if ok && q.satisfy(doc) {
@@ -137,6 +146,7 @@ func (q *Query) DeleteById(id string) error {
 	return nil
 }
 
+// Delete removes all the documents selected by q from the underlying collection.
 func (q *Query) Delete() error {
 	for _, doc := range q.collection.docs {
 		if q.satisfy(doc) {
