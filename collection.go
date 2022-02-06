@@ -57,6 +57,95 @@ func (c *Collection) addDocuments(docs ...*Document) {
 	}
 }
 
+type Query struct {
+	collection *Collection
+	criteria   *Criteria
+}
+
+func (q *Query) satisfy(doc *Document) bool {
+	if q.criteria == nil {
+		return true
+	}
+	return q.criteria.p(doc)
+}
+
+func (q *Query) Count() int {
+	n := 0
+	for _, doc := range q.collection.docs {
+		if q.satisfy(doc) {
+			n++
+		}
+	}
+	return n
+}
+
+func (q *Query) MatchPredicate(p func(doc *Document) bool) *Query {
+	return q.Where(&Criteria{p})
+}
+
+func (q *Query) Where(c *Criteria) *Query {
+	compositeCriteria := q.criteria
+	if compositeCriteria == nil {
+		compositeCriteria = c
+	} else {
+		compositeCriteria = compositeCriteria.And(c)
+	}
+
+	return &Query{
+		collection: q.collection,
+		criteria:   compositeCriteria,
+	}
+}
+
+func (q *Query) FindById(id string) *Document {
+	doc, ok := q.collection.docs[id]
+	if ok && q.satisfy(doc) {
+		return doc
+	}
+	return nil
+}
+
+func (q *Query) FindAll() []*Document {
+	docs := make([]*Document, 0)
+	for _, doc := range q.collection.docs {
+		if q.satisfy(doc) {
+			docs = append(docs, doc)
+		}
+	}
+	return docs
+}
+
+func (q *Query) Update(updateMap map[string]interface{}) error {
+	for _, doc := range q.collection.docs {
+		if q.criteria.p(doc) {
+			updateDoc := doc.Copy()
+			for updateField, updateValue := range updateMap {
+				updateDoc.Set(updateField, updateValue)
+			}
+			q.collection.docs[updateDoc.Get(idFieldName).(string)] = updateDoc
+		}
+	}
+	return q.collection.db.save(q.collection)
+}
+
+func (q *Query) DeleteById(id string) error {
+	doc, ok := q.collection.docs[id]
+	if ok && q.satisfy(doc) {
+		delete(q.collection.docs, doc.Get(idFieldName).(string))
+		return q.collection.db.save(q.collection)
+	}
+	return nil
+}
+
+func (q *Query) Delete() error {
+	for _, doc := range q.collection.docs {
+		if q.satisfy(doc) {
+			delete(q.collection.docs, doc.Get(idFieldName).(string))
+		}
+	}
+	return q.collection.db.save(q.collection)
+}
+
 type field struct {
 	name string
 }
@@ -241,64 +330,6 @@ func (q *Criteria) Not() *Criteria {
 	return &Criteria{
 		p: negatePredicate(q.p),
 	}
-}
-
-func (c *Collection) Where(q *Criteria) *Collection {
-	filtered := make([]*Document, 0)
-	for _, doc := range c.docs {
-		if q.p(doc) {
-			filtered = append(filtered, doc)
-		}
-	}
-	newColl := newCollection(c.db, c.name, filtered)
-	newColl.criteria = q
-	return newColl
-}
-
-func (c *Collection) Matches(predicate func(doc *Document) bool) *Collection {
-	return c.Where(&Criteria{
-		p: predicate,
-	})
-}
-
-func (c *Collection) FindById(id string) *Document {
-	return c.docs[id]
-}
-
-func (c *Collection) Update(updateMap map[string]interface{}) error {
-	updatedDocs := make([]*Document, 0, len(c.docs))
-	for _, doc := range c.docs {
-		updateDoc := doc.Copy()
-		for updateField, updateValue := range updateMap {
-			updateDoc.Set(updateField, updateValue)
-		}
-		updatedDocs = append(updatedDocs, updateDoc)
-	}
-
-	// copy collection
-	baseColl := c.db.collections[c.name]
-	for _, doc := range updatedDocs {
-		baseColl.docs[doc.Get(idFieldName).(string)] = doc
-	}
-	return baseColl.db.save(baseColl)
-}
-
-func (c *Collection) DeleteById(id string) error {
-	return c.Where(Field(idFieldName).Eq(id)).Delete()
-}
-
-func (c *Collection) Delete() error {
-	newColl := c.db.Query(c.name)
-
-	if c.criteria != nil {
-		newColl = newColl.Where(c.criteria.Not())
-	}
-
-	if err := c.db.save(newColl); err != nil {
-		return err
-	}
-	c.db.collections[c.name] = newColl
-	return nil
 }
 
 type Document struct {

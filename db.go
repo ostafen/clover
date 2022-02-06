@@ -48,12 +48,12 @@ func (db *DB) readCollection(name string) (*Collection, error) {
 var ErrCollectionNotExist = errors.New("no such collection")
 
 // Query simply returns the collection with the supplied name. Use it to initialize a new query.
-func (db *DB) Query(name string) *Collection {
+func (db *DB) Query(name string) *Query {
 	c, ok := db.collections[name]
 	if !ok {
 		return nil
 	}
-	return c
+	return &Query{collection: c, criteria: nil}
 }
 
 var ErrCollectionExist = errors.New("collection already exist")

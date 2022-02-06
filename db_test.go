@@ -73,7 +73,7 @@ func TestInsert(t *testing.T) {
 
 func TestInsertAndGet(t *testing.T) {
 	runCloverTest(t, "", func(t *testing.T, db *DB) {
-		c, err := db.CreateCollection("myCollection")
+		_, err := db.CreateCollection("myCollection")
 		require.NoError(t, err)
 
 		nInserts := 100
@@ -85,9 +85,9 @@ func TestInsertAndGet(t *testing.T) {
 		}
 
 		require.NoError(t, db.Insert("myCollection", docs...))
-		require.Equal(t, nInserts, c.Count())
+		require.Equal(t, nInserts, db.Query("myCollection").Count())
 
-		n := c.Matches(func(doc *Document) bool {
+		n := db.Query("myCollection").MatchPredicate(func(doc *Document) bool {
 			require.True(t, doc.Has("myField"))
 
 			v, _ := doc.Get("myField").(float64)
