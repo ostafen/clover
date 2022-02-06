@@ -336,6 +336,15 @@ type Document struct {
 	fields map[string]interface{}
 }
 
+// ObjectId returns the id of the document, provided that the document belongs to some collection. Otherwise, it returns the empty string.
+func (doc *Document) ObjectId() string {
+	id := doc.Get(idFieldName)
+	if id == nil {
+		return ""
+	}
+	return id.(string)
+}
+
 // NewDocument creates a new empty document.
 func NewDocument() *Document {
 	return &Document{
