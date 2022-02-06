@@ -10,6 +10,12 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
+// Collection creation errors
+var (
+	ErrCollectionExist    = errors.New("collection already exist")
+	ErrCollectionNotExist = errors.New("no such collection")
+)
+
 // DB represents the entry point of each clover database.
 type DB struct {
 	dir         string
@@ -45,8 +51,6 @@ func (db *DB) readCollection(name string) (*collection, error) {
 	return newCollection(db, name, rowsToDocuments(jFile.Rows)), nil
 }
 
-var ErrCollectionNotExist = errors.New("no such collection")
-
 // Query simply returns the collection with the supplied name. Use it to initialize a new query.
 func (db *DB) Query(name string) *Query {
 	c, ok := db.collections[name]
@@ -55,8 +59,6 @@ func (db *DB) Query(name string) *Query {
 	}
 	return &Query{collection: c, criteria: nil}
 }
-
-var ErrCollectionExist = errors.New("collection already exist")
 
 func (db *DB) save(c *collection) error {
 	docs := make([]map[string]interface{}, 0, c.Count())
