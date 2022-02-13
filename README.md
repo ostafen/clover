@@ -47,7 +47,7 @@ log.Println(doc.Get("hello"))
 db, _ := c.Open("../test-data/todos")
 
 // find all completed todos belonging to users with id 5 and 8
-q := db.Query("todos").Where(c.Row("completed").Eq(true).And(c.Row("userId").In(5, 8)))
+q := db.Query("todos").Where(c.Field("completed").Eq(true).And(c.Field("userId").In(5, 8)))
 
 todo := &struct {
     Completed bool   `json:"completed"`
@@ -70,10 +70,10 @@ db, _ := c.Open("../test-data/todos")
 updates := make(map[string]interface{})
 updates["completed"] = true
 
-db.Query("todos").Where(c.Row("userId").Eq(1)).Update(updates)
+db.Query("todos").Where(c.Field("userId").Eq(1)).Update(updates)
 
 // delete all todos belonging to users with id 5 and 8
-db.Query("todos").Where(c.Row("userId").In(5,8)).Delete()
+db.Query("todos").Where(c.Field("userId").In(5,8)).Delete()
 ```
 
 # Contributing
