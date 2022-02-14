@@ -31,15 +31,6 @@ func (c *collection) Count() int {
 	return len(c.docs)
 }
 
-// FindAll returns a slice containing all the documents stored in the collection.
-func (c *collection) FindAll() []*Document {
-	docs := make([]*Document, 0, len(c.docs))
-	for _, doc := range c.docs {
-		docs = append(docs, doc)
-	}
-	return docs
-}
-
 func newCollection(db *DB, name string, docs []*Document) *collection {
 	c := &collection{
 		db:       db,
