@@ -25,7 +25,7 @@ func runCloverTest(t *testing.T, dir string, test func(t *testing.T, db *c.DB)) 
 	test(t, db)
 }
 
-func TestCreateCollection(t *testing.T) {
+func TestCreateCollectionAndDrop(t *testing.T) {
 	runCloverTest(t, "", func(t *testing.T, db *c.DB) {
 		require.Nil(t, db.Query("myCollection"))
 
@@ -35,6 +35,14 @@ func TestCreateCollection(t *testing.T) {
 
 		err = db.CreateCollection("myCollection")
 		require.Equal(t, err, c.ErrCollectionExist)
+
+		err = db.DropCollection("myCollection")
+		require.NoError(t, err)
+
+		require.False(t, db.HasCollection("myCollection"))
+
+		err = db.DropCollection("myOtherCollection")
+		require.Equal(t, err, c.ErrCollectionNotExist)
 	})
 }
 
