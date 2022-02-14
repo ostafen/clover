@@ -46,6 +46,7 @@ func TestInsertOneAndDelete(t *testing.T) {
 		doc := c.NewDocument()
 		doc.Set("hello", "clover")
 
+		require.Empty(t, doc.ObjectId())
 		docId, err := db.InsertOne("myCollection", doc)
 		require.NoError(t, err)
 		require.NotEmpty(t, docId)
