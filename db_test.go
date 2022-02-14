@@ -72,6 +72,7 @@ func TestInsert(t *testing.T) {
 		doc.Set("hello", "clover")
 
 		require.NoError(t, db.Insert("myCollection", doc))
+		require.Equal(t, db.Insert("myOtherCollection"), c.ErrCollectionNotExist)
 	})
 }
 
