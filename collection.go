@@ -425,53 +425,12 @@ func normalizeMap(data interface{}) (map[string]interface{}, error) {
 	return m, err
 }
 
-func normalizeSlice(value interface{}) ([]interface{}, error) {
-	s := make([]interface{}, 0)
+func normalize(value interface{}) (interface{}, error) {
+	var normalized interface{}
 	bytes, err := json.Marshal(value)
 	if err != nil {
 		return nil, err
 	}
-	err = json.Unmarshal(bytes, &s)
-	return s, err
-}
-
-func normalizeSimpleValue(value interface{}) interface{} {
-	switch i := value.(type) {
-	case float64:
-		return i
-	case float32:
-		return float64(i)
-	case int:
-		return float64(i)
-	case int8:
-		return float64(i)
-	case int16:
-		return float64(i)
-	case int32:
-		return float64(i)
-	case int64:
-		return float64(i)
-	case uint:
-		return float64(i)
-	case uint8:
-		return float64(i)
-	case uint16:
-		return float64(i)
-	case uint32:
-		return float64(i)
-	case uint64:
-		return float64(i)
-	}
-	return value
-}
-
-func normalize(value interface{}) (interface{}, error) {
-	kind := reflect.TypeOf(value).Kind()
-	switch kind {
-	case reflect.Struct:
-		return normalizeMap(value)
-	case reflect.Slice:
-		return normalizeSlice(value)
-	}
-	return normalizeSimpleValue(value), nil
+	err = json.Unmarshal(bytes, &normalized)
+	return normalized, err
 }
