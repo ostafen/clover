@@ -173,6 +173,31 @@ func TestOpenExisting(t *testing.T) {
 	})
 }
 
+func TestInvalidCriteria(t *testing.T) {
+	runCloverTest(t, "test-data/todos", func(t *testing.T, db *c.DB) {
+		require.True(t, db.HasCollection("todos"))
+		require.NotNil(t, db.Query("todos"))
+
+		docs := db.Query("todos").Where(c.Field("completed").Eq(func() {})).FindAll()
+		require.Equal(t, len(docs), 0)
+
+		docs = db.Query("todos").Where(c.Field("completed").Neq(func() {})).FindAll()
+		require.Equal(t, len(docs), db.Query("todos").Count())
+
+		docs = db.Query("todos").Where(c.Field("completed").Lt(func() {})).FindAll()
+		require.Equal(t, len(docs), 0)
+
+		docs = db.Query("todos").Where(c.Field("completed").LtEq(func() {})).FindAll()
+		require.Equal(t, len(docs), 0)
+
+		docs = db.Query("todos").Where(c.Field("completed").Gt(func() {})).FindAll()
+		require.Equal(t, len(docs), 0)
+
+		docs = db.Query("todos").Where(c.Field("completed").GtEq(func() {})).FindAll()
+		require.Equal(t, len(docs), 0)
+	})
+}
+
 func TestExistsCriteria(t *testing.T) {
 	runCloverTest(t, "test-data/todos", func(t *testing.T, db *c.DB) {
 		require.True(t, db.HasCollection("todos"))
