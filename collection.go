@@ -415,16 +415,6 @@ func (doc *Document) Unmarshal(v interface{}) error {
 	return json.Unmarshal(bytes, v)
 }
 
-func normalizeMap(data interface{}) (map[string]interface{}, error) {
-	m := make(map[string]interface{})
-	bytes, err := json.Marshal(data)
-	if err != nil {
-		return nil, err
-	}
-	err = json.Unmarshal(bytes, &m)
-	return m, err
-}
-
 func normalize(value interface{}) (interface{}, error) {
 	var normalized interface{}
 	bytes, err := json.Marshal(value)

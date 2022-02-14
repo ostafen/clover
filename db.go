@@ -135,11 +135,11 @@ func (db *DB) Insert(collectionName string, docs ...*Document) error {
 	for _, doc := range docs {
 		insertDoc := NewDocument()
 
-		fields, err := normalizeMap(doc.fields)
+		fields, err := normalize(doc.fields)
 		if err != nil {
 			return err
 		}
-		insertDoc.fields = fields
+		insertDoc.fields = fields.(map[string]interface{})
 
 		objectId := newObjectId()
 		insertDoc.Set(objectIdField, objectId)
