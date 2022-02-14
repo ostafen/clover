@@ -357,6 +357,23 @@ func TestInCriteria(t *testing.T) {
 	})
 }
 
+func TestChainedWhere(t *testing.T) {
+	runCloverTest(t, "test-data/todos", func(t *testing.T, db *c.DB) {
+		require.True(t, db.HasCollection("todos"))
+		require.NotNil(t, db.Query("todos"))
+
+		docs := db.Query("todos").Where(c.Field("completed").Eq(true)).Where(c.Field("userId").Gt(2)).FindAll()
+
+		require.Greater(t, len(docs), 0)
+		for _, doc := range docs {
+			require.NotNil(t, doc.Get("completed"))
+			require.NotNil(t, doc.Get("userId"))
+			require.Equal(t, doc.Get("completed"), true)
+			require.Greater(t, doc.Get("userId"), float64(2))
+		}
+	})
+}
+
 func TestAndCriteria(t *testing.T) {
 	runCloverTest(t, "test-data/todos", func(t *testing.T, db *c.DB) {
 		require.True(t, db.HasCollection("todos"))
