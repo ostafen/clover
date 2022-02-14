@@ -92,7 +92,7 @@ func (q *Query) Where(c *Criteria) *Query {
 	}
 }
 
-// FindById returns the document with the given id, if such a document exists and satifies the underlying query, or null.
+// FindById returns the document with the given id, if such a document exists and satisfies the underlying query, or null.
 func (q *Query) FindById(id string) *Document {
 	doc, ok := q.collection.docs[id]
 	if ok && q.satisfy(doc) {
@@ -127,7 +127,7 @@ func (q *Query) Update(updateMap map[string]interface{}) error {
 	return q.collection.db.save(q.collection)
 }
 
-// DeleteById removes the document with the given id from the underlying collection, provided that such a document exists and satifies the underlying query.
+// DeleteById removes the document with the given id from the underlying collection, provided that such a document exists and satisfies the underlying query.
 func (q *Query) DeleteById(id string) error {
 	doc, ok := q.collection.docs[id]
 	if ok && q.satisfy(doc) {
@@ -315,24 +315,28 @@ func orPredicates(p1 predicate, p2 predicate) predicate {
 	}
 }
 
+// And returns a new Criteria obtained by combining the predicates of the provided criteria with the AND logical operator.
 func (q *Criteria) And(other *Criteria) *Criteria {
 	return &Criteria{
 		p: andPredicates(q.p, other.p),
 	}
 }
 
+// Or returns a new Criteria obtained by combining the predicates of the provided criteria with the OR logical operator.
 func (q *Criteria) Or(other *Criteria) *Criteria {
 	return &Criteria{
 		p: orPredicates(q.p, other.p),
 	}
 }
 
+// Not returns a new Criteria which negate the predicate of the original criterion.
 func (q *Criteria) Not() *Criteria {
 	return &Criteria{
 		p: negatePredicate(q.p),
 	}
 }
 
+// Document represents a document as a map.
 type Document struct {
 	fields map[string]interface{}
 }

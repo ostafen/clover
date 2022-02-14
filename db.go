@@ -104,7 +104,7 @@ func (db *DB) CreateCollection(name string) error {
 	return err
 }
 
-// Drop removes the collection with the given name, deleting any content on disk.
+// DropCollection removes the collection with the given name, deleting any content on disk.
 func (db *DB) DropCollection(name string) error {
 	if _, ok := db.collections[name]; !ok {
 		return ErrCollectionNotExist
@@ -114,7 +114,7 @@ func (db *DB) DropCollection(name string) error {
 	return os.Remove(db.dir + "/" + name + ".json")
 }
 
-// HasCollections returns true if and only if the database contains a collection with the given name.
+// HasCollection returns true if and only if the database contains a collection with the given name.
 func (db *DB) HasCollection(name string) bool {
 	_, ok := db.collections[name]
 	return ok
