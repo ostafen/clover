@@ -27,6 +27,8 @@ func runCloverTest(t *testing.T, dir string, test func(t *testing.T, db *c.DB)) 
 
 func TestCreateCollection(t *testing.T) {
 	runCloverTest(t, "", func(t *testing.T, db *c.DB) {
+		require.Nil(t, db.Query("myCollection"))
+
 		err := db.CreateCollection("myCollection")
 		require.NoError(t, err)
 		require.True(t, db.HasCollection("myCollection"))
