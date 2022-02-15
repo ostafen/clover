@@ -6,14 +6,14 @@
 
 CloverDB is a lightweight NoSQL database designed for being simple and easily maintainable, thanks to its small code base. It has been inspired by [tinyDB](https://github.com/msiemens/tinydb).
 
-# Features
+## Features
 
 - Document oriented
 - Written in pure Golang
 - Simple and intuitive api
 - Easily maintainable
 
-# API usage
+## API usage
 
 ```go
 import (
@@ -76,6 +76,6 @@ db.Query("todos").Where(c.Field("userId").Eq(1)).Update(updates)
 db.Query("todos").Where(c.Field("userId").In(5,8)).Delete()
 ```
 
-# Contributing
+## Contributing
 
 CloverDB is actively developed. Any contribution, in the form of a suggestion, bug report or pull request, is well accepted :blush:
