@@ -13,6 +13,13 @@ CloverDB is a lightweight NoSQL database designed for being simple and easily ma
 - Simple and intuitive api
 - Easily maintainable
 
+## Why CloverDB?
+
+CloverDB has been written for being easily maintenable. As such, it trades performance with simplicity, and is not intented to be an alternative to more performant databases such as **mongoDB** or **mySQL**.
+However, there are projects where running a separate database server may result overkilled, and, for simple queries, network delay may be the major performance bottleneck.
+For there scenario, **cloverDB** may be a more suitable alternative.
+
+
 ## API usage
 
 ```go
