@@ -112,14 +112,14 @@ func compareValues(v1 interface{}, v2 interface{}) (int, bool) {
 	return 0, false
 }
 
-func (r *field) Gt(value interface{}) *Criteria {
+func (f *field) Gt(value interface{}) *Criteria {
 	return &Criteria{
 		p: func(doc *Document) bool {
 			normValue, err := normalize(value)
 			if err != nil {
 				return false
 			}
-			v, ok := compareValues(doc.Get(r.name), normValue)
+			v, ok := compareValues(doc.Get(f.name), normValue)
 			if !ok {
 				return false
 			}
@@ -128,14 +128,14 @@ func (r *field) Gt(value interface{}) *Criteria {
 	}
 }
 
-func (r *field) GtEq(value interface{}) *Criteria {
+func (f *field) GtEq(value interface{}) *Criteria {
 	return &Criteria{
 		p: func(doc *Document) bool {
 			normValue, err := normalize(value)
 			if err != nil {
 				return false
 			}
-			v, ok := compareValues(doc.Get(r.name), normValue)
+			v, ok := compareValues(doc.Get(f.name), normValue)
 			if !ok {
 				return false
 			}
@@ -144,14 +144,14 @@ func (r *field) GtEq(value interface{}) *Criteria {
 	}
 }
 
-func (r *field) Lt(value interface{}) *Criteria {
+func (f *field) Lt(value interface{}) *Criteria {
 	return &Criteria{
 		p: func(doc *Document) bool {
 			normValue, err := normalize(value)
 			if err != nil {
 				return false
 			}
-			v, ok := compareValues(doc.Get(r.name), normValue)
+			v, ok := compareValues(doc.Get(f.name), normValue)
 			if !ok {
 				return false
 			}
@@ -160,14 +160,14 @@ func (r *field) Lt(value interface{}) *Criteria {
 	}
 }
 
-func (r *field) LtEq(value interface{}) *Criteria {
+func (f *field) LtEq(value interface{}) *Criteria {
 	return &Criteria{
 		p: func(doc *Document) bool {
 			normValue, err := normalize(value)
 			if err != nil {
 				return false
 			}
-			v, ok := compareValues(doc.Get(r.name), normValue)
+			v, ok := compareValues(doc.Get(f.name), normValue)
 			if !ok {
 				return false
 			}
@@ -176,15 +176,15 @@ func (r *field) LtEq(value interface{}) *Criteria {
 	}
 }
 
-func (r *field) Neq(value interface{}) *Criteria {
-	c := r.Eq(value)
+func (f *field) Neq(value interface{}) *Criteria {
+	c := f.Eq(value)
 	return c.Not()
 }
 
-func (r *field) In(values ...interface{}) *Criteria {
+func (f *field) In(values ...interface{}) *Criteria {
 	return &Criteria{
 		p: func(doc *Document) bool {
-			docValue := doc.Get(r.name)
+			docValue := doc.Get(f.name)
 			for _, value := range values {
 				normValue, err := normalize(value)
 				if err == nil {
@@ -217,23 +217,23 @@ func orPredicates(p1 predicate, p2 predicate) predicate {
 }
 
 // And returns a new Criteria obtained by combining the predicates of the provided criteria with the AND logical operator.
-func (q *Criteria) And(other *Criteria) *Criteria {
+func (c *Criteria) And(other *Criteria) *Criteria {
 	return &Criteria{
-		p: andPredicates(q.p, other.p),
+		p: andPredicates(c.p, other.p),
 	}
 }
 
 // Or returns a new Criteria obtained by combining the predicates of the provided criteria with the OR logical operator.
-func (q *Criteria) Or(other *Criteria) *Criteria {
+func (c *Criteria) Or(other *Criteria) *Criteria {
 	return &Criteria{
-		p: orPredicates(q.p, other.p),
+		p: orPredicates(c.p, other.p),
 	}
 }
 
 // Not returns a new Criteria which negate the predicate of the original criterion.
-func (q *Criteria) Not() *Criteria {
+func (c *Criteria) Not() *Criteria {
 	return &Criteria{
-		p: negatePredicate(q.p),
+		p: negatePredicate(c.p),
 	}
 }
 
