@@ -45,7 +45,7 @@ func saveToFile(path string, filename string, data []byte) error {
 		return err
 	}
 
-	return os.Rename(file.Name(), path+"/"+filename)
+	return os.Rename(file.Name(), filepath.Join(path, filename))
 }
 
 func copyMap(m map[string]interface{}) map[string]interface{} {

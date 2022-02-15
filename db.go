@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"time"
 
 	uuid "github.com/satori/go.uuid"
@@ -38,7 +39,7 @@ func rowsToDocuments(rows []map[string]interface{}) []*Document {
 }
 
 func (db *DB) readCollection(name string) (*collection, error) {
-	data, err := ioutil.ReadFile(db.dir + "/" + name + ".json")
+	data, err := ioutil.ReadFile(filepath.Join(db.dir, name+".json"))
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +112,8 @@ func (db *DB) DropCollection(name string) error {
 	}
 
 	delete(db.collections, name)
-	return os.Remove(db.dir + "/" + name + ".json")
+
+	return os.Remove(filepath.Join(db.dir, name+".json"))
 }
 
 // HasCollection returns true if and only if the database contains a collection with the given name.
