@@ -78,4 +78,4 @@ db.Query("todos").Where(c.Field("userId").In(5,8)).Delete()
 
 # Contributing
 
-CloverDB is still under development. Any contribution, in the form of a suggestion, bug report or pull request, is well accepted :blush:
+CloverDB is actively developed. Any contribution, in the form of a suggestion, bug report or pull request, is well accepted :blush:
