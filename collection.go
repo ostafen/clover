@@ -20,10 +20,9 @@ type Criteria struct {
 
 // collection represents a set of documents. It contains methods to add, select or delete documents.
 type collection struct {
-	db       *DB
-	name     string
-	docs     map[string]*Document
-	criteria *Criteria
+	db   *DB
+	name string
+	docs map[string]*Document
 }
 
 // Count returns the number of documents stored in the given collection.
@@ -33,10 +32,9 @@ func (c *collection) Count() int {
 
 func newCollection(db *DB, name string, docs []*Document) *collection {
 	c := &collection{
-		db:       db,
-		name:     name,
-		docs:     make(map[string]*Document),
-		criteria: nil,
+		db:   db,
+		name: name,
+		docs: make(map[string]*Document),
 	}
 	c.addDocuments(docs...)
 	return c
