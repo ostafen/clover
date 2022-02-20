@@ -12,6 +12,7 @@ import (
 
 type docConsumer func(doc *Document) error
 
+// StorageEngine represents the persistance layer and abstracts how collections are stored.
 type StorageEngine interface {
 	Open(path string) error
 	Close() error
