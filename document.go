@@ -26,6 +26,7 @@ func NewDocument() *Document {
 	}
 }
 
+// NewDocumentOf creates a new document and initializes it with the content of the provided map.
 func NewDocumentOf(fields map[string]interface{}) *Document {
 	return &Document{
 		fields: fields,
