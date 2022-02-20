@@ -88,11 +88,11 @@ func (s *storageImpl) Open(path string) error {
 	}
 
 	for _, filename := range filenames {
-		collectionName := getBasename(filename)
-		collFile, err := readCollection(filename)
+		collFile, err := readCollection(filepath.Join(path, filename))
 		if err != nil {
 			return err
 		}
+		collectionName := getBasename(filename)
 		s.collections[collectionName] = &collection{name: collectionName, file: collFile, index: make(map[string]docPointer)}
 	}
 	return nil
@@ -178,6 +178,7 @@ func (s *storageImpl) FindAll(q *Query) ([]*Document, error) {
 		}
 
 		jsonText := sc.Text()
+
 		doc := NewDocument()
 		if err := json.Unmarshal([]byte(jsonText), &doc.fields); err != nil {
 			return nil, err
