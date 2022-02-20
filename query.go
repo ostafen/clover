@@ -2,7 +2,8 @@ package clover
 
 // Query represents a generic query which is submitted to a specific collection.
 type Query struct {
-	collection *collection
+	engine     StorageEngine
+	collection string
 	criteria   *Criteria
 }
 
@@ -14,14 +15,9 @@ func (q *Query) satisfy(doc *Document) bool {
 }
 
 // Count returns the number of documents which satisfy the query (i.e. len(q.FindAll()) == q.Count()).
-func (q *Query) Count() int {
-	n := 0
-	for _, doc := range q.collection.docs {
-		if q.satisfy(doc) {
-			n++
-		}
-	}
-	return n
+func (q *Query) Count() (int, error) {
+	docs, err := q.FindAll()
+	return len(docs), err
 }
 
 // MatchPredicate selects all the documents which satisfy the supplied predicate function.
@@ -39,62 +35,34 @@ func (q *Query) Where(c *Criteria) *Query {
 	}
 
 	return &Query{
+		engine:     q.engine,
 		collection: q.collection,
 		criteria:   newCriteria,
 	}
 }
 
 // FindById returns the document with the given id, if such a document exists and satisfies the underlying query, or null.
-func (q *Query) FindById(id string) *Document {
-	doc, ok := q.collection.docs[id]
-	if ok && q.satisfy(doc) {
-		return doc
-	}
-	return nil
+func (q *Query) FindById(id string) (*Document, error) {
+	return q.engine.FindById(q.collection, id)
 }
 
 // FindAll selects all the documents satisfying q.
-func (q *Query) FindAll() []*Document {
-	docs := make([]*Document, 0)
-	for _, doc := range q.collection.docs {
-		if q.satisfy(doc) {
-			docs = append(docs, doc)
-		}
-	}
-	return docs
+func (q *Query) FindAll() ([]*Document, error) {
+	return q.engine.FindAll(q)
 }
 
 // Update updates all the document selected by q using the provided updateMap.
 // Each update is specified by a mapping fieldName -> newValue.
 func (q *Query) Update(updateMap map[string]interface{}) error {
-	for _, doc := range q.collection.docs {
-		if q.criteria.p(doc) {
-			updateDoc := doc.Copy()
-			for updateField, updateValue := range updateMap {
-				updateDoc.Set(updateField, updateValue)
-			}
-			q.collection.docs[updateDoc.Get(objectIdField).(string)] = updateDoc
-		}
-	}
-	return q.collection.db.save(q.collection)
+	return q.engine.Update(q, updateMap)
 }
 
 // DeleteById removes the document with the given id from the underlying collection, provided that such a document exists and satisfies the underlying query.
 func (q *Query) DeleteById(id string) error {
-	doc, ok := q.collection.docs[id]
-	if ok && q.satisfy(doc) {
-		delete(q.collection.docs, doc.Get(objectIdField).(string))
-		return q.collection.db.save(q.collection)
-	}
-	return nil
+	return q.engine.DeleteById(q.collection, id)
 }
 
 // Delete removes all the documents selected by q from the underlying collection.
 func (q *Query) Delete() error {
-	for _, doc := range q.collection.docs {
-		if q.satisfy(doc) {
-			delete(q.collection.docs, doc.Get(objectIdField).(string))
-		}
-	}
-	return q.collection.db.save(q.collection)
+	return q.engine.Delete(q)
 }

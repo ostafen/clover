@@ -1,12 +1,7 @@
 package clover
 
 import (
-	"encoding/json"
 	"errors"
-	"io/ioutil"
-	"os"
-	"path/filepath"
-	"time"
 
 	uuid "github.com/satori/go.uuid"
 )
@@ -19,107 +14,28 @@ var (
 
 // DB represents the entry point of each clover database.
 type DB struct {
-	dir         string
-	collections map[string]*collection
-}
-
-type jsonFile struct {
-	LastUpdate time.Time                `json:"last_update"`
-	Rows       []map[string]interface{} `json:"rows"`
-}
-
-func rowsToDocuments(rows []map[string]interface{}) []*Document {
-	docs := make([]*Document, 0, len(rows))
-	for _, r := range rows {
-		doc := NewDocument()
-		doc.fields = r
-		docs = append(docs, doc)
-	}
-	return docs
-}
-
-func (db *DB) readCollection(name string) (*collection, error) {
-	data, err := ioutil.ReadFile(filepath.Join(db.dir, name+".json"))
-	if err != nil {
-		return nil, err
-	}
-
-	jFile := &jsonFile{}
-	if err := json.Unmarshal(data, jFile); err != nil {
-		return nil, err
-	}
-
-	return newCollection(db, name, rowsToDocuments(jFile.Rows)), nil
+	dir    string
+	engine StorageEngine
 }
 
 // Query simply returns the collection with the supplied name. Use it to initialize a new query.
 func (db *DB) Query(name string) *Query {
-	c, ok := db.collections[name]
-	if !ok {
-		return nil
-	}
-	return &Query{collection: c, criteria: nil}
-}
-
-func (db *DB) save(c *collection) error {
-	docs := make([]map[string]interface{}, 0, c.Count())
-
-	for _, d := range c.docs {
-		docs = append(docs, d.fields)
-	}
-
-	jsonBytes, err := json.Marshal(&jsonFile{LastUpdate: time.Now(), Rows: docs})
-	if err != nil {
-		return err
-	}
-	return saveToFile(db.dir, c.name+".json", jsonBytes)
-}
-
-func (db *DB) readCollections() error {
-	filenames, err := listDir(db.dir)
-	if err != nil {
-		return err
-	}
-
-	for _, filename := range filenames {
-		collectionName := getBasename(filename)
-		c, err := db.readCollection(collectionName)
-		if err != nil {
-			return err
-		}
-		db.collections[collectionName] = c
-	}
-	return nil
+	return &Query{collection: name, criteria: nil, engine: db.engine}
 }
 
 // CreateCollection creates a new empty collection with the given name.
 func (db *DB) CreateCollection(name string) error {
-	if _, ok := db.collections[name]; ok {
-		return ErrCollectionExist
-	}
-
-	c := newCollection(db, name, nil)
-	err := db.save(c)
-
-	db.collections[name] = c
-	return err
+	return db.engine.CreateCollection(name)
 }
 
 // DropCollection removes the collection with the given name, deleting any content on disk.
 func (db *DB) DropCollection(name string) error {
-	if _, ok := db.collections[name]; !ok {
-		return ErrCollectionNotExist
-	}
-
-	delete(db.collections, name)
-
-	return os.Remove(filepath.Join(db.dir, name+".json"))
+	return db.engine.DropCollection(name)
 }
 
 // HasCollection returns true if and only if the database contains a collection with the given name.
-func (db *DB) HasCollection(name string) bool {
-	_, ok := db.collections[name]
-	return ok
+func (db *DB) HasCollection(name string) (bool, error) {
+	return db.engine.HasCollection(name)
 }
 
 func newObjectId() string {
@@ -128,15 +44,9 @@ func newObjectId() string {
 
 // Insert adds the supplied documents to a collection.
 func (db *DB) Insert(collectionName string, docs ...*Document) error {
-	c, ok := db.collections[collectionName]
-	if !ok {
-		return ErrCollectionNotExist
-	}
-
 	insertDocs := make([]*Document, 0, len(docs))
 	for _, doc := range docs {
 		insertDoc := NewDocument()
-
 		fields, err := normalize(doc.fields)
 		if err != nil {
 			return err
@@ -149,10 +59,7 @@ func (db *DB) Insert(collectionName string, docs ...*Document) error {
 
 		insertDocs = append(insertDocs, insertDoc)
 	}
-
-	c.addDocuments(insertDocs...)
-
-	return db.save(c)
+	return db.engine.Insert(collectionName, insertDocs...)
 }
 
 // InsertOne inserts a single document to an existing collection. It returns the id of the inserted document.
@@ -168,8 +75,8 @@ func Open(dir string) (*DB, error) {
 	}
 
 	db := &DB{
-		dir:         dir,
-		collections: make(map[string]*collection),
+		dir:    dir,
+		engine: newStorageImpl(),
 	}
-	return db, db.readCollections()
+	return db, db.engine.Open(dir)
 }
