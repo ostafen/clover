@@ -162,13 +162,13 @@ func appendDocs(file *collectionFile, docs []*Document) (map[string]docPointer, 
 
 func (s *storageImpl) FindAll(q *Query) ([]*Document, error) {
 	docs := make([]*Document, 0)
-	s.IterateDocs(q.collection, func(doc *Document) error {
+	err := s.IterateDocs(q.collection, func(doc *Document) error {
 		if q == nil || q.satisfy(doc) {
 			docs = append(docs, doc)
 		}
 		return nil
 	})
-	return docs, nil
+	return docs, err
 }
 
 func readDoc(collectionFile *collectionFile, ptr docPointer) (*Document, error) {
