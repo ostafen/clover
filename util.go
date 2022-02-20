@@ -34,20 +34,6 @@ func getBasename(filename string) string {
 	return strings.TrimSuffix(baseName, filepath.Ext(baseName))
 }
 
-func saveToFile(path string, filename string, data []byte) error {
-	file, err := ioutil.TempFile("", filename)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	if _, err := file.Write(data); err != nil {
-		return err
-	}
-
-	return os.Rename(file.Name(), filepath.Join(path, filename))
-}
-
 func copyMap(m map[string]interface{}) map[string]interface{} {
 	mapCopy := make(map[string]interface{})
 	for k, v := range m {
