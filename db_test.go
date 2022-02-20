@@ -30,6 +30,32 @@ func runCloverTest(t *testing.T, jsonPath string, test func(t *testing.T, db *c.
 	test(t, db)
 }
 
+func TestErrCollectionNotExist(t *testing.T) {
+	runCloverTest(t, "", func(t *testing.T, db *c.DB) {
+		q := db.Query("myCollection")
+		_, err := q.Count()
+		require.Equal(t, c.ErrCollectionNotExist, err)
+
+		_, err = q.FindById("objectId")
+		require.Equal(t, c.ErrCollectionNotExist, err)
+
+		_, err = q.FindAll()
+		require.Equal(t, c.ErrCollectionNotExist, err)
+
+		err = q.Update(nil)
+		require.Equal(t, c.ErrCollectionNotExist, err)
+
+		err = q.Delete()
+		require.Equal(t, c.ErrCollectionNotExist, err)
+
+		err = q.DeleteById("objectId")
+		require.Equal(t, c.ErrCollectionNotExist, err)
+
+		err = db.DropCollection("myCollection")
+		require.Equal(t, c.ErrCollectionNotExist, err)
+	})
+}
+
 func TestCreateCollectionAndDrop(t *testing.T) {
 	runCloverTest(t, "", func(t *testing.T, db *c.DB) {
 		err := db.CreateCollection("myCollection")
