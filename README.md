@@ -22,6 +22,13 @@ CloverDB has been written for being easily maintenable. As such, it trades perfo
 However, there are projects where running a separate database server may result overkilled, and, for simple queries, network delay may be the major performance bottleneck.
 For there scenario, **cloverDB** may be a more suitable alternative.
 
+## Database layout
+
+CloverDB abstracts the way collections are stored on disk through the **StorageEngine** interface.
+The default implementation stores each collection in a separate text file, with each line corresponding to a different document. Each insert, update or delete operation rewrites from scratch the file corresponding to a given collection. Thus, the cost of such operations increase as the amount of data grows. In return, the absence of dead records in each file speed-ups iteration at query time. Also, to allow for fast document retrieval by id, the size and the location of each document in the corresponding file are stored in an in-memory table.
+
+If you are really concerned about performance, you could write your own implementation.
+
 
 ## API usage
 
@@ -46,7 +53,7 @@ doc.Set("hello", "clover!")
 
 docId, _ := db.InsertOne("myCollection", doc)
 
-doc = db.Query("myCollection").FindById(docId)
+doc, _ = db.Query("myCollection").FindById(docId)
 log.Println(doc.Get("hello"))
 
 ```
@@ -57,7 +64,7 @@ log.Println(doc.Get("hello"))
 db, _ := c.Open("../test-data/todos")
 
 // find all completed todos belonging to users with id 5 and 8
-q := db.Query("todos").Where(c.Field("completed").Eq(true).And(c.Field("userId").In(5, 8)))
+docs, _ := db.Query("todos").Where(c.Field("completed").Eq(true).And(c.Field("userId").In(5, 8))).FindAll()
 
 todo := &struct {
     Completed bool   `json:"completed"`
@@ -65,7 +72,7 @@ todo := &struct {
     UserId    int    `json:"userId"`
 }{}
 
-for _, doc := range q.FindAll() {
+for _, doc := range docs {
     doc.Unmarshal(todo)
     log.Println(todo)
 }
