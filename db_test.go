@@ -184,7 +184,8 @@ func TestInsertAndDelete(t *testing.T) {
 }
 
 func TestOpenExisting(t *testing.T) {
-	dir, err := ioutil.TempDir(".", "clover-test")
+	dir, err := ioutil.TempDir("", "clover-test")
+	defer os.RemoveAll(dir)
 	require.NoError(t, err)
 
 	db, err := c.Open(dir)
