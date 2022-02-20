@@ -27,22 +27,22 @@ func Field(name string) *field {
 	return &field{name: name}
 }
 
-func (r *field) Exists() *Criteria {
+func (f *field) Exists() *Criteria {
 	return &Criteria{
 		p: func(doc *Document) bool {
-			return doc.Has(r.name)
+			return doc.Has(f.name)
 		},
 	}
 }
 
-func (r *field) Eq(value interface{}) *Criteria {
+func (f *field) Eq(value interface{}) *Criteria {
 	return &Criteria{
 		p: func(doc *Document) bool {
 			normValue, err := normalize(value)
 			if err != nil {
 				return false
 			}
-			return reflect.DeepEqual(doc.Get(r.name), normValue)
+			return reflect.DeepEqual(doc.Get(f.name), normValue)
 		},
 	}
 }
