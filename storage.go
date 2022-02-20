@@ -361,14 +361,17 @@ func (s *storageImpl) iterateDocs(coll *collection, consumer docConsumer) error 
 		if err := json.Unmarshal([]byte(jsonText), &doc.fields); err != nil {
 			return err
 		}
-		consumer(doc)
+
+		if err := consumer(doc); err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
 func (s *storageImpl) IterateDocs(collName string, consumer docConsumer) error {
-	s.lock.Lock()
-	defer s.lock.Unlock()
+	s.lock.RLock()
+	defer s.lock.RUnlock()
 
 	coll, ok := s.collections[collName]
 	if !ok {
