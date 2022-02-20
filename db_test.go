@@ -184,16 +184,25 @@ func TestInsertAndDelete(t *testing.T) {
 }
 
 func TestOpenExisting(t *testing.T) {
-	runCloverTest(t, "test-data/todos.json", func(t *testing.T, db *c.DB) {
-		has, err := db.HasCollection("todos")
-		require.NoError(t, err)
-		require.True(t, has)
-		require.NotNil(t, db.Query("todos"))
+	dir, err := ioutil.TempDir(".", "clover-test")
+	require.NoError(t, err)
 
-		rows, err := db.Query("todos").Count()
-		require.NoError(t, err)
-		require.Equal(t, rows, 200)
-	})
+	db, err := c.Open(dir)
+	require.NoError(t, err)
+
+	require.NoError(t, loadFromJson(db, "test-data/todos.json"))
+	require.NoError(t, db.Close())
+
+	db, err = c.Open(dir)
+	require.NoError(t, err)
+
+	has, err := db.HasCollection("todos")
+	require.NoError(t, err)
+	require.True(t, has)
+
+	rows, err := db.Query("todos").Count()
+	require.NoError(t, err)
+	require.Equal(t, 200, rows)
 }
 
 func TestInvalidCriteria(t *testing.T) {
