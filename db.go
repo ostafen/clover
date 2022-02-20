@@ -80,3 +80,8 @@ func Open(dir string) (*DB, error) {
 	}
 	return db, db.engine.Open(dir)
 }
+
+// Close releases all the resources and closes the database. After the call, the instance will no more be usable.
+func (db *DB) Close() error {
+	return db.engine.Close()
+}

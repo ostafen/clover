@@ -16,15 +16,17 @@ import (
 func runCloverTest(t *testing.T, jsonPath string, test func(t *testing.T, db *c.DB)) {
 	dir, err := ioutil.TempDir("", "clover-test")
 	require.NoError(t, err)
-	defer func() {
-		require.NoError(t, os.RemoveAll(dir))
-	}()
+
 	db, err := c.Open(dir)
 	require.NoError(t, err)
 
 	if jsonPath != "" {
 		require.NoError(t, loadFromJson(db, jsonPath))
 	}
+	defer func() {
+		require.NoError(t, db.Close())
+		require.NoError(t, os.RemoveAll(dir))
+	}()
 	test(t, db)
 }
 
