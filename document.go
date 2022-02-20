@@ -26,6 +26,12 @@ func NewDocument() *Document {
 	}
 }
 
+func NewDocumentOf(fields map[string]interface{}) *Document {
+	return &Document{
+		fields: fields,
+	}
+}
+
 // Copy returns a shallow copy of the underlying document.
 func (doc *Document) Copy() *Document {
 	return &Document{
