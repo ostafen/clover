@@ -10,6 +10,8 @@ import (
 	"sync"
 )
 
+type docConsumer func(doc *Document) error
+
 type StorageEngine interface {
 	Open(path string) error
 	Close() error
@@ -20,6 +22,7 @@ type StorageEngine interface {
 	FindAll(q *Query) ([]*Document, error)
 	FindById(collectionName string, id string) (*Document, error)
 	DeleteById(collectionName string, id string) error
+	IterateDocs(collectionName string, consumer docConsumer) error
 	Insert(collection string, docs ...*Document) error
 	Update(q *Query, updateMap map[string]interface{}) error
 	Delete(q *Query) error
@@ -41,7 +44,7 @@ func replace(oldFile *collectionFile, newFile *os.File) (*collectionFile, error)
 		return nil, err
 	}
 
-	return readCollection(oldFile.Name())
+	return readCollectionFile(oldFile.Name())
 }
 
 type docPointer struct {
@@ -67,7 +70,7 @@ func newStorageImpl() *storageImpl {
 	}
 }
 
-func readCollection(filename string) (*collectionFile, error) {
+func readCollectionFile(filename string) (*collectionFile, error) {
 	file, err := os.OpenFile(filename, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
 	if err != nil {
 		return nil, err
@@ -88,7 +91,7 @@ func (s *storageImpl) Open(path string) error {
 	}
 
 	for _, filename := range filenames {
-		collFile, err := readCollection(filepath.Join(path, filename))
+		collFile, err := readCollectionFile(filepath.Join(path, filename))
 		if err != nil {
 			return err
 		}
@@ -106,7 +109,7 @@ func (s *storageImpl) CreateCollection(name string) error {
 		return ErrCollectionExist
 	}
 
-	collFile, err := readCollection(filepath.Join(s.path, name+collectionFileExt))
+	collFile, err := readCollectionFile(filepath.Join(s.path, name+collectionFileExt))
 	if err != nil {
 		return err
 	}
@@ -158,36 +161,13 @@ func appendDocs(file *collectionFile, docs []*Document) (map[string]docPointer, 
 }
 
 func (s *storageImpl) FindAll(q *Query) ([]*Document, error) {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-
-	coll, ok := s.collections[q.collection]
-	if !ok {
-		return nil, ErrCollectionNotExist
-	}
-
-	if _, err := coll.file.Seek(0, io.SeekStart); err != nil {
-		return nil, err
-	}
-
 	docs := make([]*Document, 0)
-	sc := bufio.NewScanner(coll.file)
-	for sc.Scan() {
-		if sc.Err() != nil {
-			return nil, sc.Err()
-		}
-
-		jsonText := sc.Text()
-
-		doc := NewDocument()
-		if err := json.Unmarshal([]byte(jsonText), &doc.fields); err != nil {
-			return nil, err
-		}
-
-		if q.satisfy(doc) {
+	s.IterateDocs(q.collection, func(doc *Document) error {
+		if q == nil || q.satisfy(doc) {
 			docs = append(docs, doc)
 		}
-	}
+		return nil
+	})
 	return docs, nil
 }
 
@@ -232,7 +212,7 @@ func (s *storageImpl) Insert(collection string, docs ...*Document) error {
 	}
 
 	if _, err := coll.file.Seek(0, io.SeekStart); err != nil {
-		return nil
+		return err
 	}
 
 	if _, err := io.Copy(tempFile, coll.file); err != nil {
@@ -267,29 +247,15 @@ func (s *storageImpl) replaceDocs(collection string, update docUpdater) error {
 		return ErrCollectionNotExist
 	}
 
-	if _, err := coll.file.Seek(0, io.SeekStart); err != nil {
-		return err
-	}
-
 	tempFile, err := ioutil.TempFile(s.path, collection+collectionFileExt)
 	if err != nil {
 		return err
 	}
-	writer := bufio.NewWriter(tempFile)
+	defer os.Remove(tempFile.Name())
 
 	fileSize := 0
-	sc := bufio.NewScanner(coll.file)
-	for sc.Scan() {
-		if sc.Err() != nil {
-			return sc.Err()
-		}
-
-		jsonText := sc.Text()
-		doc := NewDocument()
-		if err := json.Unmarshal([]byte(jsonText), &doc.fields); err != nil {
-			return err
-		}
-
+	writer := bufio.NewWriter(tempFile)
+	err = s.iterateDocs(coll, func(doc *Document) error {
 		docToSave := update(doc)
 		if docToSave != nil {
 			text, err := json.Marshal(docToSave.fields)
@@ -309,6 +275,11 @@ func (s *storageImpl) replaceDocs(collection string, update docUpdater) error {
 		} else {
 			delete(coll.index, doc.ObjectId())
 		}
+		return nil
+	})
+
+	if err != nil {
+		return err
 	}
 
 	if err := writer.Flush(); err != nil {
@@ -371,4 +342,37 @@ func (s *storageImpl) HasCollection(name string) (bool, error) {
 	defer s.lock.RUnlock()
 	_, ok := s.collections[name]
 	return ok, nil
+}
+
+func (s *storageImpl) iterateDocs(coll *collection, consumer docConsumer) error {
+	if _, err := coll.file.Seek(0, io.SeekStart); err != nil {
+		return err
+	}
+
+	sc := bufio.NewScanner(coll.file)
+	for sc.Scan() {
+		if sc.Err() != nil {
+			return sc.Err()
+		}
+
+		jsonText := sc.Text()
+
+		doc := NewDocument()
+		if err := json.Unmarshal([]byte(jsonText), &doc.fields); err != nil {
+			return err
+		}
+		consumer(doc)
+	}
+	return nil
+}
+
+func (s *storageImpl) IterateDocs(collName string, consumer docConsumer) error {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	coll, ok := s.collections[collName]
+	if !ok {
+		return ErrCollectionNotExist
+	}
+	return s.iterateDocs(coll, consumer)
 }
