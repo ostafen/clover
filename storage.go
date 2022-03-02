@@ -1,13 +1,10 @@
 package clover
 
 import (
-	"bufio"
 	"encoding/json"
-	"io"
-	"io/ioutil"
-	"os"
-	"path/filepath"
-	"sync"
+	"errors"
+
+	badger "github.com/dgraph-io/badger/v3"
 )
 
 type docConsumer func(doc *Document) error
@@ -29,142 +26,62 @@ type StorageEngine interface {
 	Delete(q *Query) error
 }
 
-const collectionFileExt = ".coll"
-
-type collectionFile struct {
-	*os.File
-	size uint64
-}
-
-func replace(oldFile *collectionFile, newFile *os.File) (*collectionFile, error) {
-	if err := newFile.Close(); err != nil {
-		return nil, err
-	}
-
-	if err := os.Rename(newFile.Name(), oldFile.Name()); err != nil {
-		return nil, err
-	}
-
-	return readCollectionFile(oldFile.Name())
-}
-
-type docPointer struct {
-	offset uint64
-	size   uint32
-}
-
-type collection struct {
-	name  string
-	file  *collectionFile
-	index map[string]docPointer
-}
-
 type storageImpl struct {
-	lock        sync.RWMutex
-	path        string
-	collections map[string]*collection
+	db *badger.DB
 }
 
 func newStorageImpl() *storageImpl {
-	return &storageImpl{
-		collections: make(map[string]*collection),
-	}
-}
-
-func readCollectionFile(filename string) (*collectionFile, error) {
-	file, err := os.OpenFile(filename, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
-	if err != nil {
-		return nil, err
-	}
-
-	stat, err := os.Stat(filename)
-	if err != nil {
-		return nil, err
-	}
-	return &collectionFile{File: file, size: uint64(stat.Size())}, err
+	return &storageImpl{}
 }
 
 func (s *storageImpl) Open(path string) error {
-	s.path = path
-	filenames, err := listDir(path)
-	if err != nil {
-		return err
-	}
+	db, err := badger.Open(badger.DefaultOptions(path).WithLoggingLevel(badger.ERROR))
+	s.db = db
+	return err
+}
 
-	for _, filename := range filenames {
-		collFile, err := readCollectionFile(filepath.Join(path, filename))
-		if err != nil {
-			return err
-		}
-		collectionName := getBasename(filename)
-		s.collections[collectionName] = &collection{name: collectionName, file: collFile, index: make(map[string]docPointer)}
-	}
-	return nil
+func getCollectionKey(name string) string {
+	return "coll:" + name
 }
 
 func (s *storageImpl) CreateCollection(name string) error {
-	s.lock.Lock()
-	defer s.lock.Unlock()
+	txn := s.db.NewTransaction(true)
+	defer txn.Discard()
 
-	if _, ok := s.collections[name]; ok {
-		return ErrCollectionExist
-	}
-
-	collFile, err := readCollectionFile(filepath.Join(s.path, name+collectionFileExt))
+	ok, err := s.hasCollection(name, txn)
 	if err != nil {
 		return err
 	}
-	s.collections[name] = &collection{name: name, file: collFile, index: make(map[string]docPointer)}
-	return nil
+
+	if ok {
+		return ErrCollectionExist
+	}
+
+	if err := txn.Set([]byte(getCollectionKey(name)), []byte{0}); err != nil {
+		return err
+	}
+	return txn.Commit()
 }
 
 func (s *storageImpl) DropCollection(name string) error {
-	s.lock.Lock()
-	defer s.lock.Unlock()
+	txn := s.db.NewTransaction(true)
+	defer txn.Discard()
 
-	coll, ok := s.collections[name]
-	if !ok {
-		return ErrCollectionNotExist
-	}
-
-	if err := coll.file.Close(); err != nil {
+	if err := s.deleteAll(txn, name); err != nil {
 		return err
 	}
-	if err := os.Remove(coll.file.Name()); err != nil {
-		return nil
+
+	if err := txn.Delete([]byte(getCollectionKey(name))); err != nil {
+		return err
 	}
-	delete(s.collections, name)
-	return nil
-}
 
-func appendDocs(file *collectionFile, docs []*Document) (map[string]docPointer, error) {
-	pointers := make(map[string]docPointer)
-
-	writer := bufio.NewWriter(file)
-	for _, doc := range docs {
-		jsonText, err := json.Marshal(doc.fields)
-		if err != nil {
-			return nil, err
-		}
-
-		n, err := writer.WriteString(string(jsonText) + "\n")
-		if err != nil {
-			return nil, err
-		}
-
-		pointers[doc.ObjectId()] = docPointer{
-			offset: file.size,
-			size:   uint32(n),
-		}
-		file.size += uint64(n)
-	}
-	return pointers, writer.Flush()
+	return txn.Commit()
 }
 
 func (s *storageImpl) FindAll(q *Query) ([]*Document, error) {
 	docs := make([]*Document, 0)
 	err := s.IterateDocs(q.collection, func(doc *Document) error {
-		if q == nil || q.satisfy(doc) {
+		if q.satisfy(doc) {
 			docs = append(docs, doc)
 		}
 		return nil
@@ -172,198 +89,202 @@ func (s *storageImpl) FindAll(q *Query) ([]*Document, error) {
 	return docs, err
 }
 
-func readDoc(collectionFile *collectionFile, ptr docPointer) (*Document, error) {
-	data := make([]byte, ptr.size)
-	if _, err := collectionFile.ReadAt(data, int64(ptr.offset)); err != nil {
-		return nil, err
-	}
+func readDoc(data []byte) (*Document, error) {
 	doc := NewDocument()
 	return doc, json.Unmarshal(data, &doc.fields)
 }
 
 func (s *storageImpl) FindById(collectionName string, id string) (*Document, error) {
-	s.lock.Lock()
-	defer s.lock.Unlock()
+	txn := s.db.NewTransaction(false)
+	defer txn.Discard()
 
-	coll, ok := s.collections[collectionName]
+	ok, err := s.hasCollection(collectionName, txn)
+	if err != nil {
+		return nil, err
+	}
+
 	if !ok {
 		return nil, ErrCollectionNotExist
 	}
 
-	ptr, ok := coll.index[id]
-	if !ok {
+	item, err := txn.Get([]byte(getDocumentKey(collectionName, id)))
+	if errors.Is(err, badger.ErrKeyNotFound) {
 		return nil, nil
 	}
 
-	return readDoc(coll.file, ptr)
+	var doc *Document
+	err = item.Value(func(data []byte) error {
+		d, err := readDoc(data)
+		doc = d
+		return err
+	})
+	return doc, err
+}
+
+func getDocumentKey(collection string, id string) string {
+	return collection + ":" + id
 }
 
 func (s *storageImpl) Insert(collection string, docs ...*Document) error {
-	s.lock.Lock()
-	defer s.lock.Unlock()
+	txn := s.db.NewTransaction(true)
+	defer txn.Discard()
 
-	coll, ok := s.collections[collection]
+	ok, err := s.hasCollection(collection, txn)
+	if err != nil {
+		return err
+	}
+
 	if !ok {
 		return ErrCollectionNotExist
 	}
 
-	tempFile, err := ioutil.TempFile(s.path, collection+collectionFileExt)
-	if err != nil {
-		return err
-	}
+	for _, doc := range docs {
+		data, err := json.Marshal(doc.fields)
+		if err != nil {
+			return err
+		}
 
-	if _, err := coll.file.Seek(0, io.SeekStart); err != nil {
-		return err
+		if err := txn.Set([]byte(getDocumentKey(collection, doc.ObjectId())), data); err != nil {
+			return err
+		}
 	}
-
-	if _, err := io.Copy(tempFile, coll.file); err != nil {
-		return err
-	}
-
-	pointers, err := appendDocs(&collectionFile{File: tempFile, size: 0}, docs)
-	if err != nil {
-		return err
-	}
-
-	newFile, err := replace(coll.file, tempFile)
-	if err != nil {
-		return err
-	}
-
-	coll.file = newFile
-	for docId, ptr := range pointers {
-		coll.index[docId] = ptr
-	}
-	return nil
+	return txn.Commit()
 }
 
 type docUpdater func(doc *Document) *Document
 
-func (s *storageImpl) replaceDocs(collection string, update docUpdater) error {
-	s.lock.Lock()
-	defer s.lock.Unlock()
+func (s *storageImpl) replaceDocs(txn *badger.Txn, q *Query, updater docUpdater) error {
+	if txn == nil {
+		txn = s.db.NewTransaction(true)
+		defer txn.Discard()
+	}
 
-	coll, ok := s.collections[collection]
+	ok, err := s.hasCollection(q.collection, txn)
+	if err != nil {
+		return err
+	}
+
 	if !ok {
 		return ErrCollectionNotExist
 	}
 
-	tempFile, err := ioutil.TempFile(s.path, collection+collectionFileExt)
-	if err != nil {
-		return err
-	}
-	defer os.Remove(tempFile.Name())
-
-	fileSize := 0
-	writer := bufio.NewWriter(tempFile)
-	err = s.iterateDocs(coll, func(doc *Document) error {
-		docToSave := update(doc)
-		if docToSave != nil {
-			text, err := json.Marshal(docToSave.fields)
-			if err != nil {
-				return err
-			}
-
-			n, err := writer.WriteString(string(text) + "\n")
-			if err != nil {
-				return err
-			}
-			coll.index[doc.ObjectId()] = docPointer{
-				offset: uint64(fileSize),
-				size:   uint32(n),
-			}
-			fileSize += n
-		} else {
-			delete(coll.index, doc.ObjectId())
+	docs := make([]*Document, 0)
+	s.iterateDocs(txn, q.collection, func(doc *Document) error {
+		if q.satisfy(doc) {
+			docs = append(docs, doc)
 		}
 		return nil
 	})
 
-	if err != nil {
-		return err
+	for _, doc := range docs {
+		key := []byte(getDocumentKey(q.collection, doc.ObjectId()))
+		if q.satisfy(doc) {
+			newDoc := updater(doc)
+			if newDoc == nil {
+				if err := txn.Delete(key); err != nil {
+					return err
+				}
+			} else {
+				data, err := json.Marshal(newDoc.fields)
+				if err != nil {
+					return err
+				}
+				if err := txn.Set([]byte(getDocumentKey(q.collection, doc.ObjectId())), data); err != nil {
+					return err
+				}
+			}
+		}
 	}
-
-	if err := writer.Flush(); err != nil {
-		return err
-	}
-
-	newFile, err := replace(coll.file, tempFile)
-	if err != nil {
-		return err
-	}
-	coll.file = newFile
-	return nil
+	return txn.Commit()
 }
 
 func (s *storageImpl) Update(q *Query, updateMap map[string]interface{}) error {
-	docUpdater := func(doc *Document) *Document {
-		if q.satisfy(doc) {
-			updateDoc := doc.Copy()
-			for updateField, updateValue := range updateMap {
-				updateDoc.Set(updateField, updateValue)
-			}
-			return updateDoc
+	return s.replaceDocs(nil, q, func(doc *Document) *Document {
+		updateDoc := doc.Copy()
+		for updateField, updateValue := range updateMap {
+			updateDoc.Set(updateField, updateValue)
 		}
-		return doc
-	}
-	return s.replaceDocs(q.collection, docUpdater)
+		return updateDoc
+	})
+}
+
+func (s *storageImpl) deleteAll(txn *badger.Txn, collName string) error {
+	return s.replaceDocs(txn, &Query{collection: collName}, func(_ *Document) *Document {
+		return nil
+	})
 }
 
 func (s *storageImpl) Delete(q *Query) error {
-	docUpdater := func(doc *Document) *Document {
-		if q.satisfy(doc) {
-			return nil
-		}
-		return doc
-	}
-	return s.replaceDocs(q.collection, docUpdater)
+	return s.replaceDocs(nil, q, func(_ *Document) *Document {
+		return nil
+	})
 }
 
-func (s *storageImpl) DeleteById(collectionName string, id string) error {
-	docUpdater := func(doc *Document) *Document {
-		if doc.ObjectId() == id {
-			return nil
-		}
-		return doc
-	}
-	return s.replaceDocs(collectionName, docUpdater)
-}
+func (s *storageImpl) DeleteById(collName string, id string) error {
+	txn := s.db.NewTransaction(true)
+	defer txn.Discard()
 
-func (s *storageImpl) Close() error {
-	for _, coll := range s.collections {
-		if err := coll.file.Close(); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (s *storageImpl) HasCollection(name string) (bool, error) {
-	s.lock.RLock()
-	defer s.lock.RUnlock()
-	_, ok := s.collections[name]
-	return ok, nil
-}
-
-func (s *storageImpl) iterateDocs(coll *collection, consumer docConsumer) error {
-	if _, err := coll.file.Seek(0, io.SeekStart); err != nil {
+	ok, err := s.hasCollection(collName, txn)
+	if err != nil {
 		return err
 	}
 
-	sc := bufio.NewScanner(coll.file)
-	for sc.Scan() {
-		if sc.Err() != nil {
-			return sc.Err()
-		}
+	if !ok {
+		return ErrCollectionNotExist
+	}
 
-		jsonText := sc.Text()
+	if err := txn.Delete([]byte(getDocumentKey(collName, id))); err != nil {
+		return err
+	}
+	return txn.Commit()
+}
 
-		doc := NewDocument()
-		if err := json.Unmarshal([]byte(jsonText), &doc.fields); err != nil {
-			return err
-		}
+func (s *storageImpl) Close() error {
+	return s.db.Close()
+}
 
-		if err := consumer(doc); err != nil {
+func (s *storageImpl) hasCollection(name string, txn *badger.Txn) (bool, error) {
+	_, err := txn.Get([]byte(getCollectionKey(name)))
+	if errors.Is(err, badger.ErrKeyNotFound) {
+		return false, nil
+	}
+	return err == nil, err
+}
+
+func (s *storageImpl) HasCollection(name string) (bool, error) {
+	txn := s.db.NewTransaction(false)
+	defer txn.Discard()
+	return s.hasCollection(name, txn)
+}
+
+func (s *storageImpl) iterateDocs(txn *badger.Txn, collName string, consumer docConsumer) error {
+	if txn == nil {
+		txn = s.db.NewTransaction(false)
+		defer txn.Discard()
+	}
+
+	ok, err := s.hasCollection(collName, txn)
+	if err != nil {
+		return err
+	}
+
+	if !ok {
+		return ErrCollectionNotExist
+	}
+
+	it := txn.NewIterator(badger.DefaultIteratorOptions)
+	defer it.Close()
+	prefix := []byte(collName + ":")
+	for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
+		err := it.Item().Value(func(data []byte) error {
+			doc, err := readDoc(data)
+			if err != nil {
+				return err
+			}
+			return consumer(doc)
+		})
+
+		if err != nil {
 			return err
 		}
 	}
@@ -371,12 +292,7 @@ func (s *storageImpl) iterateDocs(coll *collection, consumer docConsumer) error 
 }
 
 func (s *storageImpl) IterateDocs(collName string, consumer docConsumer) error {
-	s.lock.RLock()
-	defer s.lock.RUnlock()
-
-	coll, ok := s.collections[collName]
-	if !ok {
-		return ErrCollectionNotExist
-	}
-	return s.iterateDocs(coll, consumer)
+	txn := s.db.NewTransaction(false)
+	defer txn.Discard()
+	return s.iterateDocs(nil, collName, consumer)
 }
