@@ -102,6 +102,8 @@ func Marshal(v interface{}) (*Document, error) {
 		return nil, err
 	}
 	kvs := make(map[string]interface{})
-	json.Unmarshal(bs, &kvs)
-	return NewDocumentOf(kvs), nil
+	if json.Unmarshal(bs, &kvs) != nil {
+		return nil, err
+	}
+	return NewDocumentOf(kvs), err
 }
