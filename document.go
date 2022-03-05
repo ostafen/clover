@@ -96,12 +96,12 @@ func (doc *Document) Unmarshal(v interface{}) error {
 }
 
 // Marshal creates a document from the value pointed by v.
-func Marshal(v interface{}) *Document {
+func Marshal(v interface{}) (*Document, error) {
 	bs, err := json.Marshal(v)
 	if err != nil {
-		return nil
+		return nil, err
 	}
 	kvs := make(map[string]interface{})
 	json.Unmarshal(bs, &kvs)
-	return NewDocumentOf(kvs)
+	return NewDocumentOf(kvs), nil
 }
