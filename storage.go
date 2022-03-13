@@ -71,6 +71,35 @@ func newStorageImpl() *storageImpl {
 	}
 }
 
+func (c *collection) loadIndex() error {
+	if _, err := c.file.Seek(0, io.SeekStart); err != nil {
+		return err
+	}
+
+	offset := 0
+	sc := bufio.NewScanner(c.file)
+	for sc.Scan() {
+		if sc.Err() != nil {
+			return sc.Err()
+		}
+
+		doc := NewDocument()
+		if err := json.Unmarshal([]byte(sc.Text()), &doc.fields); err != nil {
+			return err
+		}
+
+		size := len(sc.Text())
+		ptr := docPointer{
+			offset: uint64(offset),
+			size:   uint32(size),
+		}
+		c.index[doc.ObjectId()] = ptr
+
+		offset += size + 1
+	}
+	return nil
+}
+
 func readCollectionFile(filename string) (*collectionFile, error) {
 	file, err := os.OpenFile(filename, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
 	if err != nil {
@@ -96,8 +125,19 @@ func (s *storageImpl) Open(path string) error {
 		if err != nil {
 			return err
 		}
+
 		collectionName := getBasename(filename)
-		s.collections[collectionName] = &collection{name: collectionName, file: collFile, index: make(map[string]docPointer)}
+		coll := &collection{
+			name:  collectionName,
+			file:  collFile,
+			index: make(map[string]docPointer),
+		}
+
+		if err := coll.loadIndex(); err != nil {
+			return err
+		}
+
+		s.collections[collectionName] = coll
 	}
 	return nil
 }
