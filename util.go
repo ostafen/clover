@@ -1,24 +1,8 @@
 package clover
 
 import (
-	"io/ioutil"
 	"os"
-	"path/filepath"
-	"strings"
 )
-
-func listDir(dir string) ([]string, error) {
-	fInfos, err := ioutil.ReadDir(dir)
-	if err != nil {
-		return nil, err
-	}
-
-	filenames := make([]string, 0, len(fInfos))
-	for _, info := range fInfos {
-		filenames = append(filenames, info.Name())
-	}
-	return filenames, nil
-}
 
 const defaultPermDir = 0777
 
@@ -27,11 +11,6 @@ func makeDirIfNotExists(dir string) error {
 		return err
 	}
 	return nil
-}
-
-func getBasename(filename string) string {
-	baseName := filepath.Base(filename)
-	return strings.TrimSuffix(baseName, filepath.Ext(baseName))
 }
 
 func copyMap(m map[string]interface{}) map[string]interface{} {
