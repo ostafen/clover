@@ -27,10 +27,7 @@ For there scenario, **cloverDB** may be a more suitable alternative.
 
 ## Database layout
 
-CloverDB abstracts the way collections are stored on disk through the **StorageEngine** interface.
-The default implementation stores each collection in a separate text file, with each line corresponding to a different document. Each insert, update or delete operation rewrites from scratch the file corresponding to a given collection. Thus, the cost of such operations increase as the amount of data grows. In return, the absence of dead records in each file speed-ups iteration at query time. Also, to allow for fast document retrieval by id, the size and the location of each document in the corresponding file are stored in an in-memory table.
-
-If you are really concerned about performance, you could write your own implementation.
+CloverDB abstracts the way collections are stored on disk through the **StorageEngine** interface. The default implementation is based on the [Badger](https://github.com/dgraph-io/badger) database key-value store. However, you could easily write your own storage engine implementation.
 
 
 ## API usage
