@@ -232,6 +232,38 @@ func TestOpenExisting(t *testing.T) {
 	require.Equal(t, 200, rows)
 }
 
+func TestReloadIndex(t *testing.T) {
+	dir, err := ioutil.TempDir("", "clover-test")
+	defer os.RemoveAll(dir)
+	require.NoError(t, err)
+
+	db, err := c.Open(dir)
+	require.NoError(t, err)
+
+	db.CreateCollection("myCollection")
+
+	doc := c.NewDocument()
+	doc.Set("hello", "clover!")
+
+	docId, err := db.InsertOne("myCollection", doc)
+	require.NoError(t, err)
+
+	doc, err = db.Query("myCollection").FindById(docId)
+	require.NoError(t, err)
+	require.Equal(t, docId, doc.ObjectId())
+
+	require.NoError(t, db.Close())
+
+	db, err = c.Open(dir)
+	require.NoError(t, err)
+
+	doc, err = db.Query("myCollection").FindById(docId)
+	require.NoError(t, err)
+	require.Equal(t, docId, doc.ObjectId())
+
+	require.NoError(t, db.Close())
+}
+
 func TestInvalidCriteria(t *testing.T) {
 	runCloverTest(t, "test-data/todos.json", func(t *testing.T, db *c.DB) {
 		docs, err := db.Query("todos").Where(c.Field("completed").Eq(func() {})).FindAll()

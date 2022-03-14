@@ -1,4 +1,7 @@
-# CloverDB :four_leaf_clover:
+<p align="center">
+<img width="300" src=".github/logo.png" border="0" alt="kelindar/column">
+</p>
+<h2 align="center">Lightweight document-oriented NoSQL Database</h2>
 
 [![Mentioned in Awesome Go](https://awesome.re/mentioned-badge.svg)](https://github.com/avelino/awesome-go)  
 [![Go Reference](https://pkg.go.dev/badge/badge/github.com/ostafen/clover.svg)](https://pkg.go.dev/github.com/ostafen/clover)
