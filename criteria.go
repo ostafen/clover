@@ -35,11 +35,27 @@ func (f *field) Exists() *Criteria {
 	}
 }
 
+func (f *field) NotExists() *Criteria {
+	return f.Exists().Not()
+}
+
+func (f *field) IsNil() *Criteria {
+	return f.Eq(nil)
+}
+
+func (f *field) IsNilOrNotExists() *Criteria {
+	return f.IsNil().Or(f.NotExists())
+}
+
 func (f *field) Eq(value interface{}) *Criteria {
 	return &Criteria{
 		p: func(doc *Document) bool {
 			normValue, err := normalize(value)
 			if err != nil {
+				return false
+			}
+
+			if !doc.Has(f.name) {
 				return false
 			}
 			return reflect.DeepEqual(doc.Get(f.name), normValue)

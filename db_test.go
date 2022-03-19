@@ -304,6 +304,35 @@ func TestExistsCriteria(t *testing.T) {
 	})
 }
 
+func TestNotExistsCriteria(t *testing.T) {
+	runCloverTest(t, "test-data/todos.json", func(t *testing.T, db *c.DB) {
+		n, err := db.Query("todos").Count()
+		require.NoError(t, err)
+
+		m, err := db.Query("todos").Where(c.Field("completed_date").NotExists()).Count()
+		require.Equal(t, n-1, m)
+	})
+}
+
+func TestIsNil(t *testing.T) {
+	runCloverTest(t, "test-data/todos.json", func(t *testing.T, db *c.DB) {
+		n, err := db.Query("todos").Where(c.Field("completed_date").IsNil()).Count()
+		require.NoError(t, err)
+		require.Equal(t, n, 1)
+	})
+}
+
+func TestIsNilOrNotExist(t *testing.T) {
+	runCloverTest(t, "test-data/todos.json", func(t *testing.T, db *c.DB) {
+		n, err := db.Query("todos").Count()
+		require.NoError(t, err)
+
+		m, err := db.Query("todos").Where(c.Field("completed_date").IsNilOrNotExists()).Count()
+		require.NoError(t, err)
+		require.Equal(t, n, m)
+	})
+}
+
 func TestEqCriteria(t *testing.T) {
 	runCloverTest(t, "test-data/todos.json", func(t *testing.T, db *c.DB) {
 		docs, err := db.Query("todos").Where(c.Field("completed").Eq(true)).FindAll()
