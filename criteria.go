@@ -2,6 +2,7 @@ package clover
 
 import (
 	"encoding/json"
+	"math/big"
 	"reflect"
 	"strings"
 )
@@ -75,7 +76,7 @@ func compareValues(v1 interface{}, v2 interface{}) (int, bool) {
 	if isFloat {
 		v2Float, isFloat := v2.(float64)
 		if isFloat {
-			return int(v1Float - v2Float), true
+			return big.NewFloat(v1Float).Cmp(big.NewFloat(v2Float)), true
 		}
 	}
 
