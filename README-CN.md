@@ -93,4 +93,4 @@ db.Query("todos").Where(c.Field("userId").In(5,8)).Delete()
 
 ## 贡献
 
-**CloverDB**正在积极开发中。任何贡献，以建议、错误报告或拉请求的形式，都是可以接受的 :blush:
+**CloverDB**正在积极开发中。任何以建议、错误报告或拉请求的形式做出的贡献，都是可以接受的。 :blush:
