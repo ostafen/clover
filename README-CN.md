@@ -32,7 +32,7 @@
 
 ## 安装
 确保你拥有Go运行环境 (需要Go 1.13 或者更高版本)
-```go
+```shell
   go get github.com/ostafen/clover
 ```
 

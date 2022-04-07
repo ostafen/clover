@@ -33,7 +33,7 @@ For there scenario, **CloverDB** may be a more suitable alternative.
 
 ## Installation
 Make sure you have a working Go environment (Go 1.13 or higher is required). 
-```go
+```shell
   go get github.com/ostafen/clover
 ```
 
