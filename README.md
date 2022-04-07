@@ -10,7 +10,9 @@
 [![codecov](https://codecov.io/gh/ostafen/clover/branch/main/graph/badge.svg?token=R06H8FR47O)](https://codecov.io/gh/ostafen/clover)
 [![Join the chat at https://gitter.im/cloverDB/community](https://badges.gitter.im/cloverDB/community.svg)](https://gitter.im/cloverDB/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-CloverDB is a lightweight NoSQL database designed for being simple and easily maintainable, thanks to its small code base. It has been inspired by [tinyDB](https://github.com/msiemens/tinydb).
+> English | [简体中文](README-CN.md)
+
+**CloverDB** is a lightweight NoSQL database designed for being simple and easily maintainable, thanks to its small code base. It has been inspired by [tinyDB](https://github.com/msiemens/tinydb).
 
 ## Features
 
@@ -21,14 +23,19 @@ CloverDB is a lightweight NoSQL database designed for being simple and easily ma
 
 ## Why CloverDB?
 
-CloverDB has been written for being easily maintenable. As such, it trades performance with simplicity, and is not intented to be an alternative to more performant databases such as **mongoDB** or **mySQL**.
+**CloverDB** has been written for being easily maintenable. As such, it trades performance with simplicity, and is not intented to be an alternative to more performant databases such as **MongoDB** or **MySQL**.
 However, there are projects where running a separate database server may result overkilled, and, for simple queries, network delay may be the major performance bottleneck.
-For there scenario, **cloverDB** may be a more suitable alternative.
+For there scenario, **CloverDB** may be a more suitable alternative.
 
 ## Database layout
 
-CloverDB abstracts the way collections are stored on disk through the **StorageEngine** interface. The default implementation is based on the [Badger](https://github.com/dgraph-io/badger) database key-value store. However, you could easily write your own storage engine implementation.
+**CloverDB** abstracts the way collections are stored on disk through the **StorageEngine** interface. The default implementation is based on the [Badger](https://github.com/dgraph-io/badger) database key-value store. However, you could easily write your own storage engine implementation.
 
+## Installation
+Make sure you have a working Go environment (Go 1.13 or higher is required). 
+```shell
+  go get github.com/ostafen/clover
+```
 
 ## API usage
 
@@ -95,4 +102,4 @@ db.Query("todos").Where(c.Field("userId").In(5,8)).Delete()
 
 ## Contributing
 
-CloverDB is actively developed. Any contribution, in the form of a suggestion, bug report or pull request, is well accepted :blush:
+**CloverDB** is actively developed. Any contribution, in the form of a suggestion, bug report or pull request, is well accepted :blush:

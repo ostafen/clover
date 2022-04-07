@@ -10,6 +10,8 @@
 [![codecov](https://codecov.io/gh/ostafen/clover/branch/main/graph/badge.svg?token=R06H8FR47O)](https://codecov.io/gh/ostafen/clover)
 [![Join the chat at https://gitter.im/cloverDB/community](https://badges.gitter.im/cloverDB/community.svg)](https://gitter.im/cloverDB/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
+> [English](README.md) | 简体中文
+
 **CloverDB** 是一个轻量级的NoSQL数据库，由于它的代码库很小，所以设计得简单且易于维护。它的灵感来自 [tinyDB](https://github.com/msiemens/tinydb).
 
 ## 特点
@@ -27,6 +29,12 @@
 
 **CloverDB**通过**StorageEngine**抽象的方式将集合存储在磁盘上。默认的实现基于[Badger](https://github.com/dgraph-io/badger)数据库键值存储。不管怎样
 ，您可以轻松地编写自己的存储引擎实现。
+
+## 安装
+确保你拥有Go运行环境 (需要Go 1.13 或者更高版本)
+```shell
+  go get github.com/ostafen/clover
+```
 
 ## API 用法
 
@@ -93,4 +101,4 @@ db.Query("todos").Where(c.Field("userId").In(5,8)).Delete()
 
 ## 贡献
 
-**CloverDB**正在积极开发中。任何以建议、错误报告或拉请求的形式做出的贡献，都是可以接受的。 :blush:
+**CloverDB** 正在积极开发中。任何以建议、错误报告或拉请求的形式做出的贡献，都是可以接受的。 :blush:
