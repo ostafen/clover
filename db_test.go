@@ -579,6 +579,19 @@ func TestOrCriteria(t *testing.T) {
 	})
 }
 
+func TestLimit(t *testing.T) {
+	runCloverTest(t, "test-data/todos.json", func(t *testing.T, db *c.DB) {
+		n, err := db.Query("todos").Count()
+		require.NoError(t, err)
+
+		for m := n / 2; m >= 1; m = m / 2 {
+			k, err := db.Query("todos").Limit(m).Count()
+			require.NoError(t, err)
+			require.Equal(t, m, k)
+		}
+	})
+}
+
 func genRandomFieldName() string {
 	const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 

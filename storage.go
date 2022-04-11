@@ -26,6 +26,8 @@ type StorageEngine interface {
 	Delete(q *Query) error
 }
 
+var errStopIteration = errors.New("iteration stop")
+
 type storageImpl struct {
 	db *badger.DB
 }
@@ -80,12 +82,22 @@ func (s *storageImpl) DropCollection(name string) error {
 
 func (s *storageImpl) FindAll(q *Query) ([]*Document, error) {
 	docs := make([]*Document, 0)
+
+	n := 0
 	err := s.IterateDocs(q.collection, func(doc *Document) error {
-		if q.satisfy(doc) {
-			docs = append(docs, doc)
+		if q.limit < 0 || n < q.limit {
+			if q.satisfy(doc) {
+				docs = append(docs, doc)
+				n++
+			}
+			return nil
 		}
-		return nil
+		return errStopIteration
 	})
+
+	if err == errStopIteration {
+		err = nil
+	}
 	return docs, err
 }
 

@@ -5,6 +5,7 @@ type Query struct {
 	engine     StorageEngine
 	collection string
 	criteria   *Criteria
+	limit      int
 }
 
 func (q *Query) satisfy(doc *Document) bool {
@@ -38,6 +39,7 @@ func (q *Query) Where(c *Criteria) *Query {
 		engine:     q.engine,
 		collection: q.collection,
 		criteria:   newCriteria,
+		limit:      q.limit,
 	}
 }
 
