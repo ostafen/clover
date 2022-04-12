@@ -94,10 +94,27 @@ updates["completed"] = true
 
 db.Query("todos").Where(c.Field("userId").Eq(1)).Update(updates)
 
-// buscar todos los "por hacer" (todos) pertenecientes al usuario con id 5 y 8
+// eliminar todos los "por hacer" (todos) pertenecientes al usuario con id 5 y 8
 db.Query("todos").Where(c.Field("userId").In(5,8)).Delete()
 ```
 
+### Actualizar un único documento
+```go
+db, _ := c.Open("../test-data/todos")
+
+updates := make(map[string]interface{})
+updates["completed"] = true
+
+// puedes, o bien obtener la _id
+doc, _ := db.Query("todos").Where(c.Field("userId").Eq(2)).FindFirst()
+docId := doc.Get("_id")
+
+// o utilizar una cadena de texto, por ejemplo:
+// docId := "1dbce353-d3c6-43b3-b5a8-80d8d876389b"
+
+// actualizar un único documento con el campo _id
+db.Query("todos").Where(c.Field("_id").Eq(docId)).Update(updates)
+```
 ## Contribuir
 
 **CloverDB** se desarrolla de forma activa. Cualquier contribución, en forma de sugerencia, reporte de errores o pull request es bienvenido :blush:
