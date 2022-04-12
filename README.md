@@ -100,6 +100,24 @@ db.Query("todos").Where(c.Field("userId").Eq(1)).Update(updates)
 db.Query("todos").Where(c.Field("userId").In(5,8)).Delete()
 ```
 
+### Update a single document
+```go
+db, _ := c.Open("../test-data/todos")
+
+updates := make(map[string]interface{})
+updates["completed"] = true
+
+// you can either obtain the _id
+doc, _ := db.Query("todos").Where(c.Field("userId").Eq(2)).FindFirst()
+docId := doc.Get("_id")
+
+// or using a string
+// docId := "1dbce353-d3c6-43b3-b5a8-80d8d876389b"
+
+// update a single document with the _id field
+db.Query("todos").Where(c.Field("_id").Eq(docId)).Update(updates)
+```
+
 ## Contributing
 
 **CloverDB** is actively developed. Any contribution, in the form of a suggestion, bug report or pull request, is well accepted :blush:
