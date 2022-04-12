@@ -232,18 +232,6 @@ func (c *Criteria) Not() *Criteria {
 	}
 }
 
-// Limit sets the query q to consider at most n records.
-// As a consequence, the FindAll() method will output at most n documents,
-// and any integer m returned by Count() will satisfy the condition m <= n.
-func (q *Query) Limit(n int) *Query {
-	return &Query{
-		engine:     q.engine,
-		collection: q.collection,
-		criteria:   q.criteria,
-		limit:      n,
-	}
-}
-
 func normalize(value interface{}) (interface{}, error) {
 	var normalized interface{}
 	bytes, err := json.Marshal(value)

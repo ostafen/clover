@@ -43,6 +43,18 @@ func (q *Query) Where(c *Criteria) *Query {
 	}
 }
 
+// Limit sets the query q to consider at most n records.
+// As a consequence, the FindAll() method will output at most n documents,
+// and any integer m returned by Count() will satisfy the condition m <= n.
+func (q *Query) Limit(n int) *Query {
+	return &Query{
+		engine:     q.engine,
+		collection: q.collection,
+		criteria:   q.criteria,
+		limit:      n,
+	}
+}
+
 // FindById returns the document with the given id, if such a document exists and satisfies the underlying query, or null.
 func (q *Query) FindById(id string) (*Document, error) {
 	return q.engine.FindById(q.collection, id)
