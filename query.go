@@ -53,6 +53,17 @@ func (q *Query) FindAll() ([]*Document, error) {
 	return q.engine.FindAll(q)
 }
 
+// FindFirst returns the first document (if any) satisfying the query.
+func (q *Query) FindFirst() (*Document, error) {
+	docs, err := q.Limit(1).FindAll()
+
+	var doc *Document
+	if len(docs) > 0 {
+		doc = docs[0]
+	}
+	return doc, err
+}
+
 // Update updates all the document selected by q using the provided updateMap.
 // Each update is specified by a mapping fieldName -> newValue.
 func (q *Query) Update(updateMap map[string]interface{}) error {

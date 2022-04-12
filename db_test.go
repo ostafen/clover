@@ -592,6 +592,16 @@ func TestLimit(t *testing.T) {
 	})
 }
 
+func TestFindFirst(t *testing.T) {
+	runCloverTest(t, "test-data/todos.json", func(t *testing.T, db *c.DB) {
+		doc, err := db.Query("todos").Where(c.Field("completed").Eq(true)).FindFirst()
+		require.NoError(t, err)
+		require.NotNil(t, doc)
+
+		require.Equal(t, doc.Get("completed"), true)
+	})
+}
+
 func genRandomFieldName() string {
 	const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
