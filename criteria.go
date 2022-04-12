@@ -1,7 +1,6 @@
 package clover
 
 import (
-	"encoding/json"
 	"math/big"
 	"reflect"
 	"strings"
@@ -230,14 +229,4 @@ func (c *Criteria) Not() *Criteria {
 	return &Criteria{
 		p: negatePredicate(c.p),
 	}
-}
-
-func normalize(value interface{}) (interface{}, error) {
-	var normalized interface{}
-	bytes, err := json.Marshal(value)
-	if err != nil {
-		return nil, err
-	}
-	err = json.Unmarshal(bytes, &normalized)
-	return normalized, err
 }
