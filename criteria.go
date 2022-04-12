@@ -44,6 +44,14 @@ func (f *field) IsNil() *Criteria {
 	return f.Eq(nil)
 }
 
+func (f *field) IsTrue() *Criteria {
+	return f.Eq(true)
+}
+
+func (f *field) IsFalse() *Criteria {
+	return f.Eq(false)
+}
+
 func (f *field) IsNilOrNotExists() *Criteria {
 	return f.IsNil().Or(f.NotExists())
 }

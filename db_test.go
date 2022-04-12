@@ -322,6 +322,30 @@ func TestIsNil(t *testing.T) {
 	})
 }
 
+func TestIsTrue(t *testing.T) {
+	runCloverTest(t, "test-data/todos.json", func(t *testing.T, db *c.DB) {
+		n, err := db.Query("todos").Where(c.Field("completed").Eq(true)).Count()
+		require.NoError(t, err)
+
+		m, err := db.Query("todos").Where(c.Field("completed").IsTrue()).Count()
+		require.NoError(t, err)
+
+		require.Equal(t, n, m)
+	})
+}
+
+func TestIsFalse(t *testing.T) {
+	runCloverTest(t, "test-data/todos.json", func(t *testing.T, db *c.DB) {
+		n, err := db.Query("todos").Where(c.Field("completed").Eq(false)).Count()
+		require.NoError(t, err)
+
+		m, err := db.Query("todos").Where(c.Field("completed").IsFalse()).Count()
+		require.NoError(t, err)
+
+		require.Equal(t, n, m)
+	})
+}
+
 func TestIsNilOrNotExist(t *testing.T) {
 	runCloverTest(t, "test-data/todos.json", func(t *testing.T, db *c.DB) {
 		n, err := db.Query("todos").Count()
