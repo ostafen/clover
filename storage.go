@@ -3,6 +3,7 @@ package clover
 import (
 	"encoding/json"
 	"errors"
+	"sort"
 
 	badger "github.com/dgraph-io/badger/v3"
 )
@@ -310,9 +311,48 @@ func (s *storageImpl) iterateDocs(txn *badger.Txn, q *Query, consumer docConsume
 	return nil
 }
 
-func (s *storageImpl) IterateDocs(q *Query, consumer docConsumer) error {
-	txn := s.db.NewTransaction(false)
-	defer txn.Discard()
+func (s *storageImpl) iterateDocsSlice(q *Query, consumer docConsumer) error {
+	allDocs := make([]*Document, 0)
+	err := s.iterateDocs(nil, q.Skip(0).Limit(-1), func(doc *Document) error {
+		allDocs = append(allDocs, doc)
+		return nil
+	})
 
-	return s.iterateDocs(nil, q, consumer)
+	if err != nil {
+		return err
+	}
+
+	sort.Slice(allDocs, func(i, j int) bool {
+		return compareDocuments(allDocs[i], allDocs[j], q.sortOpts) < 0
+	})
+
+	docsToSkip := q.skip
+	if len(allDocs) < q.skip {
+		docsToSkip = len(allDocs)
+	}
+	allDocs = allDocs[docsToSkip:]
+
+	if q.limit >= 0 && len(allDocs) > q.limit {
+		allDocs = allDocs[:q.limit]
+	}
+
+	for _, doc := range allDocs {
+		err = consumer(doc)
+		if err == errStopIteration {
+			return nil
+		}
+
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *storageImpl) IterateDocs(q *Query, consumer docConsumer) error {
+	sortDocs := len(q.sortOpts) > 0
+	if !sortDocs {
+		return s.iterateDocs(nil, q, consumer)
+	}
+	return s.iterateDocsSlice(q, consumer)
 }

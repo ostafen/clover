@@ -26,6 +26,7 @@ func (db *DB) Query(name string) *Query {
 		engine:     db.engine,
 		limit:      -1,
 		skip:       0,
+		sortOpts:   nil,
 	}
 }
 

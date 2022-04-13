@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 
@@ -666,6 +667,35 @@ func TestForEach(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.Equal(t, n, m)
+	})
+}
+
+func TestSort(t *testing.T) {
+	runCloverTest(t, "test-data/airlines.json", func(t *testing.T, db *c.DB) {
+		sortOpts := []c.SortOption{{"Statistics.Flights.Total", 1}, {"Statistics.Flights.Cancelled", -1}}
+
+		docs, err := db.Query("airlines").Sort(sortOpts...).FindAll()
+		require.NoError(t, err)
+
+		totals := make([]int, 0, len(docs))
+		cancelled := make([]int, 0, len(docs))
+		for _, doc := range docs {
+			if doc.Has("Statistics.Flights.Total") {
+				total := int(doc.Get("Statistics.Flights.Total").(float64))
+				deleted := int(doc.Get("Statistics.Flights.Cancelled").(float64))
+
+				totals = append(totals, total)
+				cancelled = append(cancelled, deleted)
+			}
+		}
+
+		sorted := sort.SliceIsSorted(docs, func(i, j int) bool {
+			if totals[i] != totals[j] {
+				return totals[i] < totals[j]
+			}
+			return cancelled[i] > cancelled[j]
+		})
+		require.True(t, sorted)
 	})
 }
 

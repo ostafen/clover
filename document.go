@@ -94,3 +94,31 @@ func (doc *Document) Unmarshal(v interface{}) error {
 	}
 	return json.Unmarshal(bytes, v)
 }
+
+func compareDocuments(first *Document, second *Document, sortOpts []SortOption) int {
+	for _, opt := range sortOpts {
+		field := opt.Field
+		direction := opt.Direction
+
+		firstHas := first.Has(field)
+		secondHas := second.Has(field)
+
+		if !firstHas && secondHas {
+			return -direction
+		}
+
+		if firstHas && !secondHas {
+			return direction
+		}
+
+		if firstHas && secondHas {
+			res, canCompare := compareValues(first.Get(field), second.Get(field))
+			if canCompare {
+				if res != 0 {
+					return res * direction
+				}
+			}
+		}
+	}
+	return 0
+}

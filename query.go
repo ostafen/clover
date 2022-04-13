@@ -7,6 +7,7 @@ type Query struct {
 	criteria   *Criteria
 	limit      int
 	skip       int
+	sortOpts   []SortOption
 }
 
 func (q *Query) copy() *Query {
@@ -63,6 +64,40 @@ func (q *Query) Skip(n int) *Query {
 func (q *Query) Limit(n int) *Query {
 	newQuery := q.copy()
 	newQuery.limit = n
+	return newQuery
+}
+
+// SortOption is used to specify sorting options to the Sort method.
+// It consists of a field name and a sorting direction (1 for ascending and -1 for descending).
+// Any other positive of negative value (except from 1 and -1) will be equivalent, respectively, to 1 or -1.
+// A direction value of 0 (which is also the default value) is assumed to be ascending.
+type SortOption struct {
+	Field     string
+	Direction int
+}
+
+func normalizeSortOptions(opts []SortOption) []SortOption {
+	normOpts := make([]SortOption, 0, len(opts))
+	for _, opt := range opts {
+		if opt.Direction >= 0 {
+			normOpts = append(normOpts, SortOption{Field: opt.Field, Direction: 1})
+		} else {
+			normOpts = append(normOpts, SortOption{Field: opt.Field, Direction: -1})
+		}
+	}
+	return normOpts
+}
+
+// Sort sets the query so that the returned documents are sorted according list of options.
+func (q *Query) Sort(opts ...SortOption) *Query {
+	if len(opts) == 0 { // by default, documents are sorted documents by "_id" field
+		opts = []SortOption{{Field: objectIdField, Direction: 1}}
+	} else {
+		opts = normalizeSortOptions(opts)
+	}
+
+	newQuery := q.copy()
+	newQuery.sortOpts = opts
 	return newQuery
 }
 
