@@ -121,3 +121,8 @@ db.Query("todos").Where(c.Field("_id").Eq(docId)).Update(updates)
 ## Contributing
 
 **CloverDB** is actively developed. Any contribution, in the form of a suggestion, bug report or pull request, is well accepted :blush:
+
+Major contributions and suggestions have been gratefully received from (in alphabetical order):
+
+- [ASWLaunchs](https://github.com/ASWLaunchs)
+- [jsgm](https://github.com/jsgm)
