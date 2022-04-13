@@ -20,7 +20,13 @@ type DB struct {
 
 // Query simply returns the collection with the supplied name. Use it to initialize a new query.
 func (db *DB) Query(name string) *Query {
-	return &Query{collection: name, criteria: nil, engine: db.engine, limit: -1}
+	return &Query{
+		collection: name,
+		criteria:   nil,
+		engine:     db.engine,
+		limit:      -1,
+		skip:       0,
+	}
 }
 
 // CreateCollection creates a new empty collection with the given name.
