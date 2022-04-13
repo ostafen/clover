@@ -99,6 +99,24 @@ db.Query("todos").Where(c.Field("userId").Eq(1)).Update(updates)
 db.Query("todos").Where(c.Field("userId").In(5,8)).Delete()
 ```
 
+### 更新一个单独的文档
+```go
+db, _ := c.Open("../test-data/todos")
+
+updates := make(map[string]interface{})
+updates["completed"] = true
+
+// 您可以得到 _id
+doc, _ := db.Query("todos").Where(c.Field("userId").Eq(2)).FindFirst()
+docId := doc.Get("_id")
+
+// 或者使用一段字符串
+// docId := "1dbce353-d3c6-43b3-b5a8-80d8d876389b"
+
+//根据_id更新单独的文档
+db.Query("todos").Where(c.Field("_id").Eq(docId)).Update(updates)
+```
+
 ## 贡献
 
 **CloverDB** 正在积极开发中。任何以建议、错误报告或拉请求的形式做出的贡献，都是可以接受的。 :blush:
