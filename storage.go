@@ -20,7 +20,7 @@ type StorageEngine interface {
 	FindAll(q *Query) ([]*Document, error)
 	FindById(collectionName string, id string) (*Document, error)
 	DeleteById(collectionName string, id string) error
-	IterateDocs(collectionName string, consumer docConsumer) error
+	IterateDocs(q *Query, consumer docConsumer) error
 	Insert(collection string, docs ...*Document) error
 	Update(q *Query, updateMap map[string]interface{}) error
 	Delete(q *Query) error
@@ -83,28 +83,12 @@ func (s *storageImpl) DropCollection(name string) error {
 func (s *storageImpl) FindAll(q *Query) ([]*Document, error) {
 	docs := make([]*Document, 0)
 
-	nSkipped := 0
-
-	n := 0
-	err := s.IterateDocs(q.collection, func(doc *Document) error {
-		if nSkipped < q.skip {
-			nSkipped++
-			return nil
+	err := s.IterateDocs(q, func(doc *Document) error {
+		if q.satisfy(doc) {
+			docs = append(docs, doc)
 		}
-
-		if q.limit < 0 || n < q.limit {
-			if q.satisfy(doc) {
-				docs = append(docs, doc)
-				n++
-			}
-			return nil
-		}
-		return errStopIteration
+		return nil
 	})
-
-	if err == errStopIteration {
-		err = nil
-	}
 	return docs, err
 }
 
@@ -188,7 +172,7 @@ func (s *storageImpl) replaceDocs(txn *badger.Txn, q *Query, updater docUpdater)
 	}
 
 	docs := make([]*Document, 0)
-	s.iterateDocs(txn, q.collection, func(doc *Document) error {
+	s.iterateDocs(txn, q, func(doc *Document) error {
 		if q.satisfy(doc) {
 			docs = append(docs, doc)
 		}
@@ -276,13 +260,13 @@ func (s *storageImpl) HasCollection(name string) (bool, error) {
 	return s.hasCollection(name, txn)
 }
 
-func (s *storageImpl) iterateDocs(txn *badger.Txn, collName string, consumer docConsumer) error {
+func (s *storageImpl) iterateDocs(txn *badger.Txn, q *Query, consumer docConsumer) error {
 	if txn == nil {
 		txn = s.db.NewTransaction(false)
 		defer txn.Discard()
 	}
 
-	ok, err := s.hasCollection(collName, txn)
+	ok, err := s.hasCollection(q.collection, txn)
 	if err != nil {
 		return err
 	}
@@ -293,15 +277,31 @@ func (s *storageImpl) iterateDocs(txn *badger.Txn, collName string, consumer doc
 
 	it := txn.NewIterator(badger.DefaultIteratorOptions)
 	defer it.Close()
-	prefix := []byte(collName + ":")
-	for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
+	prefix := []byte(q.collection + ":")
+
+	it.Seek(prefix)
+	for i := 0; i < q.skip && it.ValidForPrefix(prefix); i++ { // skip the first q.skip documents
+		it.Next()
+	}
+
+	for n := 0; (q.limit < 0 || n < q.limit) && it.ValidForPrefix(prefix); it.Next() {
 		err := it.Item().Value(func(data []byte) error {
 			doc, err := readDoc(data)
 			if err != nil {
 				return err
 			}
-			return consumer(doc)
+
+			if q.satisfy(doc) {
+				n++
+				return consumer(doc)
+			}
+			return nil
 		})
+
+		// do not propagate iteration stop error
+		if err == errStopIteration {
+			return nil
+		}
 
 		if err != nil {
 			return err
@@ -310,8 +310,9 @@ func (s *storageImpl) iterateDocs(txn *badger.Txn, collName string, consumer doc
 	return nil
 }
 
-func (s *storageImpl) IterateDocs(collName string, consumer docConsumer) error {
+func (s *storageImpl) IterateDocs(q *Query, consumer docConsumer) error {
 	txn := s.db.NewTransaction(false)
 	defer txn.Discard()
-	return s.iterateDocs(nil, collName, consumer)
+
+	return s.iterateDocs(nil, q, consumer)
 }
