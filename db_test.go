@@ -654,6 +654,36 @@ func TestFindFirst(t *testing.T) {
 	})
 }
 
+func TestForEach(t *testing.T) {
+	runCloverTest(t, "test-data/todos.json", func(t *testing.T, db *c.DB) {
+		n, err := db.Query("todos").Where(c.Field("completed").IsTrue()).Count()
+		require.NoError(t, err)
+
+		m := 0
+		err = db.Query("todos").Where(c.Field("completed").IsTrue()).ForEach(func(doc *c.Document) bool {
+			m++
+			return true
+		})
+		require.NoError(t, err)
+		require.Equal(t, n, m)
+	})
+}
+
+func TestForEachStop(t *testing.T) {
+	runCloverTest(t, "test-data/todos.json", func(t *testing.T, db *c.DB) {
+		n := 0
+		err := db.Query("todos").ForEach(func(doc *c.Document) bool {
+			if n < 100 {
+				n++
+				return true
+			}
+			return false
+		})
+		require.NoError(t, err)
+		require.Equal(t, n, 100)
+	})
+}
+
 func genRandomFieldName() string {
 	const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 

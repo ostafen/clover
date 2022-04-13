@@ -89,6 +89,17 @@ func (q *Query) FindFirst() (*Document, error) {
 	return doc, err
 }
 
+// ForEach runs the consumer function for each document matching the provied query.
+// If false is returned from the consumer function, then the iteration is stopped.
+func (q *Query) ForEach(consumer func(_ *Document) bool) error {
+	return q.engine.IterateDocs(q, func(doc *Document) error {
+		if !consumer(doc) {
+			return errStopIteration
+		}
+		return nil
+	})
+}
+
 // Update updates all the document selected by q using the provided updateMap.
 // Each update is specified by a mapping fieldName -> newValue.
 func (q *Query) Update(updateMap map[string]interface{}) error {
