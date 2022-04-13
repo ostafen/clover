@@ -9,6 +9,16 @@ type Query struct {
 	skip       int
 }
 
+func (q *Query) copy() *Query {
+	return &Query{
+		engine:     q.engine,
+		collection: q.collection,
+		criteria:   q.criteria,
+		limit:      q.limit,
+		skip:       q.skip,
+	}
+}
+
 func (q *Query) satisfy(doc *Document) bool {
 	if q.criteria == nil {
 		return true
@@ -36,36 +46,24 @@ func (q *Query) Where(c *Criteria) *Query {
 		newCriteria = newCriteria.And(c)
 	}
 
-	return &Query{
-		engine:     q.engine,
-		collection: q.collection,
-		criteria:   newCriteria,
-		limit:      q.limit,
-		skip:       q.skip,
-	}
+	newQuery := q.copy()
+	newQuery.criteria = newCriteria
+	return newQuery
 }
 
 func (q *Query) Skip(n int) *Query {
-	return &Query{
-		engine:     q.engine,
-		collection: q.collection,
-		criteria:   q.criteria,
-		limit:      q.limit,
-		skip:       n,
-	}
+	newQuery := q.copy()
+	newQuery.skip = n
+	return newQuery
 }
 
 // Limit sets the query q to consider at most n records.
 // As a consequence, the FindAll() method will output at most n documents,
 // and any integer m returned by Count() will satisfy the condition m <= n.
 func (q *Query) Limit(n int) *Query {
-	return &Query{
-		engine:     q.engine,
-		collection: q.collection,
-		criteria:   q.criteria,
-		limit:      n,
-		skip:       q.skip,
-	}
+	newQuery := q.copy()
+	newQuery.limit = n
+	return newQuery
 }
 
 // FindById returns the document with the given id, if such a document exists and satisfies the underlying query, or null.
