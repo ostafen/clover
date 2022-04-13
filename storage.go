@@ -83,8 +83,15 @@ func (s *storageImpl) DropCollection(name string) error {
 func (s *storageImpl) FindAll(q *Query) ([]*Document, error) {
 	docs := make([]*Document, 0)
 
+	nSkipped := 0
+
 	n := 0
 	err := s.IterateDocs(q.collection, func(doc *Document) error {
+		if nSkipped < q.skip {
+			nSkipped++
+			return nil
+		}
+
 		if q.limit < 0 || n < q.limit {
 			if q.satisfy(doc) {
 				docs = append(docs, doc)

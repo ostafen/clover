@@ -616,6 +616,20 @@ func TestLimit(t *testing.T) {
 	})
 }
 
+func TestSkip(t *testing.T) {
+	runCloverTest(t, "test-data/todos.json", func(t *testing.T, db *c.DB) {
+		allDocs, err := db.Query("todos").FindAll()
+		require.NoError(t, err)
+		require.Len(t, allDocs, 200)
+
+		skipDocs, err := db.Query("todos").Skip(100).FindAll()
+		require.NoError(t, err)
+
+		require.Len(t, skipDocs, 100)
+		require.Equal(t, allDocs[100:], skipDocs)
+	})
+}
+
 func TestFindFirst(t *testing.T) {
 	runCloverTest(t, "test-data/todos.json", func(t *testing.T, db *c.DB) {
 		doc, err := db.Query("todos").Where(c.Field("completed").Eq(true)).FindFirst()

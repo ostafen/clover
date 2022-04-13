@@ -6,6 +6,7 @@ type Query struct {
 	collection string
 	criteria   *Criteria
 	limit      int
+	skip       int
 }
 
 func (q *Query) satisfy(doc *Document) bool {
@@ -40,6 +41,17 @@ func (q *Query) Where(c *Criteria) *Query {
 		collection: q.collection,
 		criteria:   newCriteria,
 		limit:      q.limit,
+		skip:       q.skip,
+	}
+}
+
+func (q *Query) Skip(n int) *Query {
+	return &Query{
+		engine:     q.engine,
+		collection: q.collection,
+		criteria:   q.criteria,
+		limit:      q.limit,
+		skip:       n,
 	}
 }
 
@@ -52,6 +64,7 @@ func (q *Query) Limit(n int) *Query {
 		collection: q.collection,
 		criteria:   q.criteria,
 		limit:      n,
+		skip:       q.skip,
 	}
 }
 
