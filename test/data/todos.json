@@ -2,10 +2,10 @@
     {
         "_id": "334ac238-c246-45b7-b9ab-1dd315748823",
         "completed": false,
-        "completed_date": null,
         "id": 1,
         "title": "delectus aut autem",
-        "userId": 1
+        "userId": 1,
+        "notes": null
     },
     {
         "_id": "1a226709-cb2c-4cb2-a2bb-f6292e7c4801",
@@ -24,6 +24,7 @@
     {
         "_id": "42246511-f891-4b2e-8564-ba30d35ee3a4",
         "completed": true,
+        "completed_date": "2020-01-29T22:54:41+01:00",
         "id": 4,
         "title": "et porro tempora",
         "userId": 1
@@ -52,6 +53,7 @@
     {
         "_id": "1751f373-84b9-4728-b9e9-06a76cd18392",
         "completed": true,
+        "completed_date": "2020-05-06T13:31:27+02:00",
         "id": 8,
         "title": "quo adipisci enim quam ut ab",
         "userId": 1
@@ -66,6 +68,7 @@
     {
         "_id": "8b4423b2-9bb4-414f-b11c-6b9d798c382f",
         "completed": true,
+        "completed_date": "2020-01-18T18:30:47+01:00",
         "id": 10,
         "title": "illo est ratione doloremque quia maiores aut",
         "userId": 1
@@ -73,6 +76,7 @@
     {
         "_id": "8e384f95-46cb-46ed-8c63-c98ae8dc5123",
         "completed": true,
+        "completed_date": "2021-01-14T11:40:59+01:00",
         "id": 11,
         "title": "vero rerum temporibus dolor",
         "userId": 1
@@ -80,6 +84,7 @@
     {
         "_id": "c378d159-3e8b-446f-a6c3-37d0829d9b4a",
         "completed": true,
+        "completed_date": "2020-02-24T11:08:01+01:00",
         "id": 12,
         "title": "ipsa repellendus fugit nisi",
         "userId": 1
@@ -94,6 +99,7 @@
     {
         "_id": "2d43b9da-3558-484c-81ca-0454e49924c3",
         "completed": true,
+        "completed_date": "2021-07-25T03:55:18+02:00",
         "id": 14,
         "title": "repellendus sunt dolores architecto voluptatum",
         "userId": 1
@@ -101,6 +107,7 @@
     {
         "_id": "1cc89667-e6f1-4dfa-904b-6ccc5e9a7a46",
         "completed": true,
+        "completed_date": "2020-05-11T12:00:25+02:00",
         "id": 15,
         "title": "ab voluptatum amet voluptas",
         "userId": 1
@@ -108,6 +115,7 @@
     {
         "_id": "8853116b-c35b-436d-8d8a-b83bf8edcf3a",
         "completed": true,
+        "completed_date": "2020-05-20T09:22:20+02:00",
         "id": 16,
         "title": "accusamus eos facilis sint et aut voluptatem",
         "userId": 1
@@ -115,6 +123,7 @@
     {
         "_id": "bb8efbc9-ada6-434f-84cb-26a72fa78003",
         "completed": true,
+        "completed_date": "2020-06-09T06:34:16+02:00",
         "id": 17,
         "title": "quo laboriosam deleniti aut qui",
         "userId": 1
@@ -129,6 +138,7 @@
     {
         "_id": "38154e00-90a3-4bf8-92f4-e5cb654cfadc",
         "completed": true,
+        "completed_date": "2021-12-30T05:55:00+01:00",
         "id": 19,
         "title": "molestiae ipsa aut voluptatibus pariatur dolor nihil",
         "userId": 1
@@ -136,6 +146,7 @@
     {
         "_id": "70149926-4e57-46c1-9783-2b9b8e457eb5",
         "completed": true,
+        "completed_date": "2020-02-25T17:18:14+01:00",
         "id": 20,
         "title": "ullam nobis libero sapiente ad optio sint",
         "userId": 1
@@ -150,6 +161,7 @@
     {
         "_id": "26cbd12a-6cb5-4d08-aefb-dca7e771a596",
         "completed": true,
+        "completed_date": "2021-12-24T04:08:31+01:00",
         "id": 22,
         "title": "distinctio vitae autem nihil ut molestias quo",
         "userId": 2
@@ -171,6 +183,7 @@
     {
         "_id": "dd3acf84-d802-4658-91eb-27bca1a834c4",
         "completed": true,
+        "completed_date": "2020-03-16T14:22:42+01:00",
         "id": 25,
         "title": "voluptas quo tenetur perspiciatis explicabo natus",
         "userId": 2
@@ -178,6 +191,7 @@
     {
         "_id": "51a6ec7e-3e47-4de4-a1ed-67918316153a",
         "completed": true,
+        "completed_date": "2021-04-06T08:51:29+02:00",
         "id": 26,
         "title": "aliquam aut quasi",
         "userId": 2
@@ -185,6 +199,7 @@
     {
         "_id": "a3e0b750-dcc8-46a4-97e4-508daddd9a9f",
         "completed": true,
+        "completed_date": "2021-02-09T10:05:28+01:00",
         "id": 27,
         "title": "veritatis pariatur delectus",
         "userId": 2
@@ -206,6 +221,7 @@
     {
         "_id": "8006a5a7-a27a-43c2-9c46-a762252ed46a",
         "completed": true,
+        "completed_date": "2021-02-08T08:41:14+01:00",
         "id": 30,
         "title": "nemo perspiciatis repellat ut dolor libero commodi blanditiis omnis",
         "userId": 2
@@ -241,6 +257,7 @@
     {
         "_id": "640487f5-c3a1-4f1f-ac3f-36fa42bd0638",
         "completed": true,
+        "completed_date": "2020-10-11T22:26:51+02:00",
         "id": 35,
         "title": "repellendus veritatis molestias dicta incidunt",
         "userId": 2
@@ -248,6 +265,7 @@
     {
         "_id": "10baaae1-ef19-4182-bbe1-ce20e05ba917",
         "completed": true,
+        "completed_date": "2021-06-19T04:04:05+02:00",
         "id": 36,
         "title": "excepturi deleniti adipisci voluptatem et neque optio illum ad",
         "userId": 2
@@ -276,6 +294,7 @@
     {
         "_id": "bd6af437-0f88-4bcb-a05a-0096b949b185",
         "completed": true,
+        "completed_date": "2021-01-13T18:47:17+01:00",
         "id": 40,
         "title": "totam atque quo nesciunt",
         "userId": 2
@@ -297,6 +316,7 @@
     {
         "_id": "6567d9ed-3c2a-454f-a0d2-90f7d45e06dc",
         "completed": true,
+        "completed_date": "2020-07-01T05:58:26+02:00",
         "id": 43,
         "title": "tempore ut sint quis recusandae",
         "userId": 3
@@ -304,6 +324,7 @@
     {
         "_id": "33ed36d1-44ff-4f24-b99b-580c2b690f2c",
         "completed": true,
+        "completed_date": "2021-07-04T07:41:35+02:00",
         "id": 44,
         "title": "cum debitis quis accusamus doloremque ipsa natus sapiente omnis",
         "userId": 3
@@ -346,6 +367,7 @@
     {
         "_id": "62f64b87-dbfe-46db-8f9a-4c5edcb49111",
         "completed": true,
+        "completed_date": "2021-12-20T13:11:06+01:00",
         "id": 50,
         "title": "cupiditate necessitatibus ullam aut quis dolor voluptate",
         "userId": 3
@@ -374,6 +396,7 @@
     {
         "_id": "b2f8f692-6d48-4ff9-afa9-83aba3d86d12",
         "completed": true,
+        "completed_date": "2021-11-15T04:52:08+01:00",
         "id": 54,
         "title": "quis et est ut voluptate quam dolor",
         "userId": 3
@@ -381,6 +404,7 @@
     {
         "_id": "f382462e-7191-47ba-89f9-4952d804fbed",
         "completed": true,
+        "completed_date": "2021-03-13T09:10:58+01:00",
         "id": 55,
         "title": "voluptatum omnis minima qui occaecati provident nulla voluptatem ratione",
         "userId": 3
@@ -388,6 +412,7 @@
     {
         "_id": "a8fa0759-4da8-4bed-adad-3bf6af1cc305",
         "completed": true,
+        "completed_date": "2021-06-19T11:27:27+02:00",
         "id": 56,
         "title": "deleniti ea temporibus enim",
         "userId": 3
@@ -416,6 +441,7 @@
     {
         "_id": "17fc10da-e874-41c8-97c4-f5acbf45d53a",
         "completed": true,
+        "completed_date": "2021-09-26T02:39:07+02:00",
         "id": 60,
         "title": "et sequi qui architecto ut adipisci",
         "userId": 3
@@ -423,6 +449,7 @@
     {
         "_id": "6330487e-18a6-422a-83c5-5bed598531c1",
         "completed": true,
+        "completed_date": "2021-12-06T08:18:07+01:00",
         "id": 61,
         "title": "odit optio omnis qui sunt",
         "userId": 4
@@ -437,6 +464,7 @@
     {
         "_id": "f13e4e8c-7219-4a9a-a665-5201488d1b75",
         "completed": true,
+        "completed_date": "2021-09-26T17:21:28+02:00",
         "id": 63,
         "title": "doloremque aut dolores quidem fuga qui nulla",
         "userId": 4
@@ -507,6 +535,7 @@
     {
         "_id": "6d6e12f5-c368-4211-9cfe-c808f926be76",
         "completed": true,
+        "completed_date": "2021-05-23T02:26:30+02:00",
         "id": 73,
         "title": "sint amet quia totam corporis qui exercitationem commodi",
         "userId": 4
@@ -528,6 +557,7 @@
     {
         "_id": "e807cc93-7f89-41d2-bd69-cafcb7bb6015",
         "completed": true,
+        "completed_date": "2020-03-08T02:10:15+01:00",
         "id": 76,
         "title": "sequi dolorem sed",
         "userId": 4
@@ -549,6 +579,7 @@
     {
         "_id": "d434445f-6edb-4796-9ac5-fe55776e91b7",
         "completed": true,
+        "completed_date": "2020-09-26T16:59:01+02:00",
         "id": 79,
         "title": "eum ipsa maxime ut",
         "userId": 4
@@ -556,6 +587,7 @@
     {
         "_id": "fa0545ad-4e74-4893-9a71-4a1538517227",
         "completed": true,
+        "completed_date": "2021-12-04T12:26:48+01:00",
         "id": 80,
         "title": "tempore molestias dolores rerum sequi voluptates ipsum consequatur",
         "userId": 4
@@ -563,6 +595,7 @@
     {
         "_id": "bd52034c-7bee-4fef-bdab-df579a89e7dc",
         "completed": true,
+        "completed_date": "2020-07-04T08:29:47+02:00",
         "id": 81,
         "title": "suscipit qui totam",
         "userId": 5
@@ -577,6 +610,7 @@
     {
         "_id": "b211252f-596c-48dc-8b4e-d730a076bdeb",
         "completed": true,
+        "completed_date": "2020-04-03T10:47:11+02:00",
         "id": 83,
         "title": "quidem at rerum quis ex aut sit quam",
         "userId": 5
@@ -591,6 +625,7 @@
     {
         "_id": "29cdad6b-f731-43b9-b15c-50e96c5a02c9",
         "completed": true,
+        "completed_date": "2020-08-27T20:17:09+02:00",
         "id": 85,
         "title": "et quia ad iste a",
         "userId": 5
@@ -598,6 +633,7 @@
     {
         "_id": "9e42ffb8-9c9d-4e02-8ed1-552b9d12654c",
         "completed": true,
+        "completed_date": "2021-04-19T21:55:56+02:00",
         "id": 86,
         "title": "incidunt ut saepe autem",
         "userId": 5
@@ -605,6 +641,7 @@
     {
         "_id": "c51c596e-4b6e-4ff5-bd4c-c47d30a39b02",
         "completed": true,
+        "completed_date": "2021-06-18T03:08:57+02:00",
         "id": 87,
         "title": "laudantium quae eligendi consequatur quia et vero autem",
         "userId": 5
@@ -619,6 +656,7 @@
     {
         "_id": "bb8b4e2b-33e5-4507-86de-87af567ad05c",
         "completed": true,
+        "completed_date": "2021-12-20T11:50:31+01:00",
         "id": 89,
         "title": "sequi ut omnis et",
         "userId": 5
@@ -626,6 +664,7 @@
     {
         "_id": "9f0983d2-9c63-45c9-9049-b09ed227bdc9",
         "completed": true,
+        "completed_date": "2021-12-01T09:44:45+01:00",
         "id": 90,
         "title": "molestiae nisi accusantium tenetur dolorem et",
         "userId": 5
@@ -633,6 +672,7 @@
     {
         "_id": "a1d0e3c1-1596-4434-ae29-163f6f165bb6",
         "completed": true,
+        "completed_date": "2022-01-14T10:17:06+01:00",
         "id": 91,
         "title": "nulla quis consequatur saepe qui id expedita",
         "userId": 5
@@ -640,6 +680,7 @@
     {
         "_id": "dff200b0-8dd4-4e78-80f4-6c1cb9d44553",
         "completed": true,
+        "completed_date": "2021-07-10T15:20:13+02:00",
         "id": 92,
         "title": "in omnis laboriosam",
         "userId": 5
@@ -647,6 +688,7 @@
     {
         "_id": "d5efb7d8-9343-4b9c-9b15-24feb77ba76f",
         "completed": true,
+        "completed_date": "2021-11-30T03:38:10+01:00",
         "id": 93,
         "title": "odio iure consequatur molestiae quibusdam necessitatibus quia sint",
         "userId": 5
@@ -661,6 +703,7 @@
     {
         "_id": "01b4563d-2a6a-4620-b912-55c8ebddddbf",
         "completed": true,
+        "completed_date": "2020-01-26T02:26:34+01:00",
         "id": 95,
         "title": "vel nihil et molestiae iusto assumenda nemo quo ut",
         "userId": 5
@@ -682,6 +725,7 @@
     {
         "_id": "db64191c-a7a5-4f0e-b747-4046128b4d27",
         "completed": true,
+        "completed_date": "2020-06-21T10:16:03+02:00",
         "id": 98,
         "title": "debitis accusantium ut quo facilis nihil quis sapiente necessitatibus",
         "userId": 5
@@ -731,6 +775,7 @@
     {
         "_id": "3cfe1ab0-1ea8-4474-ab25-dd4877417d1f",
         "completed": true,
+        "completed_date": "2020-01-18T13:07:13+01:00",
         "id": 105,
         "title": "totam quia dolorem et illum repellat voluptas optio",
         "userId": 6
@@ -738,6 +783,7 @@
     {
         "_id": "29234591-3afa-4f4c-ac3e-1684bd0c258a",
         "completed": true,
+        "completed_date": "2021-03-13T19:42:27+01:00",
         "id": 106,
         "title": "ad illo quis voluptatem temporibus",
         "userId": 6
@@ -752,6 +798,7 @@
     {
         "_id": "38c032d8-4ea8-43f3-b694-03845e6e5e55",
         "completed": true,
+        "completed_date": "2020-10-28T19:47:58+01:00",
         "id": 108,
         "title": "a eos eaque nihil et exercitationem incidunt delectus",
         "userId": 6
@@ -759,6 +806,7 @@
     {
         "_id": "2b8d22c0-4c66-4e6e-bc0e-3ca4915da1c8",
         "completed": true,
+        "completed_date": "2020-09-18T05:52:04+02:00",
         "id": 109,
         "title": "autem temporibus harum quisquam in culpa",
         "userId": 6
@@ -766,6 +814,7 @@
     {
         "_id": "a862d2a7-b380-4cf1-82a3-0b1e7a18bec1",
         "completed": true,
+        "completed_date": "2020-04-10T23:09:19+02:00",
         "id": 110,
         "title": "aut aut ea corporis",
         "userId": 6
@@ -808,6 +857,7 @@
     {
         "_id": "1c35c4e5-93d8-4b54-86dd-609b1be93bf7",
         "completed": true,
+        "completed_date": "2022-01-12T18:22:33+01:00",
         "id": 116,
         "title": "ipsa dolores vel facilis ut",
         "userId": 6
@@ -843,6 +893,7 @@
     {
         "_id": "16331025-7b29-4aa6-8849-c91dae47f6d9",
         "completed": true,
+        "completed_date": "2020-05-16T02:25:57+02:00",
         "id": 121,
         "title": "inventore aut nihil minima laudantium hic qui omnis",
         "userId": 7
@@ -850,6 +901,7 @@
     {
         "_id": "d6eecc38-cb17-4781-8fa3-d9750abe9251",
         "completed": true,
+        "completed_date": "2021-09-26T20:22:01+02:00",
         "id": 122,
         "title": "provident aut nobis culpa",
         "userId": 7
@@ -878,6 +930,7 @@
     {
         "_id": "533311d9-b15f-4efb-87e5-18638ad65cf9",
         "completed": true,
+        "completed_date": "2021-04-24T13:33:09+02:00",
         "id": 126,
         "title": "ut asperiores perspiciatis veniam ipsum rerum saepe",
         "userId": 7
@@ -885,6 +938,7 @@
     {
         "_id": "c68fedfa-2ed0-4b91-a76e-cb7b7ab5384f",
         "completed": true,
+        "completed_date": "2020-06-21T07:56:39+02:00",
         "id": 127,
         "title": "voluptatem libero consectetur rerum ut",
         "userId": 7
@@ -906,6 +960,7 @@
     {
         "_id": "6011b035-daae-41ff-af57-d985941840c3",
         "completed": true,
+        "completed_date": "2020-10-08T11:36:40+02:00",
         "id": 130,
         "title": "nulla aliquid eveniet harum laborum libero alias ut unde",
         "userId": 7
@@ -920,6 +975,7 @@
     {
         "_id": "84f5a4db-c40f-490d-b84d-40507fcbaac9",
         "completed": true,
+        "completed_date": "2020-12-12T13:18:25+01:00",
         "id": 132,
         "title": "qui molestiae voluptatibus velit iure harum quisquam",
         "userId": 7
@@ -927,6 +983,7 @@
     {
         "_id": "e1d9405a-57c1-463a-a309-1d93cf5e85e2",
         "completed": true,
+        "completed_date": "2020-10-02T02:48:08+02:00",
         "id": 133,
         "title": "et labore eos enim rerum consequatur sunt",
         "userId": 7
@@ -962,6 +1019,7 @@
     {
         "_id": "fdb82a23-8227-4248-838a-1338ee2a91ee",
         "completed": true,
+        "completed_date": "2021-03-04T08:02:18+01:00",
         "id": 138,
         "title": "placeat minima consequatur rem qui ut",
         "userId": 7
@@ -976,6 +1034,7 @@
     {
         "_id": "5c658a8d-dad9-4094-9b7a-1a1c914f7bef",
         "completed": true,
+        "completed_date": "2020-01-03T22:21:43+01:00",
         "id": 140,
         "title": "aut consectetur in blanditiis deserunt quia sed laboriosam",
         "userId": 7
@@ -983,6 +1042,7 @@
     {
         "_id": "c1607fe4-b8d6-4396-a802-c5b271f3508a",
         "completed": true,
+        "completed_date": "2020-08-31T00:22:35+02:00",
         "id": 141,
         "title": "explicabo consectetur debitis voluptates quas quae culpa rerum non",
         "userId": 8
@@ -990,6 +1050,7 @@
     {
         "_id": "d9803ce2-c01f-4870-9526-8100c8253c60",
         "completed": true,
+        "completed_date": "2021-11-17T01:34:11+01:00",
         "id": 142,
         "title": "maiores accusantium architecto necessitatibus reiciendis ea aut",
         "userId": 8
@@ -1018,6 +1079,7 @@
     {
         "_id": "e3b8aa60-c046-4dbb-8f91-52471d15ff23",
         "completed": true,
+        "completed_date": "2021-03-14T19:08:30+01:00",
         "id": 146,
         "title": "molestiae suscipit ratione nihil odio libero impedit vero totam",
         "userId": 8
@@ -1025,6 +1087,7 @@
     {
         "_id": "bed4b426-72db-4227-bdf9-73e39c8f3bbd",
         "completed": true,
+        "completed_date": "2021-02-14T08:56:45+01:00",
         "id": 147,
         "title": "eum itaque quod reprehenderit et facilis dolor autem ut",
         "userId": 8
@@ -1053,6 +1116,7 @@
     {
         "_id": "2e3c9d6e-876d-4897-a65a-e8c46a0bf1c2",
         "completed": true,
+        "completed_date": "2020-05-30T02:02:36+02:00",
         "id": 151,
         "title": "accusamus adipisci dicta qui quo ea explicabo sed vero",
         "userId": 8
@@ -1074,6 +1138,7 @@
     {
         "_id": "a4b99632-425b-460e-b856-7fe417d6c073",
         "completed": true,
+        "completed_date": "2020-02-16T15:57:46+01:00",
         "id": 154,
         "title": "rerum non ex sapiente",
         "userId": 8
@@ -1081,6 +1146,7 @@
     {
         "_id": "f2ad3359-5e44-4f06-8c7e-22dee326da45",
         "completed": true,
+        "completed_date": "2020-05-26T22:57:08+02:00",
         "id": 155,
         "title": "voluptatem nobis consequatur et assumenda magnam",
         "userId": 8
@@ -1088,6 +1154,7 @@
     {
         "_id": "437cb59c-6138-4774-9dc7-f242cf27eaf3",
         "completed": true,
+        "completed_date": "2021-06-28T22:32:41+02:00",
         "id": 156,
         "title": "nam quia quia nulla repellat assumenda quibusdam sit nobis",
         "userId": 8
@@ -1095,6 +1162,7 @@
     {
         "_id": "080d9eed-a183-409b-a696-54ce8c36ace9",
         "completed": true,
+        "completed_date": "2021-04-12T12:40:02+02:00",
         "id": 157,
         "title": "dolorem veniam quisquam deserunt repellendus",
         "userId": 8
@@ -1102,6 +1170,7 @@
     {
         "_id": "abc9d784-fcb9-4eaf-9edf-008afa891586",
         "completed": true,
+        "completed_date": "2020-11-27T11:06:23+01:00",
         "id": 158,
         "title": "debitis vitae delectus et harum accusamus aut deleniti a",
         "userId": 8
@@ -1109,6 +1178,7 @@
     {
         "_id": "b887dc0e-b409-4ba1-ac0d-06d4bab06007",
         "completed": true,
+        "completed_date": "2021-02-25T18:02:26+01:00",
         "id": 159,
         "title": "debitis adipisci quibusdam aliquam sed dolore ea praesentium nobis",
         "userId": 8
@@ -1123,6 +1193,7 @@
     {
         "_id": "1ebe17c7-8be5-4056-8872-8910e76c7b3d",
         "completed": true,
+        "completed_date": "2020-01-08T19:32:43+01:00",
         "id": 161,
         "title": "ex hic consequuntur earum omnis alias ut occaecati culpa",
         "userId": 9
@@ -1130,6 +1201,7 @@
     {
         "_id": "9af872b7-e442-4679-bdc0-9863c026c02c",
         "completed": true,
+        "completed_date": "2020-09-14T04:39:36+02:00",
         "id": 162,
         "title": "omnis laboriosam molestias animi sunt dolore",
         "userId": 9
@@ -1179,6 +1251,7 @@
     {
         "_id": "31af6be2-fb65-45e2-af88-1177ae3504b4",
         "completed": true,
+        "completed_date": "2021-06-24T11:10:02+02:00",
         "id": 169,
         "title": "ea odio perferendis officiis",
         "userId": 9
@@ -1193,6 +1266,7 @@
     {
         "_id": "4b87334b-fc2d-4cbc-9977-39d4257d7417",
         "completed": true,
+        "completed_date": "2021-04-30T09:08:38+02:00",
         "id": 171,
         "title": "fugiat aut voluptatibus corrupti deleniti velit iste odio",
         "userId": 9
@@ -1221,6 +1295,7 @@
     {
         "_id": "11459c36-8018-48e3-8f05-59fec7ffb6e4",
         "completed": true,
+        "completed_date": "2021-02-02T11:37:27+01:00",
         "id": 175,
         "title": "laudantium eius officia perferendis provident perspiciatis asperiores",
         "userId": 9
@@ -1242,6 +1317,7 @@
     {
         "_id": "bc1eeac8-eb4b-459a-b39f-60384e1efb0c",
         "completed": true,
+        "completed_date": "2021-11-01T22:24:54+01:00",
         "id": 178,
         "title": "nesciunt itaque commodi tempore",
         "userId": 9
@@ -1249,6 +1325,7 @@
     {
         "_id": "0445f7ee-da32-408f-9331-f19c10f06e00",
         "completed": true,
+        "completed_date": "2021-02-23T17:39:37+01:00",
         "id": 179,
         "title": "omnis consequuntur cupiditate impedit itaque ipsam quo",
         "userId": 9
@@ -1256,6 +1333,7 @@
     {
         "_id": "6b4ecd6c-c145-4d9e-886c-f022b3d77157",
         "completed": true,
+        "completed_date": "2021-05-27T21:37:43+02:00",
         "id": 180,
         "title": "debitis nisi et dolorem repellat et",
         "userId": 9
@@ -1270,6 +1348,7 @@
     {
         "_id": "f387203d-883e-457e-aadf-bb30d8e138cb",
         "completed": true,
+        "completed_date": "2021-01-28T04:33:16+01:00",
         "id": 182,
         "title": "inventore saepe cumque et aut illum enim",
         "userId": 10
@@ -1277,6 +1356,7 @@
     {
         "_id": "1e6d4923-43c3-455e-aa7d-2048216adf6b",
         "completed": true,
+        "completed_date": "2020-08-02T06:40:20+02:00",
         "id": 183,
         "title": "omnis nulla eum aliquam distinctio",
         "userId": 10
@@ -1312,6 +1392,7 @@
     {
         "_id": "e5b66834-d2c7-449f-bdbf-c2d1cf0b2e74",
         "completed": true,
+        "completed_date": "2020-02-06T03:17:03+01:00",
         "id": 188,
         "title": "vel non beatae est",
         "userId": 10
@@ -1319,6 +1400,7 @@
     {
         "_id": "3b559d35-6da1-4e1d-8a3c-f4a7799fb06a",
         "completed": true,
+        "completed_date": "2020-10-13T16:02:33+02:00",
         "id": 189,
         "title": "culpa eius et voluptatem et",
         "userId": 10
@@ -1326,6 +1408,7 @@
     {
         "_id": "f305eddf-0bdf-4177-a685-d165cecab338",
         "completed": true,
+        "completed_date": "2020-09-04T10:25:37+02:00",
         "id": 190,
         "title": "accusamus sint iusto et voluptatem exercitationem",
         "userId": 10
@@ -1333,6 +1416,7 @@
     {
         "_id": "346fc067-2bda-45a9-819b-57bb8a773acc",
         "completed": true,
+        "completed_date": "2021-05-21T08:52:13+02:00",
         "id": 191,
         "title": "temporibus atque distinctio omnis eius impedit tempore molestias pariatur",
         "userId": 10
@@ -1347,6 +1431,7 @@
     {
         "_id": "3a790586-6190-48ad-80ea-3c3fac6c9dba",
         "completed": true,
+        "completed_date": "2021-06-12T18:40:41+02:00",
         "id": 193,
         "title": "rerum debitis voluptatem qui eveniet tempora distinctio a",
         "userId": 10
@@ -1361,6 +1446,7 @@
     {
         "_id": "2d0cdb12-78ed-4c6b-889d-40a9ed49b674",
         "completed": true,
+        "completed_date": "2021-05-20T12:34:19+02:00",
         "id": 195,
         "title": "rerum ex veniam mollitia voluptatibus pariatur",
         "userId": 10
@@ -1368,6 +1454,7 @@
     {
         "_id": "b0b0202d-53f3-4441-9bfe-6d7c8f45a290",
         "completed": true,
+        "completed_date": "2021-11-05T06:23:53+01:00",
         "id": 196,
         "title": "consequuntur aut ut fugit similique",
         "userId": 10
@@ -1375,6 +1462,7 @@
     {
         "_id": "d8d2180b-72a2-482e-879a-9aae0c7cab98",
         "completed": true,
+        "completed_date": "2020-09-27T04:57:23+02:00",
         "id": 197,
         "title": "dignissimos quo nobis earum saepe",
         "userId": 10
@@ -1382,6 +1470,7 @@
     {
         "_id": "2a7346ed-7f73-4bec-9234-b3f952117ed6",
         "completed": true,
+        "completed_date": "2021-09-17T16:58:11+02:00",
         "id": 198,
         "title": "quis eius est sint explicabo",
         "userId": 10
@@ -1389,6 +1478,7 @@
     {
         "_id": "e674d4b1-6838-4746-9852-72ac4b699d01",
         "completed": true,
+        "completed_date": "2020-05-22T11:13:22+02:00",
         "id": 199,
         "title": "numquam repellendus a magnam",
         "userId": 10

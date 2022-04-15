@@ -16,7 +16,7 @@ import (
 
 const (
 	airlinesPath = "test/data/airlines.json"
-	todosPath = "test/data/todos.json" 
+	todosPath    = "test/data/todos.json"
 )
 
 func runCloverTest(t *testing.T, jsonPath string, test func(t *testing.T, db *c.DB)) {
@@ -304,25 +304,26 @@ func TestInvalidCriteria(t *testing.T) {
 
 func TestExistsCriteria(t *testing.T) {
 	runCloverTest(t, todosPath, func(t *testing.T, db *c.DB) {
-		docs, err := db.Query("todos").Where(c.Field("completed_date").Exists()).FindAll()
+		n, err := db.Query("todos").Where(c.Field("completed_date").Exists()).Count()
 		require.NoError(t, err)
-		require.Equal(t, len(docs), 1)
+		m, err := db.Query("todos").Where(c.Field("completed").IsTrue()).Count()
+		require.Equal(t, n, m)
 	})
 }
 
 func TestNotExistsCriteria(t *testing.T) {
 	runCloverTest(t, todosPath, func(t *testing.T, db *c.DB) {
-		n, err := db.Query("todos").Count()
+		n, err := db.Query("todos").Where(c.Field("completed_date").NotExists()).Count()
 		require.NoError(t, err)
 
-		m, err := db.Query("todos").Where(c.Field("completed_date").NotExists()).Count()
-		require.Equal(t, n-1, m)
+		m, err := db.Query("todos").Where(c.Field("completed").IsFalse()).Count()
+		require.Equal(t, n, m)
 	})
 }
 
 func TestIsNil(t *testing.T) {
 	runCloverTest(t, todosPath, func(t *testing.T, db *c.DB) {
-		n, err := db.Query("todos").Where(c.Field("completed_date").IsNil()).Count()
+		n, err := db.Query("todos").Where(c.Field("notes").IsNil()).Count()
 		require.NoError(t, err)
 		require.Equal(t, n, 1)
 	})
@@ -354,11 +355,9 @@ func TestIsFalse(t *testing.T) {
 
 func TestIsNilOrNotExist(t *testing.T) {
 	runCloverTest(t, todosPath, func(t *testing.T, db *c.DB) {
-		n, err := db.Query("todos").Count()
+		n, err := db.Query("todos").Where(c.Field("completed_date").IsNilOrNotExists()).Count()
 		require.NoError(t, err)
-
-		m, err := db.Query("todos").Where(c.Field("completed_date").IsNilOrNotExists()).Count()
-		require.NoError(t, err)
+		m, err := db.Query("todos").Where(c.Field("completed").IsFalse()).Count()
 		require.Equal(t, n, m)
 	})
 }
