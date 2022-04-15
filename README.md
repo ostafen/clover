@@ -85,8 +85,16 @@ The `FindAll()` method is used to retrieve all documents satisfying a given quer
 
 ```go
 docs, _ := db.Query("myCollection").FindAll()
+
+todo := &struct {
+    Completed bool   `json:"completed"`
+    Title     string `json:"title"`
+    UserId    int    `json:"userId"`
+}{}
+
 for _, doc := range docs {
-  fmt.Println(doc)
+    doc.Unmarshal(todo)
+    log.Println(todo)
 }
 ```
 
