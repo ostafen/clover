@@ -10,7 +10,7 @@
 [![codecov](https://codecov.io/gh/ostafen/clover/branch/main/graph/badge.svg?token=R06H8FR47O)](https://codecov.io/gh/ostafen/clover)
 [![Join the chat at https://gitter.im/cloverDB/community](https://badges.gitter.im/cloverDB/community.svg)](https://gitter.im/cloverDB/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-> [English](README.md) | [简体中文](README-CN.md) | Spanish
+> [🇬🇧 English](README.md) | [🇨🇳 简体中文](README-CN.md) | 🇪🇸 Spanish
 
 **CloverDB** es una base de datos NoSQL diseñada para ser simple y de fácil mantenimiento, gracias a no tener demasiado código. Está inspirada en [tinyDB](https://github.com/msiemens/tinydb).
 
