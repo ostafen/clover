@@ -1,5 +1,6 @@
 <p align="center">
-<img width="300" src=".github/logo.png" border="0" alt="kelindar/column">
+<img alt="CloverDB Logo" src=".github/logo.png#gh-light-mode-only" width="300px">
+<img alt="CloverDB Logo" src=".github/logo-white.png#gh-dark-mode-only" width="300px">
 </p>
 <h2 align="center">Lightweight document-oriented NoSQL Database</h2>
 
