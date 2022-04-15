@@ -54,9 +54,12 @@ func (q *Query) Where(c *Criteria) *Query {
 }
 
 func (q *Query) Skip(n int) *Query {
-	newQuery := q.copy()
-	newQuery.skip = n
-	return newQuery
+	if n >= 0 {
+		newQuery := q.copy()
+		newQuery.skip = n
+		return newQuery
+	}
+	return q
 }
 
 // Limit sets the query q to consider at most n records.
