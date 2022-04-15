@@ -10,7 +10,7 @@
 [![codecov](https://codecov.io/gh/ostafen/clover/branch/main/graph/badge.svg?token=R06H8FR47O)](https://codecov.io/gh/ostafen/clover)
 [![Join the chat at https://gitter.im/cloverDB/community](https://badges.gitter.im/cloverDB/community.svg)](https://gitter.im/cloverDB/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-> [English](README.md) | 简体中文 | [Spanish](README-ES.md) 
+> [🇬🇧 English](README.md) | 🇨🇳 简体中文 | [🇪🇸 Spanish](README-ES.md) 
 
 **CloverDB** 是一个轻量级的NoSQL数据库，由于它的代码库很小，所以设计得简单且易于维护。它的灵感来自 [tinyDB](https://github.com/msiemens/tinydb).
 
