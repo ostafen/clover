@@ -17,6 +17,7 @@ func (q *Query) copy() *Query {
 		criteria:   q.criteria,
 		limit:      q.limit,
 		skip:       q.skip,
+		sortOpts:   q.sortOpts,
 	}
 }
 
