@@ -27,7 +27,7 @@
 However, there are projects where running a separate database server may result overkilled, and, for simple queries, network delay may be the major performance bottleneck.
 For there scenario, **CloverDB** may be a more suitable alternative.
 
-## Database layout
+## Database Layout
 
 **CloverDB** abstracts the way collections are stored on disk through the **StorageEngine** interface. The default implementation is based on the [Badger](https://github.com/dgraph-io/badger) database key-value store. However, you could easily write your own storage engine implementation.
 
@@ -37,7 +37,13 @@ Make sure you have a working Go environment (Go 1.13 or higher is required).
   go get github.com/ostafen/clover
 ```
 
-## API usage
+## Databases and Collections
+
+CloverDB stores data records as JSON documents, which are grouped together in collections. A database is made up of one or more collections.
+
+### Database
+
+To store documents inside collections, you have to open a Clover database using the `Open()` function.
 
 ```go
 import (
@@ -47,49 +53,88 @@ import (
 
 ...
 
+db, _ := c.Open("clover-db")
+defer db.Close() // remember to close the db when you have done
 ```
 
-### Create a new collection
+### Collections
+
+CloverDB stores documents inside collections. Collections are the **schemaless** equivalent of tables in relational databases. A collection is created by calling the `CreateCollection()` function on a database instance. New documents can be inserted using the `Insert()` or `InsertOne()` methods. Each document is uniquely identified by a **Version 4 UUID** stored in the **_id** special field and generated during insertion.
+
 ```go
-
 db, _ := c.Open("clover-db")
-db.CreateCollection("myCollection")
+db.CreateCollection("myCollection") // create a new collection named "myCollection"
 
+// insert a new document inside the collection
 doc := c.NewDocument()
 doc.Set("hello", "clover!")
 
+// InsertOne returns the id of the inserted document
 docId, _ := db.InsertOne("myCollection", doc)
-
-doc, _ = db.Query("myCollection").FindById(docId)
-log.Println(doc.Get("hello"))
-
+fmt.Println(docId)
 ```
 
-### Query an existing database
+## Queries
+
+CloverDB is equipped with a fluent and elegant API to query your data. A query is represented by the **Query** object, which allows to retrieve documents matching a given **criterion**. A query can be created by passing a valid collection name to the `Query()` method.
+
+### Select All Documents in a Collection
+
+The `FindAll()` method is used to retrieve all documents satisfying a given query.
 
 ```go
-db, _ := c.Open("../test-data/todos")
-
-// find all completed todos belonging to users with id 5 and 8
-docs, _ := db.Query("todos").Where(c.Field("completed").Eq(true).And(c.Field("userId").In(5, 8))).FindAll()
-
-todo := &struct {
-    Completed bool   `json:"completed"`
-    Title     string `json:"title"`
-    UserId    int    `json:"userId"`
-}{}
-
+docs, _ := db.Query("myCollection").FindAll()
 for _, doc := range docs {
-    doc.Unmarshal(todo)
-    log.Println(todo)
+  fmt.Println(doc)
 }
 ```
 
-### Update and delete documents
+### Filter Documents with Criteria
+
+In order to filter the documents returned by `FindAll()`, you have to specify a query Criteria using the `Where()` method. A Criteria object simply represents a predicate on a document, evaluating to **true** only if the document satisfies all the query conditions. 
+
+
+The following example shows how to build a simple Criteria, matching all the documents having the **completed** field equal to true.
 
 ```go
-db, _ := c.Open("../test-data/todos")
+db.Query("todos").Where(c.Field("completed").Eq(true)).FindAll()
 
+// or equivalently
+db.Query("todos").Where(c.Field("completed").IsTrue()).FindAll()
+```
+
+In order to build very complex queries, we chain multiple Criteria objects by using the `And()` and `Or()` methods, each returning a new Criteria obtained by appling the corresponding logical operator.
+
+```go
+// find all completed todos belonging to users with id 5 and 8
+db.Query("todos").Where(c.Field("completed").Eq(true).And(c.Field("userId").In(5, 8))).FindAll()
+```
+
+### Sorting Documents
+
+To sort documents in CloverDB, you need to use `Sort()`. It is a variadic function which accepts a sequence of SortOption, each allowing to specify a field and a sorting direction.
+A sorting direction can be one of 1 or -1, respectively corresponding to ascending and descending order. If no SortOption is provided, `Sort()` uses the **_id** field by default.
+
+```go
+// Find any todo belonging to the most recent inserted user
+db.Query("todos").Sort(c.SortOption{"userId", -1}).FindFirst()
+```
+
+### Skip/Limit Documents
+
+Sometimes, it can be useful to discard some documents from the output, or simply set a limit on the maximum number of results returned by a query. For this purpose, CloverDB provides the `Skip()` and `Limit()` functions, both accepting an interger $n$ as parameter.
+
+```go
+// discard the first 10 documents from the output,
+// also limiting the maximum number of query results to 100
+db.Query("todos").Skip(10).Limit(100).FindAll()
+```
+
+### Update/Delete Documents
+
+The `Update()` method is used to modify specific fields of documents in a collection. The `Delete()` method is used to delete documents. Both methods belong to the Query object, so that it is easy to update and delete documents matching a particular query.
+
+```go
 // mark all todos belonging to user with id 1 as completed
 updates := make(map[string]interface{})
 updates["completed"] = true
@@ -100,22 +145,11 @@ db.Query("todos").Where(c.Field("userId").Eq(1)).Update(updates)
 db.Query("todos").Where(c.Field("userId").In(5,8)).Delete()
 ```
 
-### Update a single document
+Updating or deleting a single document using the document id can be accomplished in the same way, using an equality condition on the **_id** field, like shown in the following snippet:
+
 ```go
-db, _ := c.Open("../test-data/todos")
-
-updates := make(map[string]interface{})
-updates["completed"] = true
-
-// you can either obtain the _id
-doc, _ := db.Query("todos").Where(c.Field("userId").Eq(2)).FindFirst()
-docId := doc.Get("_id")
-
-// or using a string
-// docId := "1dbce353-d3c6-43b3-b5a8-80d8d876389b"
-
-// update a single document with the _id field
-db.Query("todos").Where(c.Field("_id").Eq(docId)).Update(updates)
+docId := "1dbce353-d3c6-43b3-b5a8-80d8d876389b"
+db.Query("todos").Where(c.Field("_id").Eq(docId)).Delete()
 ```
 
 ## Contributing
