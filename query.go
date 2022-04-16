@@ -34,6 +34,12 @@ func (q *Query) Count() (int, error) {
 	return len(docs), err
 }
 
+// Exists returns true if and only if the query result set is not empty.
+func (q *Query) Exists() (bool, error) {
+	doc, err := q.FindFirst()
+	return doc != nil, err
+}
+
 // MatchPredicate selects all the documents which satisfy the supplied predicate function.
 func (q *Query) MatchPredicate(p func(doc *Document) bool) *Query {
 	return q.Where(&Criteria{p})

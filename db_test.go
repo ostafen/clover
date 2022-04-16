@@ -659,6 +659,18 @@ func TestFindFirst(t *testing.T) {
 	})
 }
 
+func TestExists(t *testing.T) {
+	runCloverTest(t, todosPath, func(t *testing.T, db *c.DB) {
+		exists, err := db.Query("todos").Where(c.Field("completed").IsTrue()).Exists()
+		require.NoError(t, err)
+		require.True(t, exists)
+
+		exists, err = db.Query("todos").Where(c.Field("userId").Eq(100)).Exists()
+		require.NoError(t, err)
+		require.False(t, exists)
+	})
+}
+
 func TestForEach(t *testing.T) {
 	runCloverTest(t, todosPath, func(t *testing.T, db *c.DB) {
 		n, err := db.Query("todos").Where(c.Field("completed").IsTrue()).Count()
