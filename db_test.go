@@ -23,17 +23,22 @@ func runCloverTest(t *testing.T, jsonPath string, test func(t *testing.T, db *c.
 	dir, err := ioutil.TempDir("", "clover-test")
 	require.NoError(t, err)
 
+	inMemDb, err := c.InMemoryDB()
+	require.NoError(t, err)
 	db, err := c.Open(dir)
 	require.NoError(t, err)
 
 	if jsonPath != "" {
+		require.NoError(t, loadFromJson(inMemDb, jsonPath))
 		require.NoError(t, loadFromJson(db, jsonPath))
 	}
 	defer func() {
+		require.NoError(t, inMemDb.Close())
 		require.NoError(t, db.Close())
 		require.NoError(t, os.RemoveAll(dir))
 	}()
 	test(t, db)
+	test(t, inMemDb)
 }
 
 func TestErrCollectionNotExist(t *testing.T) {
