@@ -656,11 +656,15 @@ func TestLimit(t *testing.T) {
 
 func TestSkip(t *testing.T) {
 	runCloverTest(t, todosPath, func(t *testing.T, db *c.DB) {
-		allDocs, err := db.Query("todos").FindAll()
+		sortOption := c.SortOption{
+			Field:     "id",
+			Direction: 1,
+		}
+		allDocs, err := db.Query("todos").Sort(sortOption).FindAll()
 		require.NoError(t, err)
 		require.Len(t, allDocs, 200)
 
-		skipDocs, err := db.Query("todos").Skip(100).FindAll()
+		skipDocs, err := db.Query("todos").Sort(sortOption).Skip(100).FindAll()
 		require.NoError(t, err)
 
 		require.Len(t, skipDocs, 100)
@@ -670,11 +674,15 @@ func TestSkip(t *testing.T) {
 
 func TestLimitAndSkip(t *testing.T) {
 	runCloverTest(t, todosPath, func(t *testing.T, db *c.DB) {
-		allDocs, err := db.Query("todos").FindAll()
+		sortOption := c.SortOption{
+			Field:     "id",
+			Direction: 1,
+		}
+		allDocs, err := db.Query("todos").Sort(sortOption).FindAll()
 		require.NoError(t, err)
 		require.Len(t, allDocs, 200)
 
-		docs, err := db.Query("todos").Skip(100).Limit(50).FindAll()
+		docs, err := db.Query("todos").Sort(sortOption).Skip(100).Limit(50).FindAll()
 		require.NoError(t, err)
 
 		require.Len(t, docs, 50)
