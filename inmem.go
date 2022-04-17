@@ -14,13 +14,13 @@ type document struct {
 }
 
 type inMemEngine struct {
-	sync.Mutex
+	sync.RWMutex
 	collections map[string]map[string]*document
 }
 
 func newInMemoryStoreEngine() StorageEngine {
 	return &inMemEngine{
-		Mutex:       sync.Mutex{},
+		RWMutex:     sync.RWMutex{},
 		collections: make(map[string]map[string]*document),
 	}
 }
@@ -116,8 +116,8 @@ func (e *inMemEngine) FindAll(q *Query) ([]*Document, error) {
 
 // FindById implements StorageEngine
 func (e *inMemEngine) FindById(collectionName string, id string) (*Document, error) {
-	e.Lock()
-	defer e.Unlock()
+	e.RLock()
+	defer e.RUnlock()
 
 	c, ok := e.collections[collectionName]
 	if !ok {
@@ -159,8 +159,8 @@ func (e *inMemEngine) Insert(collection string, docs ...*Document) error {
 
 // IterateDocs implements StorageEngine
 func (e *inMemEngine) IterateDocs(q *Query, consumer docConsumer) error {
-	e.Lock()
-	defer e.Unlock()
+	e.RLock()
+	defer e.RUnlock()
 
 	c, ok := e.collections[q.collection]
 	if !ok {
