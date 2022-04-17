@@ -5,23 +5,17 @@ import (
 	"sync"
 )
 
-//iterating over a map doesn't guarantee order of the elements
-//in order to return same results for every unsorted query
-//we also keep insertion id and sort the map elements before querying
-type document struct {
-	insertId int
-	doc      *Document
-}
+type collection map[string]*Document
 
 type inMemEngine struct {
 	sync.RWMutex
-	collections map[string]map[string]*document
+	collections map[string]collection
 }
 
 func newInMemoryStoreEngine() StorageEngine {
 	return &inMemEngine{
 		RWMutex:     sync.RWMutex{},
-		collections: make(map[string]map[string]*document),
+		collections: make(map[string]collection),
 	}
 }
 
@@ -44,7 +38,7 @@ func (e *inMemEngine) CreateCollection(name string) error {
 	if ok, _ := e.HasCollection(name); ok {
 		return ErrCollectionExist
 	}
-	e.collections[name] = make(map[string]*document)
+	e.collections[name] = make(collection)
 	return nil
 }
 
@@ -59,10 +53,9 @@ func (e *inMemEngine) Delete(q *Query) error {
 	}
 
 	for key, d := range c {
-		if q.satisfy(d.doc) {
+		if q.satisfy(d) {
 			delete(c, key)
 		}
-
 	}
 
 	return nil
@@ -124,11 +117,7 @@ func (e *inMemEngine) FindById(collectionName string, id string) (*Document, err
 		return nil, ErrCollectionNotExist
 	}
 
-	d := c[id]
-	if d == nil {
-		return nil, nil
-	}
-	return d.doc, nil
+	return c[id], nil
 }
 
 // HasCollection implements StorageEngine
@@ -148,68 +137,32 @@ func (e *inMemEngine) Insert(collection string, docs ...*Document) error {
 	}
 
 	for _, d := range docs {
-		c[d.ObjectId()] = &document{
-			insertId: len(c),
-			doc:      d,
-		}
+		c[d.ObjectId()] = d
 	}
 
 	return nil
 }
 
-// IterateDocs implements StorageEngine
-func (e *inMemEngine) IterateDocs(q *Query, consumer docConsumer) error {
-	e.RLock()
-	defer e.RUnlock()
-
+func (e *inMemEngine) iterateDocsSlice(q *Query, consumer docConsumer) error {
 	c, ok := e.collections[q.collection]
 	if !ok {
 		return ErrCollectionNotExist
 	}
 
-	docs := []*document{}
-
-	for _, d := range c {
-		docs = append(docs, d)
-	}
-
-	sort.Slice(docs, func(i, j int) bool {
-		return docs[i].insertId < docs[j].insertId
-	})
-
-	skipped := 0
-	limited := 0
 	sortDocs := len(q.sortOpts) > 0
-	if !sortDocs {
-		for _, d := range docs {
-			if q.skip > 0 && skipped < q.skip {
-				skipped++
-				continue
-			}
-			if q.limit >= 0 && q.limit <= limited {
-				break
-			}
-			if q.satisfy(d.doc) {
-				limited++
-				err := consumer(d.doc)
-				if err != nil && err != errStopIteration {
-					return err
-				}
-			}
-		}
-		return nil
-	}
-
 	allDocs := []*Document{}
 
 	for _, d := range c {
-		allDocs = append(allDocs, d.doc)
-
+		if q.satisfy(d) {
+			allDocs = append(allDocs, d)
+		}
 	}
 
-	sort.Slice(allDocs, func(i, j int) bool {
-		return compareDocuments(allDocs[i], allDocs[j], q.sortOpts) < 0
-	})
+	if sortDocs {
+		sort.Slice(allDocs, func(i, j int) bool {
+			return compareDocuments(allDocs[i], allDocs[j], q.sortOpts) < 0
+		})
+	}
 
 	docsToSkip := q.skip
 	if len(allDocs) < q.skip {
@@ -231,8 +184,16 @@ func (e *inMemEngine) IterateDocs(q *Query, consumer docConsumer) error {
 			return err
 		}
 	}
-
 	return nil
+
+}
+
+// IterateDocs implements StorageEngine
+func (e *inMemEngine) IterateDocs(q *Query, consumer docConsumer) error {
+	e.RLock()
+	defer e.RUnlock()
+
+	return e.iterateDocsSlice(q, consumer)
 }
 
 // Open implements StorageEngine
@@ -244,15 +205,38 @@ func (e *inMemEngine) Open(path string) error {
 func (e *inMemEngine) Update(q *Query, updateMap map[string]interface{}) error {
 	e.Lock()
 	defer e.Unlock()
+	return e.replaceDocs(q, func(doc *Document) *Document {
+		updateDoc := doc.Copy()
+		for updateField, updateValue := range updateMap {
+			updateDoc.Set(updateField, updateValue)
+		}
+		return updateDoc
+	})
+}
 
-	c, ok := e.collections[q.collection]
+func (s *inMemEngine) replaceDocs(q *Query, updater docUpdater) error {
+	c, ok := s.collections[q.collection]
 	if !ok {
 		return ErrCollectionNotExist
 	}
 
-	for _, d := range c {
-		if q.satisfy(d.doc) {
-			d.doc.fields = updateMap
+	docs := make([]*Document, 0)
+	s.iterateDocsSlice(q, func(doc *Document) error {
+		if q.satisfy(doc) {
+			docs = append(docs, doc)
+		}
+		return nil
+	})
+
+	for _, doc := range docs {
+		key := doc.ObjectId()
+		if q.satisfy(doc) {
+			newDoc := updater(doc)
+			if newDoc == nil {
+				delete(c, key)
+			} else {
+				c[key].fields = newDoc.fields
+			}
 		}
 	}
 
