@@ -2,6 +2,7 @@ package clover
 
 import (
 	"reflect"
+	"regexp"
 )
 
 const (
@@ -151,6 +152,25 @@ func (f *field) In(values ...interface{}) *Criteria {
 				}
 			}
 			return false
+		},
+	}
+}
+
+func (f *field) Like(pattern string) *Criteria {
+	expr, err := regexp.Compile(pattern)
+
+	return &Criteria{
+		p: func(doc *Document) bool {
+			if err != nil {
+				return false
+			}
+
+			s, isString := doc.Get(f.name).(string)
+			if !isString {
+				return false
+			}
+			matched := expr.MatchString(s)
+			return matched
 		},
 	}
 }

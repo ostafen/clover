@@ -608,6 +608,34 @@ func TestOrCriteria(t *testing.T) {
 	})
 }
 
+func TestLikeCriteria(t *testing.T) {
+	runCloverTest(t, todosPath, func(t *testing.T, db *c.DB) {
+		likeCriteria := c.Field("title").Like(".*est.*")
+		docs, err := db.Query("todos").Where(likeCriteria).FindAll()
+
+		require.NoError(t, err)
+
+		n := len(docs)
+		for _, doc := range docs {
+			s, isString := doc.Get("title").(string)
+			require.True(t, isString)
+			require.True(t, strings.Contains(s, "est"))
+		}
+
+		docs, err = db.Query("todos").Where(likeCriteria.Not()).FindAll()
+		m := len(docs)
+		for _, doc := range docs {
+			s, isString := doc.Get("title").(string)
+			require.True(t, isString)
+			require.False(t, strings.Contains(s, "est"))
+		}
+
+		total, err := db.Query("todos").Count()
+		require.NoError(t, err)
+		require.Equal(t, total, n+m)
+	})
+}
+
 func TestLimit(t *testing.T) {
 	runCloverTest(t, todosPath, func(t *testing.T, db *c.DB) {
 		n, err := db.Query("todos").Count()
