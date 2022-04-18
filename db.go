@@ -99,3 +99,7 @@ func Open(dir string, opts ...Option) (*DB, error) {
 func (db *DB) Close() error {
 	return db.engine.Close()
 }
+
+func (db *DB) ListCollections() ([]string, error) {
+	return db.engine.ListCollections()
+}

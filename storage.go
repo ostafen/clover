@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"sort"
+	"strings"
 
 	badger "github.com/dgraph-io/badger/v3"
 )
@@ -16,6 +17,7 @@ type StorageEngine interface {
 	Close() error
 
 	CreateCollection(name string) error
+	ListCollections() ([]string, error)
 	DropCollection(name string) error
 	HasCollection(name string) (bool, error)
 	FindAll(q *Query) ([]*Document, error)
@@ -355,4 +357,22 @@ func (s *storageImpl) IterateDocs(q *Query, consumer docConsumer) error {
 		return s.iterateDocs(nil, q, consumer)
 	}
 	return s.iterateDocsSlice(q, consumer)
+}
+
+func (s *storageImpl) ListCollections() ([]string, error) {
+	txn := s.db.NewTransaction(true)
+	defer txn.Discard()
+
+	it := txn.NewIterator(badger.DefaultIteratorOptions)
+	defer it.Close()
+
+	collections := make([]string, 0)
+	for it.Rewind(); it.Valid(); it.Next() {
+		item := it.Item()
+		key := string(item.Key())
+		collectionName := strings.TrimPrefix(key, "coll:")
+		collections = append(collections, collectionName)
+	}
+
+	return collections, nil
 }
