@@ -9,7 +9,7 @@ type Config struct {
 func defaultConfig() *Config {
 	return &Config{
 		InMemory: false,
-		Storage:  newStorageImpl(),
+		Storage:  newDefaultStorageImpl(),
 	}
 }
 
@@ -31,7 +31,7 @@ func InMemoryMode(enable bool) Option {
 		if enable {
 			c.Storage = newMemStorageEngine()
 		} else {
-			c.Storage = newStorageImpl()
+			c.Storage = newDefaultStorageImpl()
 		}
 		c.InMemory = enable
 		return nil

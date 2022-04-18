@@ -33,7 +33,7 @@ type storageImpl struct {
 	db *badger.DB
 }
 
-func newStorageImpl() *storageImpl {
+func newDefaultStorageImpl() *storageImpl {
 	return &storageImpl{}
 }
 
