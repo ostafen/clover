@@ -76,14 +76,21 @@ func (db *DB) InsertOne(collectionName string, doc *Document) (string, error) {
 }
 
 // Open opens a new clover database on the supplied path. If such a folder doesn't exist, it is automatically created.
-func Open(dir string) (*DB, error) {
-	if err := makeDirIfNotExists(dir); err != nil {
+func Open(dir string, opts ...Option) (*DB, error) {
+	config, err := defaultConfig().applyOptions(opts)
+	if err != nil {
 		return nil, err
+	}
+
+	if !config.InMemory {
+		if err := makeDirIfNotExists(dir); err != nil {
+			return nil, err
+		}
 	}
 
 	db := &DB{
 		dir:    dir,
-		engine: newStorageImpl(),
+		engine: config.Storage,
 	}
 	return db, db.engine.Open(dir)
 }
