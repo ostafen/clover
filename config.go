@@ -29,7 +29,7 @@ type Option func(c *Config) error
 func InMemoryMode(enable bool) Option {
 	return func(c *Config) error {
 		if enable {
-			c.Storage = newInMemoryStoreEngine()
+			c.Storage = newMemStorageEngine()
 		} else {
 			c.Storage = newStorageImpl()
 		}

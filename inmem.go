@@ -7,32 +7,25 @@ import (
 
 type collection map[string]*Document
 
-type inMemEngine struct {
+type memEngine struct {
 	sync.RWMutex
 	collections map[string]collection
 }
 
-func newInMemoryStoreEngine() StorageEngine {
-	return &inMemEngine{
+func newMemStorageEngine() StorageEngine {
+	return &memEngine{
 		RWMutex:     sync.RWMutex{},
 		collections: make(map[string]collection),
 	}
 }
 
-func InMemoryDB() (*DB, error) {
-	return &DB{
-		dir:    "",
-		engine: newInMemoryStoreEngine(),
-	}, nil
-}
-
 // Close implements StorageEngine
-func (*inMemEngine) Close() error {
+func (*memEngine) Close() error {
 	return nil
 }
 
 // CreateCollection implements StorageEngine
-func (e *inMemEngine) CreateCollection(name string) error {
+func (e *memEngine) CreateCollection(name string) error {
 	e.Lock()
 	defer e.Unlock()
 	if e.hasCollection(name) {
@@ -43,14 +36,14 @@ func (e *inMemEngine) CreateCollection(name string) error {
 }
 
 // Delete implements StorageEngine
-func (e *inMemEngine) Delete(q *Query) error {
+func (e *memEngine) Delete(q *Query) error {
 	return e.replaceDocs(q, func(_ *Document) *Document {
 		return nil
 	})
 }
 
 // DeleteById implements StorageEngine
-func (e *inMemEngine) DeleteById(collectionName string, id string) error {
+func (e *memEngine) DeleteById(collectionName string, id string) error {
 	e.Lock()
 	defer e.Unlock()
 
@@ -64,13 +57,13 @@ func (e *inMemEngine) DeleteById(collectionName string, id string) error {
 	return nil
 }
 
-func (e *inMemEngine) hasCollection(collectionName string) bool {
+func (e *memEngine) hasCollection(collectionName string) bool {
 	_, ok := e.collections[collectionName]
 	return ok
 }
 
 // DropCollection implements StorageEngine
-func (e *inMemEngine) DropCollection(name string) error {
+func (e *memEngine) DropCollection(name string) error {
 	e.Lock()
 	defer e.Unlock()
 
@@ -83,7 +76,7 @@ func (e *inMemEngine) DropCollection(name string) error {
 }
 
 // FindAll implements StorageEngine
-func (e *inMemEngine) FindAll(q *Query) ([]*Document, error) {
+func (e *memEngine) FindAll(q *Query) ([]*Document, error) {
 	docs := []*Document{}
 	err := e.IterateDocs(q, func(doc *Document) error {
 		if q.satisfy(doc) {
@@ -96,7 +89,7 @@ func (e *inMemEngine) FindAll(q *Query) ([]*Document, error) {
 }
 
 // FindById implements StorageEngine
-func (e *inMemEngine) FindById(collectionName string, id string) (*Document, error) {
+func (e *memEngine) FindById(collectionName string, id string) (*Document, error) {
 	e.RLock()
 	defer e.RUnlock()
 
@@ -109,7 +102,7 @@ func (e *inMemEngine) FindById(collectionName string, id string) (*Document, err
 }
 
 // HasCollection implements StorageEngine
-func (e *inMemEngine) HasCollection(name string) (bool, error) {
+func (e *memEngine) HasCollection(name string) (bool, error) {
 	e.RLock()
 	defer e.RUnlock()
 
@@ -118,7 +111,7 @@ func (e *inMemEngine) HasCollection(name string) (bool, error) {
 }
 
 // Insert implements StorageEngine
-func (e *inMemEngine) Insert(collection string, docs ...*Document) error {
+func (e *memEngine) Insert(collection string, docs ...*Document) error {
 	e.Lock()
 	defer e.Unlock()
 
@@ -134,7 +127,7 @@ func (e *inMemEngine) Insert(collection string, docs ...*Document) error {
 	return nil
 }
 
-func (e *inMemEngine) iterateDocs(q *Query, consumer docConsumer) error {
+func (e *memEngine) iterateDocs(q *Query, consumer docConsumer) error {
 	c, ok := e.collections[q.collection]
 	if !ok {
 		return ErrCollectionNotExist
@@ -180,7 +173,7 @@ func (e *inMemEngine) iterateDocs(q *Query, consumer docConsumer) error {
 }
 
 // IterateDocs implements StorageEngine
-func (e *inMemEngine) IterateDocs(q *Query, consumer docConsumer) error {
+func (e *memEngine) IterateDocs(q *Query, consumer docConsumer) error {
 	e.RLock()
 	defer e.RUnlock()
 
@@ -188,12 +181,12 @@ func (e *inMemEngine) IterateDocs(q *Query, consumer docConsumer) error {
 }
 
 // Open implements StorageEngine
-func (e *inMemEngine) Open(path string) error {
+func (e *memEngine) Open(path string) error {
 	return nil
 }
 
 // Update implements StorageEngine
-func (e *inMemEngine) Update(q *Query, updateMap map[string]interface{}) error {
+func (e *memEngine) Update(q *Query, updateMap map[string]interface{}) error {
 	return e.replaceDocs(q, func(doc *Document) *Document {
 		updateDoc := doc.Copy()
 		for updateField, updateValue := range updateMap {
@@ -203,7 +196,7 @@ func (e *inMemEngine) Update(q *Query, updateMap map[string]interface{}) error {
 	})
 }
 
-func (e *inMemEngine) replaceDocs(q *Query, updater docUpdater) error {
+func (e *memEngine) replaceDocs(q *Query, updater docUpdater) error {
 	e.Lock()
 	defer e.Unlock()
 
