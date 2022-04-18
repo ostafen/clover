@@ -35,7 +35,7 @@ func (*inMemEngine) Close() error {
 func (e *inMemEngine) CreateCollection(name string) error {
 	e.Lock()
 	defer e.Unlock()
-	if ok, _ := e.HasCollection(name); ok {
+	if e.hasCollection(name) {
 		return ErrCollectionExist
 	}
 	e.collections[name] = make(collection)
@@ -46,19 +46,9 @@ func (e *inMemEngine) CreateCollection(name string) error {
 func (e *inMemEngine) Delete(q *Query) error {
 	e.Lock()
 	defer e.Unlock()
-
-	c, ok := e.collections[q.collection]
-	if !ok {
-		return ErrCollectionNotExist
-	}
-
-	for key, d := range c {
-		if q.satisfy(d) {
-			delete(c, key)
-		}
-	}
-
-	return nil
+	return e.replaceDocs(q, func(_ *Document) *Document {
+		return nil
+	})
 }
 
 // DeleteById implements StorageEngine
@@ -86,7 +76,7 @@ func (e *inMemEngine) DropCollection(name string) error {
 	e.Lock()
 	defer e.Unlock()
 
-	if ok, _ := e.HasCollection(name); ok {
+	if e.hasCollection(name) {
 		delete(e.collections, name)
 	} else {
 		return ErrCollectionNotExist
@@ -122,6 +112,9 @@ func (e *inMemEngine) FindById(collectionName string, id string) (*Document, err
 
 // HasCollection implements StorageEngine
 func (e *inMemEngine) HasCollection(name string) (bool, error) {
+	e.RLock()
+	defer e.RUnlock()
+
 	_, ok := e.collections[name]
 	return ok, nil
 }
@@ -143,7 +136,7 @@ func (e *inMemEngine) Insert(collection string, docs ...*Document) error {
 	return nil
 }
 
-func (e *inMemEngine) iterateDocsSlice(q *Query, consumer docConsumer) error {
+func (e *inMemEngine) iterateDocs(q *Query, consumer docConsumer) error {
 	c, ok := e.collections[q.collection]
 	if !ok {
 		return ErrCollectionNotExist
@@ -193,7 +186,7 @@ func (e *inMemEngine) IterateDocs(q *Query, consumer docConsumer) error {
 	e.RLock()
 	defer e.RUnlock()
 
-	return e.iterateDocsSlice(q, consumer)
+	return e.iterateDocs(q, consumer)
 }
 
 // Open implements StorageEngine
@@ -221,7 +214,7 @@ func (s *inMemEngine) replaceDocs(q *Query, updater docUpdater) error {
 	}
 
 	docs := make([]*Document, 0)
-	s.iterateDocsSlice(q, func(doc *Document) error {
+	s.iterateDocs(q, func(doc *Document) error {
 		if q.satisfy(doc) {
 			docs = append(docs, doc)
 		}
