@@ -44,8 +44,6 @@ func (e *inMemEngine) CreateCollection(name string) error {
 
 // Delete implements StorageEngine
 func (e *inMemEngine) Delete(q *Query) error {
-	e.Lock()
-	defer e.Unlock()
 	return e.replaceDocs(q, func(_ *Document) *Document {
 		return nil
 	})
@@ -196,8 +194,6 @@ func (e *inMemEngine) Open(path string) error {
 
 // Update implements StorageEngine
 func (e *inMemEngine) Update(q *Query, updateMap map[string]interface{}) error {
-	e.Lock()
-	defer e.Unlock()
 	return e.replaceDocs(q, func(doc *Document) *Document {
 		updateDoc := doc.Copy()
 		for updateField, updateValue := range updateMap {
@@ -207,14 +203,17 @@ func (e *inMemEngine) Update(q *Query, updateMap map[string]interface{}) error {
 	})
 }
 
-func (s *inMemEngine) replaceDocs(q *Query, updater docUpdater) error {
-	c, ok := s.collections[q.collection]
+func (e *inMemEngine) replaceDocs(q *Query, updater docUpdater) error {
+	e.Lock()
+	defer e.Unlock()
+
+	c, ok := e.collections[q.collection]
 	if !ok {
 		return ErrCollectionNotExist
 	}
 
 	docs := make([]*Document, 0)
-	s.iterateDocs(q, func(doc *Document) error {
+	e.iterateDocs(q, func(doc *Document) error {
 		if q.satisfy(doc) {
 			docs = append(docs, doc)
 		}
