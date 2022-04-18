@@ -169,3 +169,4 @@ Major contributions and suggestions have been gratefully received from (in alpha
 
 - [ASWLaunchs](https://github.com/ASWLaunchs)
 - [jsgm](https://github.com/jsgm)
+- [segfault99](https://github.com/segfault99)
