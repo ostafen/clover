@@ -33,7 +33,7 @@
 ## Instalación
 Asegúrate de que tienes un entorno Go funcional (Se requiere Go 1.13 o superior). 
 ```shell
-  go get github.com/ostafen/clover
+  GO111MODULE=on go get github.com/ostafen/clover
 ```
 
 ## Bases de datos y colecciones
