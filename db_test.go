@@ -816,16 +816,16 @@ func TestDocumentUnmarshal(t *testing.T) {
 }
 
 func TestListCollections(t *testing.T) {
-	runCloverTest(t, "", func(t *testing.T, db *c.DB) {
+	runCloverTest(t, todosPath, func(t *testing.T, db *c.DB) {
 		collections, err := db.ListCollections()
 		require.NoError(t, err)
-		require.Equal(t, 0, len(collections))
+		require.Equal(t, 1, len(collections))
 
 		err = db.CreateCollection("test1")
 		require.NoError(t, err)
 
 		collections, err = db.ListCollections()
-		require.Equal(t, 1, len(collections))
+		require.Equal(t, 2, len(collections))
 
 		err = db.DropCollection("test1")
 		require.NoError(t, err)
@@ -838,6 +838,18 @@ func TestListCollections(t *testing.T) {
 		require.NoError(t, err)
 
 		collections, err = db.ListCollections()
-		require.Equal(t, 3, len(collections))
+		require.Equal(t, 4, len(collections))
+
+		err = db.DropCollection("c1")
+		require.NoError(t, err)
+		err = db.DropCollection("c2")
+		require.NoError(t, err)
+		err = db.DropCollection("c3")
+		require.NoError(t, err)
+		err = db.DropCollection("todos")
+		require.NoError(t, err)
+
+		collections, err = db.ListCollections()
+		require.Equal(t, 0, len(collections))
 	})
 }

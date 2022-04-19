@@ -230,8 +230,8 @@ func (e *memEngine) replaceDocs(q *Query, updater docUpdater) error {
 
 func (e *memEngine) ListCollections() ([]string, error) {
 	collections := make([]string, 0)
-	for key := range e.collections {
-		collections = append(collections, key)
+	for name := range e.collections {
+		collections = append(collections, name)
 	}
 	return collections, nil
 }

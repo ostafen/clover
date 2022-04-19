@@ -367,7 +367,8 @@ func (s *storageImpl) ListCollections() ([]string, error) {
 	defer it.Close()
 
 	collections := make([]string, 0)
-	for it.Rewind(); it.Valid(); it.Next() {
+	prefix := []byte("coll:")
+	for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
 		item := it.Item()
 		key := string(item.Key())
 		collectionName := strings.TrimPrefix(key, "coll:")

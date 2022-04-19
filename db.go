@@ -100,6 +100,7 @@ func (db *DB) Close() error {
 	return db.engine.Close()
 }
 
+// Returns a slice of strings with the collection's names
 func (db *DB) ListCollections() ([]string, error) {
 	return db.engine.ListCollections()
 }
