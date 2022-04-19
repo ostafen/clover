@@ -73,6 +73,23 @@ docId, _ := db.InsertOne("myCollection", doc)
 fmt.Println(docId)
 ```
 
+### Importando y Exportando Colecciones
+
+CloverDB es capaz de importar y exportar fácilmente colecciones a formato JSON con independencia del motor de almacenamiento usado.
+
+```go
+db, _ := c.Open("clover-db")
+
+db.ImportCollection("todos", "test/data/todos.json") // el contenido de todos.json será importado en la colección `todos`
+docs, _ := db.Query("todos").FindAll()
+for _, doc := range docs{
+  // ahora puedes trabajar con cada documento.
+  doc.Set("completed", false)
+}
+
+db.ExportCollection("todos", "test/data/exported.json") // exportará los documentos de `todos` al archivo `exported.json`, el campo `completed` de cada documento será `false`
+```
+
 ## Consultas
 
 CloverDB está equipada con una API fluida y elegante para consultar tus datos. Una consulta está representada por el objeto **Query**, que permite devolver documentos que coincidan con unos determinados parámetros. Una consulta puede ser creada pasando como parámetro un nombre de colección válido en el método `Query()`.
@@ -96,8 +113,7 @@ for _, doc := range docs {
 }
 ```
 
-
-### Filter Documents with Criteria
+### Filtrar Documentos con el objeto Criteria
 
 Para filtrar los documentos devueltos por `FindAll()`, deberás de especificar ciertos parámetros determinados por el objeto **Criteria** utilizando el método `Where()`. Un objeto **Criteria** simplemente representa una afirmación en un documento, evaluándose como verdadero (true) solo si coinciden todas las condiciones expuestas en la consulta.
 
@@ -110,7 +126,7 @@ db.Query("todos").Where(c.Field("completed").Eq(true)).FindAll()
 db.Query("todos").Where(c.Field("completed").IsTrue()).FindAll()
 ```
 
-Con el objetivo de construir consultas más complejas, encadenaremos diferentes objetos Criteria utilizando los métodos `And()` y `Or()`, each returning a new Criteria obtained by appling the corresponding logical operator.
+Con el objetivo de construir consultas más complejas, encadenaremos diferentes objetos Criteria utilizando los métodos `And()` y `Or()`, cada cual devolviendo un nuevo objeto Criteria obtenido de aplicar los operadores lógicos correspondientes.
 
 ```go
 // encontrar todos los documentos por hacer (todos) que pertenezcan a los usuarios con id 5 y 8
@@ -151,7 +167,7 @@ db.Query("todos").Where(c.Field("userId").Eq(1)).Update(updates)
 db.Query("todos").Where(c.Field("userId").In(5,8)).Delete()
 ```
 
-Actualizar o eliminar un único documento utilizando la id se puede lograr de la misma forma, using an equality condition on the **_id** field, like shown in the following snippet:
+Actualizar o eliminar un único documento utilizando la id se puede lograr de la misma forma, usando la condición de equivalencia del campo **_id**, como se muestra en el siguiente fragmento:
 
 ```go
 docId := "1dbce353-d3c6-43b3-b5a8-80d8d876389b"
