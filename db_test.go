@@ -206,7 +206,7 @@ func TestUpdateCollection(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, n, 0)
 
-		doc.Set("completed", true)
+		doc.Set("completed", false)
 		updatedDoc, err := db.Query("todos").Where(c.Field("id").Eq(doc.Get("id"))).FindFirst()
 		require.NoError(t, err)
 		require.Equal(t, doc, updatedDoc)
