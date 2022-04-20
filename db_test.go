@@ -196,7 +196,7 @@ func TestUpdateCollection(t *testing.T) {
 		updates := make(map[string]interface{})
 		updates["completed"] = false
 
-		doc, err := db.Query("todos").Where(criteria).FindFirst()
+		docs, err := db.Query("todos").Where(criteria).FindAll()
 		require.NoError(t, err)
 
 		err = db.Query("todos").Where(criteria).Update(updates)
@@ -206,10 +206,12 @@ func TestUpdateCollection(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, n, 0)
 
-		doc.Set("completed", false)
-		updatedDoc, err := db.Query("todos").Where(c.Field("id").Eq(doc.Get("id"))).FindFirst()
-		require.NoError(t, err)
-		require.Equal(t, doc, updatedDoc)
+		for _, doc := range docs {
+			doc.Set("completed", false)
+			updatedDoc, err := db.Query("todos").Where(c.Field("id").Eq(doc.Get("id"))).FindFirst()
+			require.NoError(t, err)
+			require.Equal(t, doc, updatedDoc)
+		}
 	})
 }
 
