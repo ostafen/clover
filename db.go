@@ -99,3 +99,8 @@ func Open(dir string, opts ...Option) (*DB, error) {
 func (db *DB) Close() error {
 	return db.engine.Close()
 }
+
+// ListCollections returns a slice of strings containing the name of each collection stored in the db.
+func (db *DB) ListCollections() ([]string, error) {
+	return db.engine.ListCollections()
+}
