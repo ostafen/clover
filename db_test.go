@@ -196,12 +196,20 @@ func TestUpdateCollection(t *testing.T) {
 		updates := make(map[string]interface{})
 		updates["completed"] = false
 
-		err := db.Query("todos").Where(criteria).Update(updates)
+		doc, err := db.Query("todos").Where(criteria).FindFirst()
+		require.NoError(t, err)
+
+		err = db.Query("todos").Where(criteria).Update(updates)
 		require.NoError(t, err)
 
 		n, err := db.Query("todos").Where(criteria).Count()
 		require.NoError(t, err)
 		require.Equal(t, n, 0)
+
+		doc.Set("completed", true)
+		updatedDoc, err := db.Query("todos").Where(c.Field("id").Eq(doc.Get("id"))).FindFirst()
+		require.NoError(t, err)
+		require.Equal(t, doc, updatedDoc)
 	})
 }
 
