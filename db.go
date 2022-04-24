@@ -71,8 +71,8 @@ func (db *DB) Insert(collectionName string, docs ...*Document) error {
 
 // Save or update a document
 func (db *DB) Save(collectionName string, doc *Document) error {
-	if doc.Has(objectIdField) {
-		doc.Set(objectIdField, newObjectId())
+	if !doc.Has(objectIdField) {
+		db.Insert(collectionName, doc)
 	}
 	return db.engine.Insert(collectionName, doc)
 }
