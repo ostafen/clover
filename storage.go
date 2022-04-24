@@ -25,6 +25,7 @@ type StorageEngine interface {
 	DeleteById(collectionName string, id string) error
 	IterateDocs(q *Query, consumer docConsumer) error
 	Insert(collection string, docs ...*Document) error
+	Save(collection string, doc *Document) error
 	Update(q *Query, updateMap map[string]interface{}) error
 	Delete(q *Query) error
 }
@@ -154,6 +155,31 @@ func (s *storageImpl) Insert(collection string, docs ...*Document) error {
 			return err
 		}
 	}
+	return txn.Commit()
+}
+
+func (s *storageImpl) Save(collection string, doc *Document) error {
+	txn := s.db.NewTransaction(true)
+	defer txn.Discard()
+
+	ok, err := s.hasCollection(collection, txn)
+	if err != nil {
+		return err
+	}
+
+	if !ok {
+		return ErrCollectionNotExist
+	}
+
+	data, err := json.Marshal(doc.fields)
+	if err != nil {
+		return err
+	}
+
+	if err := txn.Set([]byte(getDocumentKey(collection, doc.ObjectId())), data); err != nil {
+		return err
+	}
+
 	return txn.Commit()
 }
 

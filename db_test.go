@@ -134,6 +134,37 @@ func TestInsert(t *testing.T) {
 	})
 }
 
+func TestSaveExistingDocument(t *testing.T) {
+	runCloverTest(t, "", func(t *testing.T, db *c.DB) {
+		err := db.CreateCollection("myCollection")
+		require.NoError(t, err)
+
+		doc := c.NewDocument()
+		doc.Set("hello", "clover")
+
+		require.NoError(t, db.Save("myCollection", doc))
+
+		n, err := db.Query("myCollection").Count()
+		require.NoError(t, err)
+		require.Equal(t, 1, n)
+
+		require.Equal(t, db.Insert("myOtherCollection"), c.ErrCollectionNotExist)
+	})
+}
+
+func TestSaveNewDocument(t *testing.T) {
+	runCloverTest(t, "", func(t *testing.T, db *c.DB) {
+		err := db.CreateCollection("myCollection")
+		require.NoError(t, err)
+
+		doc := c.NewDocument()
+		doc.Set("hello", "clover")
+
+		require.NoError(t, db.Save("myCollection", doc))
+		require.Equal(t, db.Insert("myOtherCollection"), c.ErrCollectionNotExist)
+	})
+}
+
 func TestInsertAndGet(t *testing.T) {
 	runCloverTest(t, "", func(t *testing.T, db *c.DB) {
 		err := db.CreateCollection("myCollection")
