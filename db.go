@@ -74,7 +74,7 @@ func (db *DB) Save(collectionName string, doc *Document) error {
 	if doc.Get(objectIdField) == "" {
 		doc.Set(objectIdField, newObjectId())
 	}
-	return db.engine.Save(collectionName, doc)
+	return db.engine.Insert(collectionName, doc)
 }
 
 // InsertOne inserts a single document to an existing collection. It returns the id of the inserted document.

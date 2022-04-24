@@ -127,20 +127,6 @@ func (e *memEngine) Insert(collection string, docs ...*Document) error {
 	return nil
 }
 
-func (e *memEngine) Save(collection string, doc *Document) error {
-	e.Lock()
-	defer e.Unlock()
-
-	c, ok := e.collections[collection]
-	if !ok {
-		return ErrCollectionNotExist
-	}
-
-	c[doc.ObjectId()] = doc
-
-	return nil
-}
-
 func (e *memEngine) iterateDocs(q *Query, consumer docConsumer) error {
 	c, ok := e.collections[q.collection]
 	if !ok {
