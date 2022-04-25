@@ -146,7 +146,11 @@ func (q *Query) ForEach(consumer func(_ *Document) bool) error {
 // Update updates all the document selected by q using the provided updateMap.
 // Each update is specified by a mapping fieldName -> newValue.
 func (q *Query) Update(updateMap map[string]interface{}) error {
-	return q.engine.Update(q, updateMap)
+	return q.engine.Update(q, func(doc *Document) *Document {
+		newDoc := doc.Copy()
+		newDoc.SetAll(updateMap)
+		return newDoc
+	})
 }
 
 // DeleteById removes the document with the given id from the underlying collection, provided that such a document exists and satisfies the underlying query.

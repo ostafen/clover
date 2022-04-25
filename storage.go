@@ -25,7 +25,7 @@ type StorageEngine interface {
 	DeleteById(collectionName string, id string) error
 	IterateDocs(q *Query, consumer docConsumer) error
 	Insert(collection string, docs ...*Document) error
-	Update(q *Query, updateMap map[string]interface{}) error
+	Update(q *Query, updater func(doc *Document) *Document) error
 	Delete(q *Query) error
 }
 
@@ -204,14 +204,8 @@ func (s *storageImpl) replaceDocs(txn *badger.Txn, q *Query, updater docUpdater)
 	return txn.Commit()
 }
 
-func (s *storageImpl) Update(q *Query, updateMap map[string]interface{}) error {
-	return s.replaceDocs(nil, q, func(doc *Document) *Document {
-		updateDoc := doc.Copy()
-		for updateField, updateValue := range updateMap {
-			updateDoc.Set(updateField, updateValue)
-		}
-		return updateDoc
-	})
+func (s *storageImpl) Update(q *Query, updater func(doc *Document) *Document) error {
+	return s.replaceDocs(nil, q, updater)
 }
 
 func (s *storageImpl) deleteAll(txn *badger.Txn, collName string) error {

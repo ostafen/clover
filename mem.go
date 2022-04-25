@@ -186,14 +186,8 @@ func (e *memEngine) Open(path string) error {
 }
 
 // Update implements StorageEngine
-func (e *memEngine) Update(q *Query, updateMap map[string]interface{}) error {
-	return e.replaceDocs(q, func(doc *Document) *Document {
-		updateDoc := doc.Copy()
-		for updateField, updateValue := range updateMap {
-			updateDoc.Set(updateField, updateValue)
-		}
-		return updateDoc
-	})
+func (e *memEngine) Update(q *Query, updater func(doc *Document) *Document) error {
+	return e.replaceDocs(q, updater)
 }
 
 func (e *memEngine) replaceDocs(q *Query, updater docUpdater) error {
