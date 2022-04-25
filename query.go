@@ -153,6 +153,16 @@ func (q *Query) Update(updateMap map[string]interface{}) error {
 	})
 }
 
+// UpdateById updates the document with the specified id using the supplied update map.
+// If no document with the specified id exists, an ErrDocumentNotExist is returned.
+func (q *Query) UpdateById(docId string, updateMap map[string]interface{}) error {
+	return q.engine.UpdateById(q.collection, docId, func(doc *Document) *Document {
+		newDoc := doc.Copy()
+		newDoc.SetAll(updateMap)
+		return newDoc
+	})
+}
+
 // DeleteById removes the document with the given id from the underlying collection, provided that such a document exists and satisfies the underlying query.
 func (q *Query) DeleteById(id string) error {
 	return q.engine.DeleteById(q.collection, id)

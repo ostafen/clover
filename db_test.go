@@ -215,6 +215,27 @@ func TestUpdateCollection(t *testing.T) {
 	})
 }
 
+func TestUpdateById(t *testing.T) {
+	runCloverTest(t, todosPath, func(t *testing.T, db *c.DB) {
+		doc, err := db.Query("todos").FindFirst()
+		require.NoError(t, err)
+
+		err = db.Query("todos").UpdateById("invalid-id", map[string]interface{}{})
+		require.Error(t, c.ErrDocumentNotExist)
+
+		id := doc.ObjectId()
+		completed := doc.Get("completed").(bool)
+
+		err = db.Query("todos").UpdateById(id, map[string]interface{}{"completed": !completed})
+		require.NoError(t, err)
+
+		doc, err = db.Query("todos").FindById(id)
+		require.NoError(t, err)
+
+		require.Equal(t, !completed, doc.Get("completed").(bool))
+	})
+}
+
 func TestInsertAndDelete(t *testing.T) {
 	runCloverTest(t, todosPath, func(t *testing.T, db *c.DB) {
 		criteria := c.Field("completed").Eq(true)

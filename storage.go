@@ -3,11 +3,14 @@ package clover
 import (
 	"encoding/json"
 	"errors"
+	"log"
 	"sort"
 	"strings"
 
 	badger "github.com/dgraph-io/badger/v3"
 )
+
+var ErrDocumentNotExist = errors.New("no such document")
 
 type docConsumer func(doc *Document) error
 
@@ -22,6 +25,7 @@ type StorageEngine interface {
 	HasCollection(name string) (bool, error)
 	FindAll(q *Query) ([]*Document, error)
 	FindById(collectionName string, id string) (*Document, error)
+	UpdateById(collectionName string, docId string, updater func(doc *Document) *Document) error
 	DeleteById(collectionName string, id string) error
 	IterateDocs(q *Query, consumer docConsumer) error
 	Insert(collection string, docs ...*Document) error
@@ -237,6 +241,44 @@ func (s *storageImpl) DeleteById(collName string, id string) error {
 		return err
 	}
 	return txn.Commit()
+}
+
+func (s *storageImpl) UpdateById(collectionName string, docId string, updater func(doc *Document) *Document) error {
+	return s.db.Update(func(txn *badger.Txn) error {
+		has, err := s.hasCollection(collectionName, txn)
+		if err != nil {
+			return err
+		}
+
+		if !has {
+			return ErrCollectionNotExist
+		}
+
+		docKey := getDocumentKey(collectionName, docId)
+		item, err := txn.Get([]byte(docKey))
+		if errors.Is(err, badger.ErrKeyNotFound) {
+			return ErrDocumentNotExist
+		}
+
+		var doc *Document
+		err = item.Value(func(value []byte) error {
+			d, err := readDoc(value)
+			doc = d
+			return err
+		})
+
+		if err != nil {
+			return err
+		}
+
+		updatedDoc := updater(doc)
+		log.Println(updatedDoc.fields)
+		jsonDoc, err := json.Marshal(updatedDoc.fields)
+		if err != nil {
+			return err
+		}
+		return txn.Set([]byte(docKey), jsonDoc)
+	})
 }
 
 func (s *storageImpl) Close() error {
