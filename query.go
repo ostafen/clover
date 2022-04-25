@@ -1,5 +1,9 @@
 package clover
 
+import (
+	"fmt"
+)
+
 // Query represents a generic query which is submitted to a specific collection.
 type Query struct {
 	engine     StorageEngine
@@ -160,6 +164,17 @@ func (q *Query) UpdateById(docId string, updateMap map[string]interface{}) error
 		newDoc := doc.Copy()
 		newDoc.SetAll(updateMap)
 		return newDoc
+	})
+}
+
+// ReplaceById replaces the document with the specified id with the one provided.
+// If no document exists, an ErrDocumentNotExist is returned.
+func (q *Query) ReplaceById(docId string, doc *Document) error {
+	if doc.ObjectId() != docId {
+		return fmt.Errorf("the id of the document must match the one supplied")
+	}
+	return q.engine.UpdateById(q.collection, docId, func(_ *Document) *Document {
+		return doc
 	})
 }
 
