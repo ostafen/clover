@@ -104,6 +104,9 @@ func TestInsertOneAndDelete(t *testing.T) {
 		require.NoError(t, err)
 		require.NotEmpty(t, docId)
 
+		_, err = db.InsertOne("myCollection", doc)
+		require.Equal(t, c.ErrDuplicateKey, err)
+
 		doc, err = db.Query("myCollection").FindById(docId)
 		require.NoError(t, err)
 		require.NotEmpty(t, doc.ObjectId(), docId)

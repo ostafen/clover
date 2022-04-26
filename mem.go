@@ -121,6 +121,12 @@ func (e *memEngine) Insert(collection string, docs ...*Document) error {
 	}
 
 	for _, d := range docs {
+		if c[d.ObjectId()] != nil {
+			return ErrDuplicateKey
+		}
+	}
+
+	for _, d := range docs {
 		c[d.ObjectId()] = d
 	}
 

@@ -45,8 +45,13 @@ func (db *DB) HasCollection(name string) (bool, error) {
 	return db.engine.HasCollection(name)
 }
 
-func newObjectId() string {
+func NewObjectId() string {
 	return uuid.NewV4().String()
+}
+
+func isValidObjectId(id string) bool {
+	_, err := uuid.FromString(id)
+	return err == nil
 }
 
 // Insert adds the supplied documents to a collection.
@@ -60,9 +65,12 @@ func (db *DB) Insert(collectionName string, docs ...*Document) error {
 		}
 		insertDoc.fields = fields.(map[string]interface{})
 
-		objectId := newObjectId()
-		insertDoc.Set(objectIdField, objectId)
-		doc.Set(objectIdField, objectId)
+		if !isValidObjectId(doc.ObjectId()) {
+			objectId := NewObjectId()
+
+			insertDoc.Set(objectIdField, objectId)
+			doc.Set(objectIdField, objectId)
+		}
 
 		insertDocs = append(insertDocs, insertDoc)
 	}
