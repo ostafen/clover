@@ -6,6 +6,9 @@ import (
 	"log"
 	"sort"
 	"strings"
+	"sync"
+	"sync/atomic"
+	"time"
 
 	badger "github.com/dgraph-io/badger/v3"
 )
@@ -36,16 +39,59 @@ type StorageEngine interface {
 var errStopIteration = errors.New("iteration stop")
 
 type storageImpl struct {
-	db *badger.DB
+	db     *badger.DB
+	chQuit chan struct{}
+	chWg   sync.WaitGroup
+	closed uint32
 }
 
 func newDefaultStorageImpl() *storageImpl {
-	return &storageImpl{}
+	return &storageImpl{
+		chQuit: make(chan struct{}, 1),
+	}
+}
+
+const (
+	reclaimInterval = 5 * time.Minute
+	discardRatio    = 0.5
+)
+
+func (s *storageImpl) startGC() {
+	s.chWg.Add(1)
+
+	go func() {
+		defer s.chWg.Done()
+
+		ticker := time.NewTicker(reclaimInterval)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-s.chQuit:
+				return
+
+			case <-ticker.C:
+				err := s.db.RunValueLogGC(discardRatio)
+				if err != nil {
+					log.Printf("RunValueLogGC(): %s\n", err.Error())
+				}
+			}
+		}
+	}()
+}
+
+func (s *storageImpl) stopGC() {
+	s.chQuit <- struct{}{}
+	s.chWg.Wait()
+	close(s.chQuit)
 }
 
 func (s *storageImpl) Open(path string) error {
 	db, err := badger.Open(badger.DefaultOptions(path).WithLoggingLevel(badger.ERROR))
 	s.db = db
+	if err == nil {
+		s.startGC()
+	}
 	return err
 }
 
@@ -272,7 +318,6 @@ func (s *storageImpl) UpdateById(collectionName string, docId string, updater fu
 		}
 
 		updatedDoc := updater(doc)
-		log.Println(updatedDoc.fields)
 		jsonDoc, err := json.Marshal(updatedDoc.fields)
 		if err != nil {
 			return err
@@ -282,7 +327,11 @@ func (s *storageImpl) UpdateById(collectionName string, docId string, updater fu
 }
 
 func (s *storageImpl) Close() error {
-	return s.db.Close()
+	if atomic.CompareAndSwapUint32(&s.closed, 0, 1) {
+		s.stopGC()
+		return s.db.Close()
+	}
+	return nil
 }
 
 func (s *storageImpl) hasCollection(name string, txn *badger.Txn) (bool, error) {
