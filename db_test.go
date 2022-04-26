@@ -912,3 +912,30 @@ func TestListCollections(t *testing.T) {
 		require.Equal(t, 0, len(collections))
 	})
 }
+
+func TestExportAndImportCollection(t *testing.T) {
+	runCloverTest(t, todosPath, func(t *testing.T, db *c.DB) {
+		exportPath, err := ioutil.TempDir("", "export-dir")
+		require.NoError(t, err)
+		defer os.RemoveAll(exportPath)
+
+		exportFilePath := exportPath + "todos.json"
+		err = db.ExportCollection("todos", exportFilePath)
+		require.NoError(t, err)
+
+		err = db.ImportCollection("todos-copy", exportFilePath)
+		require.NoError(t, err)
+
+		docs, err := db.Query("todos").Sort().FindAll()
+		require.NoError(t, err)
+
+		importDocs, err := db.Query("todos-copy").Sort().FindAll()
+		require.NoError(t, err)
+
+		require.Equal(t, len(docs), len(importDocs))
+
+		for i := 0; i < len(docs); i++ {
+			require.Equal(t, docs[i], importDocs[i])
+		}
+	})
+}
