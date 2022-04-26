@@ -3,11 +3,17 @@ package clover
 import (
 	"encoding/json"
 	"errors"
+	"log"
 	"sort"
 	"strings"
+	"sync"
+	"sync/atomic"
+	"time"
 
 	badger "github.com/dgraph-io/badger/v3"
 )
+
+var ErrDocumentNotExist = errors.New("no such document")
 
 type docConsumer func(doc *Document) error
 
@@ -22,26 +28,70 @@ type StorageEngine interface {
 	HasCollection(name string) (bool, error)
 	FindAll(q *Query) ([]*Document, error)
 	FindById(collectionName string, id string) (*Document, error)
+	UpdateById(collectionName string, docId string, updater func(doc *Document) *Document) error
 	DeleteById(collectionName string, id string) error
 	IterateDocs(q *Query, consumer docConsumer) error
 	Insert(collection string, docs ...*Document) error
-	Update(q *Query, updateMap map[string]interface{}) error
+	Update(q *Query, updater func(doc *Document) *Document) error
 	Delete(q *Query) error
 }
 
 var errStopIteration = errors.New("iteration stop")
 
 type storageImpl struct {
-	db *badger.DB
+	db     *badger.DB
+	chQuit chan struct{}
+	chWg   sync.WaitGroup
+	closed uint32
 }
 
 func newDefaultStorageImpl() *storageImpl {
-	return &storageImpl{}
+	return &storageImpl{
+		chQuit: make(chan struct{}, 1),
+	}
+}
+
+const (
+	reclaimInterval = 5 * time.Minute
+	discardRatio    = 0.5
+)
+
+func (s *storageImpl) startGC() {
+	s.chWg.Add(1)
+
+	go func() {
+		defer s.chWg.Done()
+
+		ticker := time.NewTicker(reclaimInterval)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-s.chQuit:
+				return
+
+			case <-ticker.C:
+				err := s.db.RunValueLogGC(discardRatio)
+				if err != nil {
+					log.Printf("RunValueLogGC(): %s\n", err.Error())
+				}
+			}
+		}
+	}()
+}
+
+func (s *storageImpl) stopGC() {
+	s.chQuit <- struct{}{}
+	s.chWg.Wait()
+	close(s.chQuit)
 }
 
 func (s *storageImpl) Open(path string) error {
 	db, err := badger.Open(badger.DefaultOptions(path).WithLoggingLevel(badger.ERROR))
 	s.db = db
+	if err == nil {
+		s.startGC()
+	}
 	return err
 }
 
@@ -204,14 +254,8 @@ func (s *storageImpl) replaceDocs(txn *badger.Txn, q *Query, updater docUpdater)
 	return txn.Commit()
 }
 
-func (s *storageImpl) Update(q *Query, updateMap map[string]interface{}) error {
-	return s.replaceDocs(nil, q, func(doc *Document) *Document {
-		updateDoc := doc.Copy()
-		for updateField, updateValue := range updateMap {
-			updateDoc.Set(updateField, updateValue)
-		}
-		return updateDoc
-	})
+func (s *storageImpl) Update(q *Query, updater func(doc *Document) *Document) error {
+	return s.replaceDocs(nil, q, updater)
 }
 
 func (s *storageImpl) deleteAll(txn *badger.Txn, collName string) error {
@@ -245,8 +289,49 @@ func (s *storageImpl) DeleteById(collName string, id string) error {
 	return txn.Commit()
 }
 
+func (s *storageImpl) UpdateById(collectionName string, docId string, updater func(doc *Document) *Document) error {
+	return s.db.Update(func(txn *badger.Txn) error {
+		has, err := s.hasCollection(collectionName, txn)
+		if err != nil {
+			return err
+		}
+
+		if !has {
+			return ErrCollectionNotExist
+		}
+
+		docKey := getDocumentKey(collectionName, docId)
+		item, err := txn.Get([]byte(docKey))
+		if errors.Is(err, badger.ErrKeyNotFound) {
+			return ErrDocumentNotExist
+		}
+
+		var doc *Document
+		err = item.Value(func(value []byte) error {
+			d, err := readDoc(value)
+			doc = d
+			return err
+		})
+
+		if err != nil {
+			return err
+		}
+
+		updatedDoc := updater(doc)
+		jsonDoc, err := json.Marshal(updatedDoc.fields)
+		if err != nil {
+			return err
+		}
+		return txn.Set([]byte(docKey), jsonDoc)
+	})
+}
+
 func (s *storageImpl) Close() error {
-	return s.db.Close()
+	if atomic.CompareAndSwapUint32(&s.closed, 0, 1) {
+		s.stopGC()
+		return s.db.Close()
+	}
+	return nil
 }
 
 func (s *storageImpl) hasCollection(name string, txn *badger.Txn) (bool, error) {

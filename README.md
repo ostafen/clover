@@ -154,11 +154,14 @@ db.Query("todos").Where(c.Field("userId").Eq(1)).Update(updates)
 db.Query("todos").Where(c.Field("userId").In(5,8)).Delete()
 ```
 
-Updating or deleting a single document using the document id can be accomplished in the same way, using an equality condition on the **_id** field, like shown in the following snippet:
+To update or delete a single document using a specific document id, use `UpdateById()` or `DeleteById()`, respectively:
 
 ```go
 docId := "1dbce353-d3c6-43b3-b5a8-80d8d876389b"
-db.Query("todos").Where(c.Field("_id").Eq(docId)).Delete()
+// update the document with the specified id
+db.Query("todos").UpdateById(docId, map[string]interface{}{"completed": true})
+// or delete it
+db.Query("todos").DeleteById(docId)
 ```
 
 ## Contributing

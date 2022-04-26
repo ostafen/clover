@@ -258,6 +258,52 @@ func TestUpdateCollection(t *testing.T) {
 	})
 }
 
+func TestUpdateById(t *testing.T) {
+	runCloverTest(t, todosPath, func(t *testing.T, db *c.DB) {
+		doc, err := db.Query("todos").FindFirst()
+		require.NoError(t, err)
+
+		err = db.Query("todos").UpdateById("invalid-id", map[string]interface{}{})
+		require.Error(t, c.ErrDocumentNotExist)
+
+		id := doc.ObjectId()
+		completed := doc.Get("completed").(bool)
+
+		err = db.Query("todos").UpdateById(id, map[string]interface{}{"completed": !completed})
+		require.NoError(t, err)
+
+		doc, err = db.Query("todos").FindById(id)
+		require.NoError(t, err)
+
+		require.Equal(t, !completed, doc.Get("completed").(bool))
+	})
+}
+
+func TestReplaceById(t *testing.T) {
+	runCloverTest(t, todosPath, func(t *testing.T, db *c.DB) {
+		doc, err := db.Query("todos").FindFirst()
+		require.NoError(t, err)
+
+		err = db.Query("todos").ReplaceById("invalid-id", doc)
+		require.Error(t, c.ErrDocumentNotExist)
+
+		id := doc.ObjectId()
+		newDoc := c.NewDocument()
+		newDoc.Set("hello", "clover")
+
+		err = db.Query("todos").ReplaceById(id, newDoc)
+		require.Error(t, err)
+
+		newDoc.Set("_id", id)
+		err = db.Query("todos").ReplaceById(id, newDoc)
+		require.NoError(t, err)
+
+		doc, err = db.Query("todos").FindById(id)
+		require.NoError(t, err)
+		require.Equal(t, doc, newDoc)
+	})
+}
+
 func TestInsertAndDelete(t *testing.T) {
 	runCloverTest(t, todosPath, func(t *testing.T, db *c.DB) {
 		criteria := c.Field("completed").Eq(true)

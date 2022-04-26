@@ -86,6 +86,13 @@ func (doc *Document) Set(name string, value interface{}) {
 	m[fieldName] = value
 }
 
+// SetAll sets each field specified in the input map to the corresponding value. Nested fields can be accessed using dot.
+func (doc *Document) SetAll(values map[string]interface{}) {
+	for updateField, updateValue := range values {
+		doc.Set(updateField, updateValue)
+	}
+}
+
 // Unmarshal stores the document in the value pointed by v.
 func (doc *Document) Unmarshal(v interface{}) error {
 	bytes, err := json.Marshal(doc.fields)

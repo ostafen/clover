@@ -1,5 +1,9 @@
 package clover
 
+import (
+	"fmt"
+)
+
 // Query represents a generic query which is submitted to a specific collection.
 type Query struct {
 	engine     StorageEngine
@@ -146,7 +150,32 @@ func (q *Query) ForEach(consumer func(_ *Document) bool) error {
 // Update updates all the document selected by q using the provided updateMap.
 // Each update is specified by a mapping fieldName -> newValue.
 func (q *Query) Update(updateMap map[string]interface{}) error {
-	return q.engine.Update(q, updateMap)
+	return q.engine.Update(q, func(doc *Document) *Document {
+		newDoc := doc.Copy()
+		newDoc.SetAll(updateMap)
+		return newDoc
+	})
+}
+
+// UpdateById updates the document with the specified id using the supplied update map.
+// If no document with the specified id exists, an ErrDocumentNotExist is returned.
+func (q *Query) UpdateById(docId string, updateMap map[string]interface{}) error {
+	return q.engine.UpdateById(q.collection, docId, func(doc *Document) *Document {
+		newDoc := doc.Copy()
+		newDoc.SetAll(updateMap)
+		return newDoc
+	})
+}
+
+// ReplaceById replaces the document with the specified id with the one provided.
+// If no document exists, an ErrDocumentNotExist is returned.
+func (q *Query) ReplaceById(docId string, doc *Document) error {
+	if doc.ObjectId() != docId {
+		return fmt.Errorf("the id of the document must match the one supplied")
+	}
+	return q.engine.UpdateById(q.collection, docId, func(_ *Document) *Document {
+		return doc
+	})
 }
 
 // DeleteById removes the document with the given id from the underlying collection, provided that such a document exists and satisfies the underlying query.

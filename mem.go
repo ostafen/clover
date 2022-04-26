@@ -186,14 +186,25 @@ func (e *memEngine) Open(path string) error {
 }
 
 // Update implements StorageEngine
-func (e *memEngine) Update(q *Query, updateMap map[string]interface{}) error {
-	return e.replaceDocs(q, func(doc *Document) *Document {
-		updateDoc := doc.Copy()
-		for updateField, updateValue := range updateMap {
-			updateDoc.Set(updateField, updateValue)
-		}
-		return updateDoc
-	})
+func (e *memEngine) Update(q *Query, updater func(doc *Document) *Document) error {
+	return e.replaceDocs(q, updater)
+}
+
+func (e *memEngine) UpdateById(collectionName string, docId string, updater func(doc *Document) *Document) error {
+	e.Lock()
+	defer e.Unlock()
+
+	c, ok := e.collections[collectionName]
+	if !ok {
+		return ErrCollectionNotExist
+	}
+
+	doc, has := c[docId]
+	if !has {
+		return ErrDocumentNotExist
+	}
+	c[docId] = updater(doc)
+	return nil
 }
 
 func (e *memEngine) replaceDocs(q *Query, updater docUpdater) error {
