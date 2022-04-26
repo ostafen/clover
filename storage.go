@@ -14,6 +14,7 @@ import (
 )
 
 var ErrDocumentNotExist = errors.New("no such document")
+var ErrDuplicateKey = errors.New("duplicate key")
 
 type docConsumer func(doc *Document) error
 
@@ -200,7 +201,13 @@ func (s *storageImpl) Insert(collection string, docs ...*Document) error {
 			return err
 		}
 
-		if err := txn.Set([]byte(getDocumentKey(collection, doc.ObjectId())), data); err != nil {
+		key := []byte(getDocumentKey(collection, doc.ObjectId()))
+		_, err = txn.Get(key)
+		if !errors.Is(err, badger.ErrKeyNotFound) {
+			return ErrDuplicateKey
+		}
+
+		if err := txn.Set(key, data); err != nil {
 			return err
 		}
 	}
