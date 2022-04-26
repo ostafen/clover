@@ -134,7 +134,7 @@ func TestInsert(t *testing.T) {
 	})
 }
 
-func TestSaveExistingDocument(t *testing.T) {
+func TestSaveDocument(t *testing.T) {
 	runCloverTest(t, "", func(t *testing.T, db *c.DB) {
 		collection := "myCollection"
 		key := "hello"
@@ -145,14 +145,19 @@ func TestSaveExistingDocument(t *testing.T) {
 
 		doc := c.NewDocument()
 		doc.Set(key, "clover")
-		id, err := db.InsertOne(collection, doc)
+		err = db.Save(collection, doc)
 		require.NoError(t, err)
 
+		n, err := db.Query(collection).Count()
+		require.NoError(t, err)
+		require.Equal(t, 1, n)
+
+		id := doc.ObjectId()
 		doc.Set("_id", id)
 		doc.Set(key, updatedValue)
 		require.NoError(t, db.Save(collection, doc))
 
-		n, err := db.Query(collection).Count()
+		n, err = db.Query(collection).Count()
 		require.NoError(t, err)
 		require.Equal(t, 1, n)
 
