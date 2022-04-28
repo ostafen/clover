@@ -7,7 +7,8 @@ import (
 )
 
 func main() {
-	db, _ := c.Open("clover-db")
+	// Create DB in memory (directory will not be created)
+	db, _ := c.Open("clover-db", c.InMemoryMode(true))
 	defer db.Close()
 
 	db.CreateCollection("todos")
