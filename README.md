@@ -55,6 +55,10 @@ import (
 ...
 
 db, _ := c.Open("clover-db")
+
+// or, if you don't need persistency
+db, _ := c.Open("", c.InMemoryMode(true))
+
 defer db.Close() // remember to close the db when you have done
 ```
 
