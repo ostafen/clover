@@ -34,11 +34,14 @@
 ## 安装
 确保你拥有Go运行环境 (需要Go 1.13 或者更高版本)
 ```shell
-  go get github.com/ostafen/clover
+  GO111MODULE=on go get github.com/ostafen/clover
 ```
 
-## API 用法
+## 数据库和集合
+CloverDB将数据记录存储为JSON文档，这些文档被分组在集合中。数据库由一个或多个集合组成。
 
+### 数据库
+要在集合中存储文档，必须使用open()函数打开Clover数据库。 
 ```go
 import (
 	"log"
@@ -47,31 +50,59 @@ import (
 
 ...
 
+db, _ := c.Open("clover-db")
+
+// 或者，如果你不需要持久性，则像下面这样设置开启内存数据库模式
+db, _ := c.Open("", c.InMemoryMode(true))
+
+defer db.Close() // 记住当你完成时关闭数据库
 ```
 
-### 创造一个新的集合
+### 集合
+CloverDB将文档存储在集合中。集合是关系数据库中的表的无模式对等物。集合是通过调用数据库实例上的CreateCollection()函数创建的。可以使用Insert()或InsertOne()方法插入新文档。每个文档都由存储在id特殊字段中的Version 4 UUID唯一标识，并在插入期间生成。
+
 ```go
 
 db, _ := c.Open("clover-db")
-db.CreateCollection("myCollection")
+db.CreateCollection("myCollection") // 创建一个名为"mycollection"的新集合
 
+// 在集合中插入一个新文档
 doc := c.NewDocument()
 doc.Set("hello", "clover!")
 
+// Insertone返回插入文档的ID
 docId, _ := db.InsertOne("myCollection", doc)
+fmt.Println(docId)
 
-doc, _ = db.Query("myCollection").FindById(docId)
-log.Println(doc.Get("hello"))
+```
+### 引入与导出集合
+CloverDB能够轻松地将集合导入和导出为JSON格式，而不管使用的是哪种存储引擎。
+```go
+// 将"todos"集合的内容转储到"todos.json"文件
+db.ExportCollection("todos", "todos.json")
+
+...
+
+// 从导出的json文件中恢复todos集合
+db.DropCollection("todos")
+db.ImportCollection("todos", "todos.json")
+
+docs, _ := db.Query("todos").FindAll()
+for _, doc := range docs {
+  log.Println(doc)
+}
 
 ```
 
-### 请求现有的数据库
 
+## 请求
+CloverDB配备了流利而优雅的API来查询您的数据。查询由查询对象表示，该对象允许检索与给定标准匹配的文档。可以通过将有效的集合名称传递给query()方法来创建查询。
+
+
+### 选择集合中的所有文档
+FindAll()方法用于检索满足给定查询的所有文档。
 ```go
-db, _ := c.Open("../test-data/todos")
-
-//找到属于id为5和8的用户的所有completed等于true的todos。
-docs, _ := db.Query("todos").Where(c.Field("completed").Eq(true).And(c.Field("userId").In(5, 8))).FindAll()
+docs, _ := db.Query("myCollection").FindAll()
 
 todo := &struct {
     Completed bool   `json:"completed"`
@@ -84,40 +115,71 @@ for _, doc := range docs {
     log.Println(todo)
 }
 ```
+### 筛选器文档与标准
+为了过滤FindAll()返回的文档，必须使用Where()方法指定查询标准。标准对象只是表示文档上的谓词，只有当文档满足所有查询条件时才计算为true。
 
-### 更新和删除文档
+下面的示例展示了如何构建一个简单的标准，以匹配所有completed字段等于true的文档。
 
 ```go
-db, _ := c.Open("../test-data/todos")
+db.Query("todos").Where(c.Field("completed").Eq(true)).FindAll()
 
-// 将所有属于id为1的用户的todos的completed更新为true。
+// 等效于
+db.Query("todos").Where(c.Field("completed").IsTrue()).FindAll()
+```
+
+为了构建非常复杂的查询，我们使用And()和Or()方法链接多个标准对象，每个对象返回一个通过应用相应的逻辑运算符获得的新标准。
+```go
+//查找id为5和8的用户的所有已完成的待办事项
+db.Query("todos").Where(c.Field("completed").Eq(true).And(c.Field("userId").In(5, 8))).FindAll()
+```
+
+### 排序文档
+要对CloverDB中的文档进行排序，您需要使用sort()。它是一个可变函数，接受SortOption序列，每个序列允许指定一个字段和一个排序方向。排序方向可以为1或-1，分别对应升序和降序。如果没有提供SortOption, Sort()默认使用id字段。
+
+```go
+// 找到属于最近插入的用户的任何待办事项
+db.Query("todos").Sort(c.SortOption{"userId", -1}).FindFirst()
+```
+### 跳过/限制文档
+有时，从输出中丢弃一些文档，或者简单地设置查询返回结果的最大数量可能很有用。为此，CloverDB提供了Skip()和Limit()函数，它们都接受整数$n$作为参数。
+```go
+// 丢弃输出中的前10个文档
+// 还将查询结果的最大数量限制为100个
+db.Query("todos").Skip(10).Limit(100).FindAll()
+```
+
+
+### 更新和删除文档
+Update()方法用于修改集合中文档的特定字段。delete()方法用于删除文档。两种方法都属于查询对象，因此易于更新和删除与特定查询匹配的文档。
+```go
+// 将id为1的用户的所有待办事项标记为已完成
 updates := make(map[string]interface{})
 updates["completed"] = true
 
 db.Query("todos").Where(c.Field("userId").Eq(1)).Update(updates)
 
-// 将所有id为5和8的用户的todos删除。
+// 删除id为5和8的用户的所有待办事项
 db.Query("todos").Where(c.Field("userId").In(5,8)).Delete()
 ```
 
-### 更新一个单独的文档
+要使用特定的文档id更新或删除单个文档，请分别使用UpdateById()或DeleteById(),
+顺序为:
+
 ```go
-db, _ := c.Open("../test-data/todos")
-
-updates := make(map[string]interface{})
-updates["completed"] = true
-
-// 您可以得到 _id
-doc, _ := db.Query("todos").Where(c.Field("userId").Eq(2)).FindFirst()
-docId := doc.Get("_id")
-
-// 或者使用一段字符串
-// docId := "1dbce353-d3c6-43b3-b5a8-80d8d876389b"
-
-//根据_id更新单独的文档
-db.Query("todos").Where(c.Field("_id").Eq(docId)).Update(updates)
+docId := "1dbce353-d3c6-43b3-b5a8-80d8d876389b"
+// 使用指定的id更新文档
+db.Query("todos").UpdateById(docId, map[string]interface{}{"completed": true})
+// or delete it
+db.Query("todos").DeleteById(docId)
 ```
+
 
 ## 贡献
 
 **CloverDB** 正在积极开发中。任何以建议、错误报告或拉请求的形式做出的贡献，都是可以接受的。 :blush:
+
+很感激收到的来自下面名单的主要贡献及建议(按字母顺序排列)：
+
+- [ASWLaunchs](https://github.com/ASWLaunchs)
+- [jsgm](https://github.com/jsgm)
+- [segfault99](https://github.com/segfault99)
