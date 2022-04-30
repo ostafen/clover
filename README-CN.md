@@ -75,7 +75,7 @@ docId, _ := db.InsertOne("myCollection", doc)
 fmt.Println(docId)
 
 ```
-### 引入与导出集合
+### 导入与导出集合
 CloverDB能够轻松地将集合导入和导出为JSON格式，而不管使用的是哪种存储引擎。
 ```go
 // 将"todos"集合的内容转储到"todos.json"文件
