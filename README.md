@@ -79,6 +79,26 @@ docId, _ := db.InsertOne("myCollection", doc)
 fmt.Println(docId)
 ```
 
+### Importing and Exporting Collections
+
+CloverDB is capable of easily importing and exporting collections to JSON format regardless of the storage engine used.
+
+```go
+// dump the content of the "todos" collection in a "todos.json" file
+db.ExportCollection("todos", "todos.json")
+
+...
+
+// recover the todos collection from the exported json file
+db.DropCollection("todos")
+db.ImportCollection("todos", "todos.json")
+
+docs, _ := db.Query("todos").FindAll()
+for _, doc := range docs {
+  log.Println(doc)
+}
+```
+
 ## Queries
 
 CloverDB is equipped with a fluent and elegant API to query your data. A query is represented by the **Query** object, which allows to retrieve documents matching a given **criterion**. A query can be created by passing a valid collection name to the `Query()` method.
