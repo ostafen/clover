@@ -1,7 +1,8 @@
 package clover
 
 import (
-	"encoding/json"
+	"bytes"
+	"encoding/gob"
 	"errors"
 	"log"
 	"sort"
@@ -92,6 +93,7 @@ func (s *storageImpl) Open(path string) error {
 	s.db = db
 	if err == nil {
 		s.startGC()
+		gob.Register(map[string]interface{}{})
 	}
 	return err
 }
@@ -146,9 +148,16 @@ func (s *storageImpl) FindAll(q *Query) ([]*Document, error) {
 	return docs, err
 }
 
-func readDoc(data []byte) (*Document, error) {
+func decodeDoc(data []byte) (*Document, error) {
 	doc := NewDocument()
-	return doc, json.Unmarshal(data, &doc.fields)
+	err := gob.NewDecoder(bytes.NewBuffer(data)).Decode(&doc.fields)
+	return doc, err
+}
+
+func encodeDoc(doc *Document) ([]byte, error) {
+	var buf bytes.Buffer
+	err := gob.NewEncoder(&buf).Encode(doc.fields)
+	return buf.Bytes(), err
 }
 
 func (s *storageImpl) FindById(collectionName string, id string) (*Document, error) {
@@ -171,7 +180,7 @@ func (s *storageImpl) FindById(collectionName string, id string) (*Document, err
 
 	var doc *Document
 	err = item.Value(func(data []byte) error {
-		d, err := readDoc(data)
+		d, err := decodeDoc(data)
 		doc = d
 		return err
 	})
@@ -196,7 +205,7 @@ func (s *storageImpl) Insert(collection string, docs ...*Document) error {
 	}
 
 	for _, doc := range docs {
-		data, err := json.Marshal(doc.fields)
+		data, err := encodeDoc(doc)
 		if err != nil {
 			return err
 		}
@@ -248,7 +257,7 @@ func (s *storageImpl) replaceDocs(txn *badger.Txn, q *Query, updater docUpdater)
 					return err
 				}
 			} else {
-				data, err := json.Marshal(newDoc.fields)
+				data, err := encodeDoc(newDoc)
 				if err != nil {
 					return err
 				}
@@ -315,7 +324,7 @@ func (s *storageImpl) UpdateById(collectionName string, docId string, updater fu
 
 		var doc *Document
 		err = item.Value(func(value []byte) error {
-			d, err := readDoc(value)
+			d, err := decodeDoc(value)
 			doc = d
 			return err
 		})
@@ -325,11 +334,11 @@ func (s *storageImpl) UpdateById(collectionName string, docId string, updater fu
 		}
 
 		updatedDoc := updater(doc)
-		jsonDoc, err := json.Marshal(updatedDoc.fields)
+		encodedDoc, err := encodeDoc(updatedDoc)
 		if err != nil {
 			return err
 		}
-		return txn.Set([]byte(docKey), jsonDoc)
+		return txn.Set([]byte(docKey), encodedDoc)
 	})
 }
 
@@ -381,7 +390,7 @@ func (s *storageImpl) iterateDocs(txn *badger.Txn, q *Query, consumer docConsume
 
 	for n := 0; (q.limit < 0 || n < q.limit) && it.ValidForPrefix(prefix); it.Next() {
 		err := it.Item().Value(func(data []byte) error {
-			doc, err := readDoc(data)
+			doc, err := decodeDoc(data)
 			if err != nil {
 				return err
 			}
