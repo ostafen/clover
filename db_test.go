@@ -17,6 +17,7 @@ import (
 const (
 	airlinesPath = "test/data/airlines.json"
 	todosPath    = "test/data/todos.json"
+	containsPath = "test/data/contains.json"
 )
 
 func runCloverTest(t *testing.T, jsonPath string, test func(t *testing.T, db *c.DB)) {
@@ -648,6 +649,29 @@ func TestInCriteria(t *testing.T) {
 			if userId != float64(5) && userId != float64(8) {
 				require.Fail(t, "userId is not in the correct range")
 			}
+		}
+	})
+}
+
+func TestContainsCriteria(t *testing.T) {
+	runCloverTest(t, containsPath, func(t *testing.T, db *c.DB) {
+		docs, err := db.Query("contains").Where(c.Field("myField").Contains(4)).FindAll()
+		require.NoError(t, err)
+
+		require.Equal(t, 2, len(docs))
+
+	OuterLoop:
+		for _, doc := range docs {
+			myField := doc.Get("myField").([]interface{})
+			require.NotNil(t, myField)
+
+			for _, elem := range myField {
+				if elem.(float64) == 4 {
+					break OuterLoop
+				}
+			}
+
+			require.Fail(t, "myField does not contain element")
 		}
 	})
 }

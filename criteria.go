@@ -156,6 +156,33 @@ func (f *field) In(values ...interface{}) *Criteria {
 	}
 }
 
+func (f *field) Contains(elems ...interface{}) *Criteria {
+	return &Criteria{
+		p: func(doc *Document) bool {
+			docValue := doc.Get(f.name)
+			if docValue == nil || reflect.TypeOf(docValue).Kind() != reflect.Slice {
+				return false
+			}
+			rv := reflect.ValueOf(docValue)
+			len := rv.Len()
+			set := make(map[interface{}]int)
+			for i := 0; i < len; i++ {
+				set[rv.Index(i).Interface()]++
+			}
+			for _, elem := range elems {
+				normElem, err := normalize(elem)
+				if err == nil {
+					if count, found := set[normElem]; !found || count < 1 {
+						return false
+					}
+					set[normElem]--
+				}
+			}
+			return true
+		},
+	}
+}
+
 func (f *field) Like(pattern string) *Criteria {
 	expr, err := regexp.Compile(pattern)
 

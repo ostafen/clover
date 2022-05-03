@@ -1,0 +1,20 @@
+[
+  {
+    "_id": "1b4d7c6a-d8ba-4a71-b521-0f14402f3908",
+    "completed": true,
+    "completed_date": "2020-05-22T11:13:22+02:00",
+    "myField": [1, 2, 4]
+  },
+  {
+    "_id": "9fcda444-f8c9-4b72-a3f1-1b3570dbd0a8",
+    "completed": true,
+    "completed_date": "2020-05-22T11:13:22+02:00",
+    "myField": [5, 6, 7]
+  },
+  {
+    "_id": "5a80366a-52f3-460e-91ac-3d00bed25a68",
+    "completed": true,
+    "completed_date": "2020-05-22T11:13:22+02:00",
+    "myField": [4, 10, 20]
+  }
+]
