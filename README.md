@@ -83,11 +83,11 @@ CloverDB is capable of easily importing and exporting collections to JSON format
 db, _ := c.Open("clover-db")
 
 db.ImportCollection("todos", "test/data/todos.json") // the content of todos.json will be imported in the `todos` collection
-docs, _ := db.Query("todos").FindAll()
-for _, doc := range docs{
-  // you can now work with each document.
-  doc.Set("completed", false)
-}
+
+// mark all incomplete todos as completed
+updates := make(map[string]interface{})
+updates["completed"] = true
+db.Query("todos").Where(c.Field("completed").Eq(false)).Update(updates)
 
 db.ExportCollection("todos", "test/data/exported.json") // will export the `todos` documents to `exported.json` file, the `completed` field for each document will be `false`
 ```
