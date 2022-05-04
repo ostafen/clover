@@ -160,7 +160,7 @@ func (f *field) Contains(elems ...interface{}) *Criteria {
 	return &Criteria{
 		p: func(doc *Document) bool {
 			fieldValue := doc.Get(f.name)
-			if fieldValue == nil || reflect.TypeOf(fieldValue).Kind() != reflect.Slice {
+			if s, _ := fieldValue.([]interface{}); fieldValue == nil || s == nil {
 				return false
 			}
 			rv := reflect.ValueOf(fieldValue)
