@@ -94,6 +94,7 @@ func (s *storageImpl) Open(path string) error {
 	if err == nil {
 		s.startGC()
 		gob.Register(map[string]interface{}{})
+		gob.Register(time.Time{})
 	}
 	return err
 }
