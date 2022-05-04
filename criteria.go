@@ -1,7 +1,6 @@
 package clover
 
 import (
-	"reflect"
 	"regexp"
 )
 
@@ -55,9 +54,10 @@ func (f *field) IsNilOrNotExists() *Criteria {
 }
 
 func (f *field) Eq(value interface{}) *Criteria {
+	normalizedValue, err := normalize(value)
+
 	return &Criteria{
 		p: func(doc *Document) bool {
-			normValue, err := normalize(value)
 			if err != nil {
 				return false
 			}
@@ -65,7 +65,12 @@ func (f *field) Eq(value interface{}) *Criteria {
 			if !doc.Has(f.name) {
 				return false
 			}
-			return reflect.DeepEqual(doc.Get(f.name), normValue)
+
+			fieldValue, err := normalize(doc.Get(f.name))
+			if err != nil {
+				return false
+			}
+			return compareValues(fieldValue, normalizedValue) == 0
 		},
 	}
 }
@@ -77,11 +82,7 @@ func (f *field) Gt(value interface{}) *Criteria {
 			if err != nil {
 				return false
 			}
-			v, ok := compareValues(doc.Get(f.name), normValue)
-			if !ok {
-				return false
-			}
-			return v > 0
+			return compareValues(doc.Get(f.name), normValue) > 0
 		},
 	}
 }
@@ -93,11 +94,7 @@ func (f *field) GtEq(value interface{}) *Criteria {
 			if err != nil {
 				return false
 			}
-			v, ok := compareValues(doc.Get(f.name), normValue)
-			if !ok {
-				return false
-			}
-			return v >= 0
+			return compareValues(doc.Get(f.name), normValue) >= 0
 		},
 	}
 }
@@ -109,11 +106,7 @@ func (f *field) Lt(value interface{}) *Criteria {
 			if err != nil {
 				return false
 			}
-			v, ok := compareValues(doc.Get(f.name), normValue)
-			if !ok {
-				return false
-			}
-			return v < 0
+			return compareValues(doc.Get(f.name), normValue) < 0
 		},
 	}
 }
@@ -125,18 +118,13 @@ func (f *field) LtEq(value interface{}) *Criteria {
 			if err != nil {
 				return false
 			}
-			v, ok := compareValues(doc.Get(f.name), normValue)
-			if !ok {
-				return false
-			}
-			return v <= 0
+			return compareValues(doc.Get(f.name), normValue) <= 0
 		},
 	}
 }
 
 func (f *field) Neq(value interface{}) *Criteria {
-	c := f.Eq(value)
-	return c.Not()
+	return f.Eq(value).Not()
 }
 
 func (f *field) In(values ...interface{}) *Criteria {
@@ -146,7 +134,7 @@ func (f *field) In(values ...interface{}) *Criteria {
 			for _, value := range values {
 				normValue, err := normalize(value)
 				if err == nil {
-					if reflect.DeepEqual(normValue, docValue) {
+					if compareValues(normValue, docValue) == 0 {
 						return true
 					}
 				}
