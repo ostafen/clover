@@ -159,11 +159,11 @@ func (f *field) In(values ...interface{}) *Criteria {
 func (f *field) Contains(elems ...interface{}) *Criteria {
 	return &Criteria{
 		p: func(doc *Document) bool {
-			docValue := doc.Get(f.name)
-			if docValue == nil || reflect.TypeOf(docValue).Kind() != reflect.Slice {
+			fieldValue := doc.Get(f.name)
+			if fieldValue == nil || reflect.TypeOf(fieldValue).Kind() != reflect.Slice {
 				return false
 			}
-			rv := reflect.ValueOf(docValue)
+			rv := reflect.ValueOf(fieldValue)
 			len := rv.Len()
 			set := make(map[interface{}]int)
 			for i := 0; i < len; i++ {

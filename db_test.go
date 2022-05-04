@@ -2,6 +2,7 @@ package clover_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"math/rand"
 	"os"
@@ -655,7 +656,8 @@ func TestInCriteria(t *testing.T) {
 
 func TestContainsCriteria(t *testing.T) {
 	runCloverTest(t, containsPath, func(t *testing.T, db *c.DB) {
-		docs, err := db.Query("contains").Where(c.Field("myField").Contains(4)).FindAll()
+		testElement := 4
+		docs, err := db.Query("contains").Where(c.Field("myField").Contains(testElement)).FindAll()
 		require.NoError(t, err)
 
 		require.Equal(t, 2, len(docs))
@@ -671,7 +673,7 @@ func TestContainsCriteria(t *testing.T) {
 				}
 			}
 
-			require.Fail(t, "myField does not contain element")
+			require.Fail(t, fmt.Sprintf("myField does not contain element %d\n", testElement))
 		}
 	})
 }
