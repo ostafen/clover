@@ -10,6 +10,12 @@ const (
 
 type predicate func(doc *Document) bool
 
+var falseCriteria Criteria = Criteria{
+	p: func(_ *Document) bool {
+		return false
+	},
+}
+
 // Criteria represents a predicate for selecting documents.
 // It follows a fluent API style so that you can easily chain together multiple criteria.
 type Criteria struct {
@@ -55,69 +61,67 @@ func (f *field) IsNilOrNotExists() *Criteria {
 
 func (f *field) Eq(value interface{}) *Criteria {
 	normalizedValue, err := normalize(value)
+	if err != nil {
+		return &falseCriteria
+	}
 
 	return &Criteria{
 		p: func(doc *Document) bool {
-			if err != nil {
-				return false
-			}
-
 			if !doc.Has(f.name) {
 				return false
 			}
-
-			fieldValue, err := normalize(doc.Get(f.name))
-			if err != nil {
-				return false
-			}
-			return compareValues(fieldValue, normalizedValue) == 0
+			return compareValues(doc.Get(f.name), normalizedValue) == 0
 		},
 	}
 }
 
 func (f *field) Gt(value interface{}) *Criteria {
+	normValue, err := normalize(value)
+	if err != nil {
+		return &falseCriteria
+	}
+
 	return &Criteria{
 		p: func(doc *Document) bool {
-			normValue, err := normalize(value)
-			if err != nil {
-				return false
-			}
 			return compareValues(doc.Get(f.name), normValue) > 0
 		},
 	}
 }
 
 func (f *field) GtEq(value interface{}) *Criteria {
+	normValue, err := normalize(value)
+	if err != nil {
+		return &falseCriteria
+	}
+
 	return &Criteria{
 		p: func(doc *Document) bool {
-			normValue, err := normalize(value)
-			if err != nil {
-				return false
-			}
 			return compareValues(doc.Get(f.name), normValue) >= 0
 		},
 	}
 }
 
 func (f *field) Lt(value interface{}) *Criteria {
+	normValue, err := normalize(value)
+	if err != nil {
+		return &falseCriteria
+	}
+
 	return &Criteria{
 		p: func(doc *Document) bool {
-			normValue, err := normalize(value)
-			if err != nil {
-				return false
-			}
 			return compareValues(doc.Get(f.name), normValue) < 0
 		},
 	}
 }
 
 func (f *field) LtEq(value interface{}) *Criteria {
+	normValue, err := normalize(value)
+	if err != nil {
+		return &falseCriteria
+	}
+
 	return &Criteria{
 		p: func(doc *Document) bool {
-			normValue, err := normalize(value)
-			if err != nil {
-				return false
-			}
 			return compareValues(doc.Get(f.name), normValue) <= 0
 		},
 	}
@@ -128,15 +132,17 @@ func (f *field) Neq(value interface{}) *Criteria {
 }
 
 func (f *field) In(values ...interface{}) *Criteria {
+	normValues, err := normalize(values)
+	if err != nil || normValues == nil {
+		return &falseCriteria
+	}
+
 	return &Criteria{
 		p: func(doc *Document) bool {
 			docValue := doc.Get(f.name)
-			for _, value := range values {
-				normValue, err := normalize(value)
-				if err == nil {
-					if compareValues(normValue, docValue) == 0 {
-						return true
-					}
+			for _, value := range normValues.([]interface{}) {
+				if compareValues(value, docValue) == 0 {
+					return true
 				}
 			}
 			return false
