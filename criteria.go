@@ -160,23 +160,29 @@ func (f *field) Contains(elems ...interface{}) *Criteria {
 	return &Criteria{
 		p: func(doc *Document) bool {
 			fieldValue := doc.Get(f.name)
-			if s, _ := fieldValue.([]interface{}); fieldValue == nil || s == nil {
+			slice, _ := fieldValue.([]interface{})
+
+			if fieldValue == nil || slice == nil {
 				return false
 			}
-			rv := reflect.ValueOf(fieldValue)
-			len := rv.Len()
-			set := make(map[interface{}]int)
-			for i := 0; i < len; i++ {
-				set[rv.Index(i).Interface()]++
-			}
+
 			for _, elem := range elems {
+				found := false
 				normElem, err := normalize(elem)
+
 				if err == nil {
-					if count, found := set[normElem]; !found || count < 1 {
-						return false
+					for _, val := range slice {
+						if reflect.DeepEqual(normElem, val) {
+							found = true
+							break
+						}
 					}
-					set[normElem]--
 				}
+
+				if !found {
+					return false
+				}
+
 			}
 			return true
 		},
