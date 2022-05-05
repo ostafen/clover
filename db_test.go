@@ -1097,3 +1097,33 @@ func TestSliceCompare(t *testing.T) {
 		require.Equal(t, 7, n)
 	})
 }
+
+func TestObjectComparison(t *testing.T) {
+	runCloverTest(t, "", func(t *testing.T, db *c.DB) {
+		err := db.CreateCollection("myCollection")
+		require.NoError(t, err)
+
+		data := map[string]interface{}{
+			"SomeNumber": float64(0),
+			"SomeString": "aString",
+		}
+
+		dataAsStruct := struct {
+			SomeNumber int
+			SomeString string
+		}{0, "aString"}
+
+		doc := c.NewDocument()
+		doc.SetAll(map[string]interface{}{
+			"data": data,
+		})
+
+		_, err = db.InsertOne("myCollection", doc)
+		require.NoError(t, err)
+
+		queryDoc, err := db.Query("myCollection").Where(c.Field("data").Eq(dataAsStruct)).FindFirst()
+		require.NoError(t, err)
+
+		require.Equal(t, doc, queryDoc)
+	})
+}
