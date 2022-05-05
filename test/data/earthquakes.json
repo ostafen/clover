@@ -1,0 +1,322 @@
+[
+    {
+        "type": "Feature",
+        "properties": {
+            "mag": 0.43,
+            "place": "9km NE of Aguanga, CA",
+            "time": 1651742164000,
+            "updated": 1651742373412,
+            "tz": null,
+            "url": "https://earthquake.usgs.gov/earthquakes/eventpage/ci40252688",
+            "detail": "https://earthquake.usgs.gov/earthquakes/feed/v1.0/detail/ci40252688.geojson",
+            "felt": null,
+            "cdi": null,
+            "mmi": null,
+            "alert": null,
+            "status": "automatic",
+            "tsunami": 0,
+            "sig": 3,
+            "net": "ci",
+            "code": "40252688",
+            "ids": ",ci40252688,",
+            "sources": ",ci,",
+            "types": ",nearby-cities,origin,phase-data,scitech-link,",
+            "nst": 14,
+            "dmin": 0.08271,
+            "rms": 0.31,
+            "gap": 114,
+            "magType": "ml",
+            "type": "earthquake",
+            "title": "M 0.4 - 9km NE of Aguanga, CA"
+        },
+        "geometry": {
+            "type": "Point",
+            "coordinates": [
+                -116.788,
+                33.4941667,
+                14.73
+            ]
+        },
+        "id": "ci40252688"
+    },
+    {
+        "type": "Feature",
+        "properties": {
+            "mag": 1.90999997,
+            "place": "4 km E of Pāhala, Hawaii",
+            "time": 1651741077860,
+            "updated": 1651741263230,
+            "tz": null,
+            "url": "https://earthquake.usgs.gov/earthquakes/eventpage/hv73003457",
+            "detail": "https://earthquake.usgs.gov/earthquakes/feed/v1.0/detail/hv73003457.geojson",
+            "felt": null,
+            "cdi": null,
+            "mmi": null,
+            "alert": null,
+            "status": "automatic",
+            "tsunami": 0,
+            "sig": 56,
+            "net": "hv",
+            "code": "73003457",
+            "ids": ",hv73003457,",
+            "sources": ",hv,",
+            "types": ",origin,phase-data,",
+            "nst": 33,
+            "dmin": null,
+            "rms": 0.109999999,
+            "gap": 141,
+            "magType": "md",
+            "type": "earthquake",
+            "title": "M 1.9 - 4 km E of Pāhala, Hawaii"
+        },
+        "geometry": {
+            "type": "Point",
+            "coordinates": [
+                -155.433502197266,
+                19.204833984375,
+                31.8299999237061
+            ]
+        },
+        "id": "hv73003457"
+    },
+    {
+        "type": "Feature",
+        "properties": {
+            "mag": 1.1,
+            "place": "32 km SE of Mina, Nevada",
+            "time": 1651740832067,
+            "updated": 1651741064918,
+            "tz": null,
+            "url": "https://earthquake.usgs.gov/earthquakes/eventpage/nn00838379",
+            "detail": "https://earthquake.usgs.gov/earthquakes/feed/v1.0/detail/nn00838379.geojson",
+            "felt": null,
+            "cdi": null,
+            "mmi": null,
+            "alert": null,
+            "status": "automatic",
+            "tsunami": 0,
+            "sig": 19,
+            "net": "nn",
+            "code": "00838379",
+            "ids": ",nn00838379,",
+            "sources": ",nn,",
+            "types": ",origin,phase-data,",
+            "nst": 9,
+            "dmin": 0.09,
+            "rms": 0.1808,
+            "gap": 182.89,
+            "magType": "ml",
+            "type": "earthquake",
+            "title": "M 1.1 - 32 km SE of Mina, Nevada"
+        },
+        "geometry": {
+            "type": "Point",
+            "coordinates": [
+                -117.8573,
+                38.1792,
+                3.8
+            ]
+        },
+        "id": "nn00838379"
+    },
+    {
+        "type": "Feature",
+        "properties": {
+            "mag": 1.6,
+            "place": "31 km NE of Paxson, Alaska",
+            "time": 1651740604282,
+            "updated": 1651740843535,
+            "tz": null,
+            "url": "https://earthquake.usgs.gov/earthquakes/eventpage/ak0225qv8ko3",
+            "detail": "https://earthquake.usgs.gov/earthquakes/feed/v1.0/detail/ak0225qv8ko3.geojson",
+            "felt": null,
+            "cdi": null,
+            "mmi": null,
+            "alert": null,
+            "status": "automatic",
+            "tsunami": 0,
+            "sig": 39,
+            "net": "ak",
+            "code": "0225qv8ko3",
+            "ids": ",ak0225qv8ko3,",
+            "sources": ",ak,",
+            "types": ",origin,phase-data,",
+            "nst": null,
+            "dmin": null,
+            "rms": 1.04,
+            "gap": null,
+            "magType": "ml",
+            "type": "earthquake",
+            "title": "M 1.6 - 31 km NE of Paxson, Alaska"
+        },
+        "geometry": {
+            "type": "Point",
+            "coordinates": [
+                -145.104,
+                63.2543,
+                0
+            ]
+        },
+        "id": "ak0225qv8ko3"
+    },
+    {
+        "type": "Feature",
+        "properties": {
+            "mag": 1.4,
+            "place": "25 km SSE of Manley Hot Springs, Alaska",
+            "time": 1651740047653,
+            "updated": 1651740941735,
+            "tz": null,
+            "url": "https://earthquake.usgs.gov/earthquakes/eventpage/ak0225qv6iue",
+            "detail": "https://earthquake.usgs.gov/earthquakes/feed/v1.0/detail/ak0225qv6iue.geojson",
+            "felt": null,
+            "cdi": null,
+            "mmi": null,
+            "alert": null,
+            "status": "automatic",
+            "tsunami": 0,
+            "sig": 30,
+            "net": "ak",
+            "code": "0225qv6iue",
+            "ids": ",ak0225qv6iue,",
+            "sources": ",ak,",
+            "types": ",origin,phase-data,",
+            "nst": null,
+            "dmin": null,
+            "rms": 0.7,
+            "gap": null,
+            "magType": "ml",
+            "type": "earthquake",
+            "title": "M 1.4 - 25 km SSE of Manley Hot Springs, Alaska"
+        },
+        "geometry": {
+            "type": "Point",
+            "coordinates": [
+                -150.3704,
+                64.8061,
+                4.5
+            ]
+        },
+        "id": "ak0225qv6iue"
+    },
+    {
+        "type": "Feature",
+        "properties": {
+            "mag": 1.5,
+            "place": "33 km NNW of Petersville, Alaska",
+            "time": 1651740000314,
+            "updated": 1651740246415,
+            "tz": null,
+            "url": "https://earthquake.usgs.gov/earthquakes/eventpage/ak0225qv6c3y",
+            "detail": "https://earthquake.usgs.gov/earthquakes/feed/v1.0/detail/ak0225qv6c3y.geojson",
+            "felt": null,
+            "cdi": null,
+            "mmi": null,
+            "alert": null,
+            "status": "automatic",
+            "tsunami": 0,
+            "sig": 35,
+            "net": "ak",
+            "code": "0225qv6c3y",
+            "ids": ",ak0225qv6c3y,",
+            "sources": ",ak,",
+            "types": ",origin,phase-data,",
+            "nst": null,
+            "dmin": null,
+            "rms": 0.96,
+            "gap": null,
+            "magType": "ml",
+            "type": "earthquake",
+            "title": "M 1.5 - 33 km NNW of Petersville, Alaska"
+        },
+        "geometry": {
+            "type": "Point",
+            "coordinates": [
+                -150.9951,
+                62.7736,
+                107.6
+            ]
+        },
+        "id": "ak0225qv6c3y"
+    },
+    {
+        "type": "Feature",
+        "properties": {
+            "mag": 1.42,
+            "place": "40km ENE of Olancha, CA",
+            "time": 1651738909910,
+            "updated": 1651739121545,
+            "tz": null,
+            "url": "https://earthquake.usgs.gov/earthquakes/eventpage/ci40252680",
+            "detail": "https://earthquake.usgs.gov/earthquakes/feed/v1.0/detail/ci40252680.geojson",
+            "felt": null,
+            "cdi": null,
+            "mmi": null,
+            "alert": null,
+            "status": "automatic",
+            "tsunami": 0,
+            "sig": 31,
+            "net": "ci",
+            "code": "40252680",
+            "ids": ",ci40252680,",
+            "sources": ",ci,",
+            "types": ",nearby-cities,origin,phase-data,scitech-link,",
+            "nst": 14,
+            "dmin": 0.1471,
+            "rms": 0.15,
+            "gap": 110,
+            "magType": "ml",
+            "type": "earthquake",
+            "title": "M 1.4 - 40km ENE of Olancha, CA"
+        },
+        "geometry": {
+            "type": "Point",
+            "coordinates": [
+                -117.5981667,
+                36.4188333,
+                -0.12
+            ]
+        },
+        "id": "ci40252680"
+    },
+    {
+        "type": "Feature",
+        "properties": {
+            "mag": 5.9,
+            "place": "96 km SE of Lukatan, Philippines",
+            "time": 1651738877171,
+            "updated": 1651741886073,
+            "tz": null,
+            "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us7000h781",
+            "detail": "https://earthquake.usgs.gov/earthquakes/feed/v1.0/detail/us7000h781.geojson",
+            "felt": 7,
+            "cdi": 4.6,
+            "mmi": 4.022,
+            "alert": "green",
+            "status": "reviewed",
+            "tsunami": 0,
+            "sig": 539,
+            "net": "us",
+            "code": "7000h781",
+            "ids": ",us7000h781,",
+            "sources": ",us,",
+            "types": ",dyfi,losspager,origin,phase-data,shakemap,",
+            "nst": null,
+            "dmin": 1.639,
+            "rms": 0.93,
+            "gap": 52,
+            "magType": "mww",
+            "type": "earthquake",
+            "title": "M 5.9 - 96 km SE of Lukatan, Philippines"
+        },
+        "geometry": {
+            "type": "Point",
+            "coordinates": [
+                127.1311,
+                6.5061,
+                26.2
+            ]
+        },
+        "id": "us7000h781"
+    }
+]

@@ -18,6 +18,7 @@ import (
 const (
 	airlinesPath = "test/data/airlines.json"
 	todosPath    = "test/data/todos.json"
+	earthquakes  = "test/data/earthquakes.json"
 )
 
 func runCloverTest(t *testing.T, jsonPath string, test func(t *testing.T, db *c.DB)) {
@@ -1076,5 +1077,23 @@ func TestExportAndImportCollection(t *testing.T) {
 		for i := 0; i < len(docs); i++ {
 			require.Equal(t, docs[i], importDocs[i])
 		}
+	})
+}
+
+func TestSliceCompare(t *testing.T) {
+	runCloverTest(t, earthquakes, func(t *testing.T, db *c.DB) {
+		coords := []interface{}{127.1311, 6.5061, 26.2}
+
+		n, err := db.Query("earthquakes").Where(c.Field("geometry.coordinates").Eq(coords)).Count()
+		require.NoError(t, err)
+		require.Equal(t, 1, n)
+
+		n, err = db.Query("earthquakes").Where(c.Field("geometry.coordinates").GtEq(coords)).Count()
+		require.NoError(t, err)
+		require.Equal(t, 1, n)
+
+		n, err = db.Query("earthquakes").Where(c.Field("geometry.coordinates").Lt(coords)).Count()
+		require.NoError(t, err)
+		require.Equal(t, 7, n)
 	})
 }
