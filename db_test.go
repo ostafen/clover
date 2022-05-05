@@ -931,8 +931,67 @@ func TestDocument(t *testing.T) {
 		fieldName := genRandomFieldName()
 		doc.Set(fieldName, i)
 		require.True(t, doc.Has(fieldName))
-		require.Equal(t, doc.Get(fieldName), i)
+		require.Equal(t, doc.Get(fieldName), int64(i))
 	}
+}
+
+func TestDocumentSetUint(t *testing.T) {
+	doc := c.NewDocument()
+
+	// test uint64 conversion
+	doc.Set("uint", uint(0))
+	require.IsType(t, uint64(0), doc.Get("uint"))
+
+	doc.Set("uint8", uint8(0))
+	require.IsType(t, uint64(0), doc.Get("uint8"))
+
+	doc.Set("uint16", uint16(0))
+	require.IsType(t, uint64(0), doc.Get("uint16"))
+
+	doc.Set("uint32", uint16(0))
+	require.IsType(t, uint64(0), doc.Get("uint32"))
+
+	doc.Set("uint64", uint16(0))
+	require.IsType(t, uint64(0), doc.Get("uint64"))
+}
+
+func TestDocumentSetInt(t *testing.T) {
+	doc := c.NewDocument()
+
+	// test int64 conversion
+	doc.Set("int", int(0))
+	require.IsType(t, int64(0), doc.Get("int"))
+
+	doc.Set("int8", int8(0))
+	require.IsType(t, int64(0), doc.Get("int8"))
+
+	doc.Set("int16", int16(0))
+	require.IsType(t, int64(0), doc.Get("int16"))
+
+	doc.Set("int32", int16(0))
+	require.IsType(t, int64(0), doc.Get("int32"))
+
+	doc.Set("int64", int16(0))
+	require.IsType(t, int64(0), doc.Get("int64"))
+}
+
+func TestDocumentSetFloat(t *testing.T) {
+	doc := c.NewDocument()
+
+	// test float64 conversion
+	doc.Set("float32", float32(0))
+	require.IsType(t, float64(0), doc.Get("float32"))
+
+	doc.Set("float64", float64(0))
+	require.IsType(t, float64(0), doc.Get("float64"))
+}
+
+func TestDocumentSetInvalidType(t *testing.T) {
+	doc := c.NewDocument()
+
+	// try setting an invalid type
+	doc.Set("chan", make(chan struct{}))
+	require.Nil(t, doc.Get("chan"))
 }
 
 func TestDocumentUnmarshal(t *testing.T) {
