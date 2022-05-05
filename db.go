@@ -56,25 +56,13 @@ func isValidObjectId(id string) bool {
 
 // Insert adds the supplied documents to a collection.
 func (db *DB) Insert(collectionName string, docs ...*Document) error {
-	insertDocs := make([]*Document, 0, len(docs))
 	for _, doc := range docs {
-		insertDoc := NewDocument()
-		fields, err := normalize(doc.fields)
-		if err != nil {
-			return err
-		}
-		insertDoc.fields = fields.(map[string]interface{})
-
 		if !isValidObjectId(doc.ObjectId()) {
 			objectId := NewObjectId()
-
-			insertDoc.Set(objectIdField, objectId)
 			doc.Set(objectIdField, objectId)
 		}
-
-		insertDocs = append(insertDocs, insertDoc)
 	}
-	return db.engine.Insert(collectionName, insertDocs...)
+	return db.engine.Insert(collectionName, docs...)
 }
 
 // Save or update a document
