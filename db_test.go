@@ -663,20 +663,19 @@ func TestContainsCriteria(t *testing.T) {
 		require.Equal(t, 2, len(docs))
 
 		for _, doc := range docs {
-			found := false
 			myField := doc.Get("myField").([]interface{})
 			require.NotNil(t, myField)
 
+			found := false
 			for _, elem := range myField {
 				if elem.(float64) == 4 {
 					found = true
 					break
 				}
 			}
-			
-			if !found {
-				require.Fail(t, fmt.Sprintf("myField does not contain element %d\n", testElement))
-			}
+
+			require.True(t, found, fmt.Sprintf("myField does not contain element %d\n", testElement))
+
 		}
 	})
 }
