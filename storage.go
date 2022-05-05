@@ -90,6 +90,7 @@ func (s *storageImpl) stopGC() {
 
 func registerGobTypes() {
 	gob.Register(map[string]interface{}{})
+	gob.Register([]interface{}{})
 	gob.Register(time.Time{})
 }
 
