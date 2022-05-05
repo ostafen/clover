@@ -88,13 +88,17 @@ func (s *storageImpl) stopGC() {
 	close(s.chQuit)
 }
 
+func registerGobTypes() {
+	gob.Register(map[string]interface{}{})
+	gob.Register(time.Time{})
+}
+
 func (s *storageImpl) Open(path string) error {
 	db, err := badger.Open(badger.DefaultOptions(path).WithLoggingLevel(badger.ERROR))
 	s.db = db
 	if err == nil {
+		registerGobTypes()
 		s.startGC()
-		gob.Register(map[string]interface{}{})
-		gob.Register(time.Time{})
 	}
 	return err
 }
