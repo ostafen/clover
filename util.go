@@ -138,7 +138,7 @@ func toFloat64(v interface{}) float64 {
 	panic("not a number")
 }
 
-func toUint64(v interface{}) int64 {
+func toInt64(v interface{}) int64 {
 	switch vType := v.(type) {
 	case uint64:
 		return int64(vType)

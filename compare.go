@@ -68,8 +68,8 @@ func compareNumbers(v1 interface{}, v2 interface{}) int {
 	_, isV2Int64 := v1.(int64)
 
 	if isV1Int64 || isV2Int64 {
-		v1Int64 := toUint64(v1)
-		v2Int64 := toUint64(v2)
+		v1Int64 := toInt64(v1)
+		v2Int64 := toInt64(v2)
 		return int(v1Int64 - v2Int64)
 	}
 
