@@ -938,6 +938,47 @@ func TestDocumentSetFloat(t *testing.T) {
 	require.IsType(t, float64(0), doc.Get("float64"))
 }
 
+func TestDocumentSetPointer(t *testing.T) {
+	doc := c.NewDocument()
+
+	var x int = 100
+	ptr := &x
+	dPtr := &ptr
+
+	doc.Set("*int", ptr)
+
+	v := doc.Get("*int")
+
+	require.NotEqual(t, &v, ptr)
+	require.Equal(t, v, int64(100))
+
+	doc.Set("**int", dPtr)
+	v1 := doc.Get("**int")
+	require.NotEqual(t, &v1, dPtr)
+
+	require.Equal(t, doc.Get("**int"), int64(100))
+
+	var intPtr *int = nil
+	doc.Set("intPtr", intPtr)
+	require.True(t, doc.Has("intPtr"))
+	require.Nil(t, doc.Get("intPtr"))
+
+	s := "hello"
+	var sPtr *string = &s
+
+	doc.Set("string", &sPtr)
+
+	s = "clover" // this statement should not affect the document field
+
+	require.Equal(t, "hello", doc.Get("string"))
+
+	sPtr = nil
+	doc.Set("string", sPtr)
+
+	require.True(t, doc.Has("string"))
+	require.Nil(t, doc.Get("string"))
+}
+
 func TestDocumentSetInvalidType(t *testing.T) {
 	doc := c.NewDocument()
 
