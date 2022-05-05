@@ -118,7 +118,7 @@ func compareValues(v1 interface{}, v2 interface{}) int {
 }
 
 func getKeys(m map[string]interface{}) []string {
-	keys := make([]string, len(m))
+	keys := make([]string, 0, len(m))
 	for key := range m {
 		keys = append(keys, key)
 	}
