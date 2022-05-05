@@ -98,8 +98,9 @@ func normalize(value interface{}) (interface{}, error) {
 	rType := reflect.TypeOf(value)
 
 	switch rType.Kind() {
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
-		reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return rValue.Convert(reflect.TypeOf(uint64(0))).Interface(), nil
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		return rValue.Convert(reflect.TypeOf(int64(0))).Interface(), nil
 	case reflect.Float32, reflect.Float64:
 		return rValue.Convert(reflect.TypeOf(float64(0))).Interface(), nil
