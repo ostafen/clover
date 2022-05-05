@@ -85,17 +85,30 @@ func convertSlice(sliceValue reflect.Value) ([]interface{}, error) {
 	return s, nil
 }
 
+func getElemValueAndType(v interface{}) (reflect.Value, reflect.Type) {
+	rv := reflect.ValueOf(v)
+	rt := reflect.TypeOf(v)
+
+	for rt.Kind() == reflect.Ptr && !rv.IsNil() {
+		rt = rt.Elem()
+		rv = rv.Elem()
+	}
+	return rv, rt
+}
+
 func normalize(value interface{}) (interface{}, error) {
 	if value == nil {
+		return nil, nil
+	}
+
+	rValue, rType := getElemValueAndType(value)
+	if rType.Kind() == reflect.Ptr {
 		return nil, nil
 	}
 
 	if _, isTime := value.(time.Time); isTime {
 		return value, nil
 	}
-
-	rValue := reflect.ValueOf(value)
-	rType := reflect.TypeOf(value)
 
 	switch rType.Kind() {
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
@@ -108,8 +121,10 @@ func normalize(value interface{}) (interface{}, error) {
 		return convertStruct(rValue)
 	case reflect.Map:
 		return convertMap(rValue)
-	case reflect.String, reflect.Bool:
-		return value, nil
+	case reflect.String:
+		return rValue.String(), nil
+	case reflect.Bool:
+		return rValue.Bool(), nil
 	case reflect.Slice:
 		return convertSlice(rValue)
 	}
