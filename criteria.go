@@ -185,13 +185,12 @@ func (f *field) Contains(elems ...interface{}) *Criteria {
 
 func (f *field) Like(pattern string) *Criteria {
 	expr, err := regexp.Compile(pattern)
+	if err != nil {
+		return &falseCriteria
+	}
 
 	return &Criteria{
 		p: func(doc *Document) bool {
-			if err != nil {
-				return false
-			}
-
 			s, isString := doc.Get(f.name).(string)
 			if !isString {
 				return false
