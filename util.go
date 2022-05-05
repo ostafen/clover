@@ -74,7 +74,7 @@ func convertStruct(structValue reflect.Value) (map[string]interface{}, error) {
 }
 
 func convertSlice(sliceValue reflect.Value) ([]interface{}, error) {
-	s := make([]interface{}, 01)
+	s := make([]interface{}, 0)
 	for i := 0; i < sliceValue.Len(); i++ {
 		v, err := normalize(sliceValue.Index(i).Interface())
 		if err != nil {
