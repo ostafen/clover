@@ -31,4 +31,8 @@ func main() {
 	doc = c.NewDocumentOf(todo)
 	title := doc.Get("title")
 	fmt.Println(title)
+	
+	// Use InsertOne again to insert the document from map
+	mapDocId, _ := db.InsertOne("todos", doc)
+	fmt.Println(mapDocId)
 }
