@@ -82,8 +82,11 @@ func (doc *Document) Get(name string) interface{} {
 
 // Set maps a field to a value. Nested fields can be accessed using dot.
 func (doc *Document) Set(name string, value interface{}) {
-	m, _, fieldName := lookupField(name, doc.fields, true)
-	m[fieldName] = value
+	normalizedValue, err := normalize(value)
+	if err == nil {
+		m, _, fieldName := lookupField(name, doc.fields, true)
+		m[fieldName] = normalizedValue
+	}
 }
 
 // SetAll sets each field specified in the input map to the corresponding value. Nested fields can be accessed using dot.
