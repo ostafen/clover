@@ -547,13 +547,11 @@ func TestEqCriteriaWithDifferentTypes(t *testing.T) {
 		count10, err := db.Query("todos").Where(c.Field("userId").Eq(uint64(1))).Count()
 		require.NoError(t, err)
 
-		/*
-			count11, err := db.Query("todos").Where(c.Field("userId").Eq(float32(1))).Count()
-			require.NoError(t, err)
+		count11, err := db.Query("todos").Where(c.Field("userId").Eq(float32(1))).Count()
+		require.NoError(t, err)
 
-			count12, err := db.Query("todos").Where(c.Field("userId").Eq(float64(1))).Count()
-			require.NoError(t, err)
-		*/
+		count12, err := db.Query("todos").Where(c.Field("userId").Eq(float64(1))).Count()
+		require.NoError(t, err)
 
 		require.Greater(t, count1, 0)
 
@@ -566,8 +564,8 @@ func TestEqCriteriaWithDifferentTypes(t *testing.T) {
 		require.Equal(t, count1, count8)
 		require.Equal(t, count1, count9)
 		require.Equal(t, count1, count10)
-		//require.Equal(t, count1, count11)
-		//require.Equal(t, count1, count12)
+		require.Equal(t, count1, count11)
+		require.Equal(t, count1, count12)
 	})
 }
 
