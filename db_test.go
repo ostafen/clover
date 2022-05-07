@@ -1198,20 +1198,43 @@ func TestExportAndImportCollection(t *testing.T) {
 }
 
 func TestSliceCompare(t *testing.T) {
-	runCloverTest(t, earthquakes, nil, func(t *testing.T, db *c.DB) {
-		coords := []interface{}{127.1311, 6.5061, 26.2}
-
-		n, err := db.Query("earthquakes").Where(c.Field("geometry.coordinates").Eq(coords)).Count()
+	runCloverTest(t, todosPath, nil, func(t *testing.T, db *c.DB) {
+		allDocs, err := db.Query("todos").FindAll()
 		require.NoError(t, err)
-		require.Equal(t, 1, n)
 
-		n, err = db.Query("earthquakes").Where(c.Field("geometry.coordinates").GtEq(coords)).Count()
-		require.NoError(t, err)
-		require.Equal(t, 1, n)
+		require.NoError(t, db.CreateCollection("todos.copy"))
 
-		n, err = db.Query("earthquakes").Where(c.Field("geometry.coordinates").Lt(coords)).Count()
+		for _, doc := range allDocs {
+			title, _ := doc.Get("title").(string)
+			if title != "" {
+				s := make([]int, len(title))
+				for i := 0; i < len(title); i++ {
+					s[i] = int(byte(title[i]))
+				}
+				doc.Set("title", s)
+			}
+		}
+		err = db.Insert("todos.copy", allDocs...)
 		require.NoError(t, err)
-		require.Equal(t, 7, n)
+
+		sort1, err := db.Query("todos").Sort(c.SortOption{Field: "title"}).FindAll()
+
+		sort2, err := db.Query("todos.copy").Sort(c.SortOption{Field: "title"}).FindAll()
+		require.NoError(t, err)
+
+		require.Equal(t, len(sort1), len(sort2))
+
+		for i := 0; i < len(sort1); i++ {
+			doc1 := sort1[i]
+			doc2 := sort2[i]
+
+			title := ""
+			sTitle := doc2.Get("title").([]interface{})
+			for j := 0; j < len(sTitle); j++ {
+				title += string(byte(sTitle[j].(int64)))
+			}
+			require.Equal(t, title, doc1.Get("title"))
+		}
 	})
 }
 
