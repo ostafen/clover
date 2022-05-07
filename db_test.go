@@ -656,8 +656,30 @@ func TestInCriteria(t *testing.T) {
 
 func TestContainsCriteria(t *testing.T) {
 	runCloverTest(t, containsPath, func(t *testing.T, db *c.DB) {
+		err := db.CreateCollection("myCollection")
+		require.NoError(t, err)
+
+		vals := [][]int{
+			{
+				1, 2, 4,
+			},
+			{
+				5, 6, 7,
+			},
+			{
+				4, 10, 20,
+			},
+		}
+		docs := make([]*c.Document, 0, 3)
+		for _, val := range vals {
+			doc := c.NewDocument()
+			doc.Set("myField", val)
+			docs = append(docs, doc)
+		}
+		require.NoError(t, db.Insert("myCollection", docs...))
+
 		testElement := 4
-		docs, err := db.Query("contains").Where(c.Field("myField").Contains(testElement)).FindAll()
+		docs, err = db.Query("myCollection").Where(c.Field("myField").Contains(testElement)).FindAll()
 		require.NoError(t, err)
 
 		require.Equal(t, 2, len(docs))
