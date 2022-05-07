@@ -1,8 +1,9 @@
 package clover
 
 import (
-	"encoding/json"
 	"strings"
+
+	"github.com/ostafen/clover/encoding"
 )
 
 // Document represents a document as a map.
@@ -27,7 +28,13 @@ func NewDocument() *Document {
 }
 
 // NewDocumentOf creates a new document and initializes it with the content of the provided map.
-func NewDocumentOf(fields map[string]interface{}) *Document {
+func NewDocumentOf(o interface{}) *Document {
+	normalized, _ := encoding.Normalize(o)
+	fields, _ := normalized.(map[string]interface{})
+	if fields == nil {
+		return nil
+	}
+
 	return &Document{
 		fields: fields,
 	}
@@ -82,7 +89,7 @@ func (doc *Document) Get(name string) interface{} {
 
 // Set maps a field to a value. Nested fields can be accessed using dot.
 func (doc *Document) Set(name string, value interface{}) {
-	normalizedValue, err := normalize(value)
+	normalizedValue, err := encoding.Normalize(value)
 	if err == nil {
 		m, _, fieldName := lookupField(name, doc.fields, true)
 		m[fieldName] = normalizedValue
@@ -98,11 +105,7 @@ func (doc *Document) SetAll(values map[string]interface{}) {
 
 // Unmarshal stores the document in the value pointed by v.
 func (doc *Document) Unmarshal(v interface{}) error {
-	bytes, err := json.Marshal(doc.fields)
-	if err != nil {
-		return err
-	}
-	return json.Unmarshal(bytes, v)
+	return encoding.Convert(doc.fields, v)
 }
 
 func compareDocuments(first *Document, second *Document, sortOpts []SortOption) int {

@@ -1,10 +1,7 @@
 package clover
 
 import (
-	"fmt"
 	"os"
-	"reflect"
-	"time"
 )
 
 const defaultPermDir = 0777
@@ -34,102 +31,6 @@ func boolToInt(v bool) int {
 		return 1
 	}
 	return 0
-}
-
-func convertMap(mapValue reflect.Value) (map[string]interface{}, error) {
-	// check if type is map (this is intended to be used directly)
-
-	if mapValue.Type().Key().Kind() != reflect.String {
-		return nil, fmt.Errorf("map key type must be a string")
-	}
-
-	m := make(map[string]interface{})
-	for _, key := range mapValue.MapKeys() {
-		value := mapValue.MapIndex(key)
-
-		normalized, err := normalize(value.Interface())
-		if err != nil {
-			return nil, err
-		}
-		m[key.String()] = normalized
-	}
-	return m, nil
-}
-
-func convertStruct(structValue reflect.Value) (map[string]interface{}, error) {
-	m := make(map[string]interface{})
-	for i := 0; i < structValue.NumField(); i++ {
-		fieldName := structValue.Type().Field(i).Name
-		fieldValue := structValue.Field(i)
-
-		if fieldValue.CanInterface() {
-			normalized, err := normalize(structValue.Field(i).Interface())
-			if err != nil {
-				return nil, err
-			}
-			m[fieldName] = normalized
-		}
-	}
-	return m, nil
-}
-
-func convertSlice(sliceValue reflect.Value) ([]interface{}, error) {
-	s := make([]interface{}, 0)
-	for i := 0; i < sliceValue.Len(); i++ {
-		v, err := normalize(sliceValue.Index(i).Interface())
-		if err != nil {
-			return nil, err
-		}
-		s = append(s, v)
-	}
-	return s, nil
-}
-
-func getElemValueAndType(v interface{}) (reflect.Value, reflect.Type) {
-	rv := reflect.ValueOf(v)
-	rt := reflect.TypeOf(v)
-
-	for rt.Kind() == reflect.Ptr && !rv.IsNil() {
-		rt = rt.Elem()
-		rv = rv.Elem()
-	}
-	return rv, rt
-}
-
-func normalize(value interface{}) (interface{}, error) {
-	if value == nil {
-		return nil, nil
-	}
-
-	rValue, rType := getElemValueAndType(value)
-	if rType.Kind() == reflect.Ptr {
-		return nil, nil
-	}
-
-	if _, isTime := value.(time.Time); isTime {
-		return value, nil
-	}
-
-	switch rType.Kind() {
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		return rValue.Convert(reflect.TypeOf(uint64(0))).Interface(), nil
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		return rValue.Convert(reflect.TypeOf(int64(0))).Interface(), nil
-	case reflect.Float32, reflect.Float64:
-		return rValue.Convert(reflect.TypeOf(float64(0))).Interface(), nil
-	case reflect.Struct:
-		return convertStruct(rValue)
-	case reflect.Map:
-		return convertMap(rValue)
-	case reflect.String:
-		return rValue.String(), nil
-	case reflect.Bool:
-		return rValue.Bool(), nil
-	case reflect.Slice:
-		return convertSlice(rValue)
-	}
-
-	return nil, fmt.Errorf("invalid dtype %s", rType.Name())
 }
 
 func isNumber(v interface{}) bool {
