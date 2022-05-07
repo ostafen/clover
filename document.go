@@ -27,7 +27,8 @@ func NewDocument() *Document {
 	}
 }
 
-// NewDocumentOf creates a new document and initializes it with the content of the provided map.
+// NewDocumentOf creates a new document and initializes it with the content of the provided object.
+// It returns nil if the object cannot be converted to a valid Document.
 func NewDocumentOf(o interface{}) *Document {
 	normalized, _ := encoding.Normalize(o)
 	fields, _ := normalized.(map[string]interface{})
