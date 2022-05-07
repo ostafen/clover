@@ -50,7 +50,7 @@ func normalizeStruct(structValue reflect.Value) (map[string]interface{}, error) 
 		fieldType := structValue.Type().Field(i)
 		fieldValue := structValue.Field(i)
 
-		if fieldValue.CanInterface() {
+		if fieldType.IsExported() {
 			fieldName := fieldType.Name
 
 			cloverTag := fieldType.Tag.Get("clover")
