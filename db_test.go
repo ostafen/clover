@@ -1238,7 +1238,7 @@ func TestSliceCompare(t *testing.T) {
 	})
 }
 
-func TestObjectComparison(t *testing.T) {
+func TestCompareObjects1(t *testing.T) {
 	runCloverTest(t, "", nil, func(t *testing.T, db *c.DB) {
 		err := db.CreateCollection("myCollection")
 		require.NoError(t, err)
@@ -1265,5 +1265,35 @@ func TestObjectComparison(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Equal(t, doc, queryDoc)
+	})
+}
+
+func TestCompareObjects2(t *testing.T) {
+	runCloverTest(t, "", nil, func(t *testing.T, db *c.DB) {
+		err := db.CreateCollection("myCollection")
+		require.NoError(t, err)
+
+		doc1 := c.NewDocumentOf(map[string]interface{}{
+			"data": map[string]interface{}{
+				"SomeNumber": float64(0),
+				"SomeString": "aString",
+			},
+		})
+
+		doc2 := c.NewDocumentOf(map[string]interface{}{
+			"data": map[string]interface{}{
+				"SomeNumber": float64(0),
+				"SomeStr":    "aString",
+			},
+		})
+
+		err = db.Insert("myCollection", doc1, doc2)
+		require.NoError(t, err)
+
+		docs, err := db.Query("myCollection").Sort(c.SortOption{Field: "data"}).FindAll()
+		require.NoError(t, err)
+		require.Len(t, docs, 2)
+
+		require.True(t, docs[0].Has("data.SomeStr"))
 	})
 }
