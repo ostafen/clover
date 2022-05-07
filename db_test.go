@@ -1175,7 +1175,13 @@ func TestExportAndImportCollection(t *testing.T) {
 		require.Equal(t, len(docs), len(importDocs))
 
 		for i := 0; i < len(docs); i++ {
-			require.Equal(t, docs[i], importDocs[i])
+			todo1 := &TodoModel{}
+			todo2 := &TodoModel{}
+
+			require.NoError(t, docs[i].Unmarshal(todo1))
+			require.NoError(t, importDocs[i].Unmarshal(todo2))
+
+			require.Equal(t, todo1, todo2)
 		}
 	})
 }
