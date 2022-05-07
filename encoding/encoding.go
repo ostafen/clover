@@ -16,7 +16,7 @@ func init() {
 	gob.Register(time.Time{})
 }
 
-func processTag(tagStr string) (string, bool) {
+func processStructTag(tagStr string) (string, bool) {
 	tags := strings.Split(tagStr, ",")
 	if len(tags) == 0 {
 		return "", false
@@ -44,7 +44,7 @@ func isEmptyValue(v reflect.Value) bool {
 	return false
 }
 
-func convertStruct(structValue reflect.Value) (map[string]interface{}, error) {
+func normalizeStruct(structValue reflect.Value) (map[string]interface{}, error) {
 	m := make(map[string]interface{})
 	for i := 0; i < structValue.NumField(); i++ {
 		fieldType := structValue.Type().Field(i)
@@ -54,7 +54,7 @@ func convertStruct(structValue reflect.Value) (map[string]interface{}, error) {
 			fieldName := fieldType.Name
 
 			cloverTag := fieldType.Tag.Get("clover")
-			name, omitempty := processTag(cloverTag)
+			name, omitempty := processStructTag(cloverTag)
 			if name != "" {
 				fieldName = name
 			}
@@ -72,7 +72,7 @@ func convertStruct(structValue reflect.Value) (map[string]interface{}, error) {
 	return m, nil
 }
 
-func convertSlice(sliceValue reflect.Value) ([]interface{}, error) {
+func normalizeSlice(sliceValue reflect.Value) ([]interface{}, error) {
 	s := make([]interface{}, 0)
 	for i := 0; i < sliceValue.Len(); i++ {
 		v, err := Normalize(sliceValue.Index(i).Interface())
@@ -95,7 +95,7 @@ func getElemValueAndType(v interface{}) (reflect.Value, reflect.Type) {
 	return rv, rt
 }
 
-func convertMap(mapValue reflect.Value) (map[string]interface{}, error) {
+func normalizeMap(mapValue reflect.Value) (map[string]interface{}, error) {
 	if mapValue.Type().Key().Kind() != reflect.String {
 		return nil, fmt.Errorf("map key type must be a string")
 	}
@@ -135,27 +135,27 @@ func Normalize(value interface{}) (interface{}, error) {
 	case reflect.Float32, reflect.Float64:
 		return rValue.Float(), nil
 	case reflect.Struct:
-		return convertStruct(rValue)
+		return normalizeStruct(rValue)
 	case reflect.Map:
-		return convertMap(rValue)
+		return normalizeMap(rValue)
 	case reflect.String:
 		return rValue.String(), nil
 	case reflect.Bool:
 		return rValue.Bool(), nil
 	case reflect.Slice:
-		return convertSlice(rValue)
+		return normalizeSlice(rValue)
 	}
 	return nil, fmt.Errorf("invalid dtype %s", rType.Name())
 }
 
-func buildRenameMap(rv reflect.Value) map[string]string {
+func createRenameMap(rv reflect.Value) map[string]string {
 	renameMap := make(map[string]string)
 	for i := 0; i < rv.NumField(); i++ {
 		fieldType := rv.Type().Field(i)
 
 		tagStr, found := fieldType.Tag.Lookup("clover")
 		if found {
-			name, _ := processTag(tagStr)
+			name, _ := processStructTag(tagStr)
 			renameMap[name] = fieldType.Name
 		}
 	}
@@ -168,7 +168,7 @@ func rename(fields map[string]interface{}, v interface{}) map[string]interface{}
 		return nil
 	}
 
-	renameMap := buildRenameMap(rv)
+	renameMap := createRenameMap(rv)
 	m := make(map[string]interface{})
 	for key, value := range fields {
 		renamedFieldName := renameMap[key]
@@ -194,13 +194,13 @@ func getFieldName(m map[string]interface{}, sf reflect.StructField) string {
 
 	tagStr, found := sf.Tag.Lookup("clover")
 	if found {
-		name, _ = processTag(tagStr)
+		name, _ = processStructTag(tagStr)
 	}
 
 	return name
 }
 
-func renameMap(m map[string]interface{}, v interface{}) map[string]interface{} {
+func renameMapKeys(m map[string]interface{}, v interface{}) map[string]interface{} {
 	rv, rt := getElemValueAndType(v)
 	if rt.Kind() != reflect.Struct {
 		return m
@@ -214,7 +214,7 @@ func renameMap(m map[string]interface{}, v interface{}) map[string]interface{} {
 
 		fMap, isMap := fv.(map[string]interface{})
 		if isMap && ft.Kind() == reflect.Struct {
-			converted := renameMap(fMap, rv.Field(i).Interface())
+			converted := renameMapKeys(fMap, rv.Field(i).Interface())
 			renamed[sf.Name] = converted
 		}
 	}
@@ -233,7 +233,7 @@ func Decode(data []byte, v interface{}) error {
 }
 
 func Convert(m map[string]interface{}, v interface{}) error {
-	renamed := renameMap(m, v)
+	renamed := renameMapKeys(m, v)
 
 	b, err := json.Marshal(renamed)
 	if err != nil {
