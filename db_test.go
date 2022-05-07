@@ -26,7 +26,7 @@ const (
 type TodoModel struct {
 	Title         string     `json:"title" clover:"title"`
 	Completed     bool       `json:"completed,omitempty" clover:"completed"`
-	Id            int        `json:"id" clover:"id"`
+	Id            uint       `json:"id" clover:"id"`
 	UserId        int        `json:"userId" clover:"userId"`
 	CompletedDate *time.Time `json:"completed_date,omitempty" clover:"completed_date,omitempty"`
 	Notes         *string    `json:"notes,omitempty" clover:"notes,omitempty"`
@@ -593,6 +593,17 @@ func TestEqCriteriaWithDifferentTypes(t *testing.T) {
 		require.Equal(t, count1, count10)
 		require.Equal(t, count1, count11)
 		require.Equal(t, count1, count12)
+	})
+}
+
+func TestCompareUint64(t *testing.T) {
+	runCloverTest(t, todosPath, &TodoModel{}, func(t *testing.T, db *c.DB) {
+		docs, err := db.Query("todos").Where(c.Field("id").Gt(uint64(4))).FindAll()
+		require.NoError(t, err)
+
+		for _, doc := range docs {
+			require.Greater(t, doc.Get("id"), uint64(4))
+		}
 	})
 }
 
