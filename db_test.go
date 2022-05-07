@@ -18,7 +18,6 @@ import (
 const (
 	airlinesPath = "test/data/airlines.json"
 	todosPath    = "test/data/todos.json"
-	containsPath = "test/data/contains.json"
 )
 
 func runCloverTest(t *testing.T, jsonPath string, test func(t *testing.T, db *c.DB)) {
@@ -655,7 +654,7 @@ func TestInCriteria(t *testing.T) {
 }
 
 func TestContainsCriteria(t *testing.T) {
-	runCloverTest(t, containsPath, func(t *testing.T, db *c.DB) {
+	runCloverTest(t, "", func(t *testing.T, db *c.DB) {
 		err := db.CreateCollection("myCollection")
 		require.NoError(t, err)
 
