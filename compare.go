@@ -40,18 +40,12 @@ func compareTypes(v1 interface{}, v2 interface{}) int {
 }
 
 func compareSlices(s1 []interface{}, s2 []interface{}) int {
-	if len(s1) < len(s2) {
-		return -1
-	} else if len(s1) > len(s2) {
-		return 1
-	}
-
-	for i := 0; i < len(s1); i++ {
+	for i := 0; i < len(s1) && i < len(s2); i++ {
 		if res := compareValues(s1[i], s2[i]); res != 0 {
 			return res
 		}
 	}
-	return 0
+	return len(s1) - len(s2)
 }
 
 func compareNumbers(v1 interface{}, v2 interface{}) int {
