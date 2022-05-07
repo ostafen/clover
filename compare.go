@@ -125,14 +125,6 @@ func getKeys(m map[string]interface{}) []string {
 }
 
 func compareObjects(m1 map[string]interface{}, m2 map[string]interface{}) int {
-	if len(m1) < len(m2) {
-		return -1
-	}
-
-	if len(m1) > len(m2) {
-		return 1
-	}
-
 	m1Keys := getKeys(m1)
 	m2Keys := getKeys(m2)
 
@@ -151,5 +143,5 @@ func compareObjects(m1 map[string]interface{}, m2 map[string]interface{}) int {
 			return res
 		}
 	}
-	return 0
+	return len(m1) - len(m2)
 }
