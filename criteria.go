@@ -2,6 +2,8 @@ package clover
 
 import (
 	"regexp"
+
+	"github.com/ostafen/clover/encoding"
 )
 
 const (
@@ -60,7 +62,7 @@ func (f *field) IsNilOrNotExists() *Criteria {
 }
 
 func (f *field) Eq(value interface{}) *Criteria {
-	normalizedValue, err := normalize(value)
+	normalizedValue, err := encoding.Normalize(value)
 	if err != nil {
 		return &falseCriteria
 	}
@@ -76,7 +78,7 @@ func (f *field) Eq(value interface{}) *Criteria {
 }
 
 func (f *field) Gt(value interface{}) *Criteria {
-	normValue, err := normalize(value)
+	normValue, err := encoding.Normalize(value)
 	if err != nil {
 		return &falseCriteria
 	}
@@ -89,7 +91,7 @@ func (f *field) Gt(value interface{}) *Criteria {
 }
 
 func (f *field) GtEq(value interface{}) *Criteria {
-	normValue, err := normalize(value)
+	normValue, err := encoding.Normalize(value)
 	if err != nil {
 		return &falseCriteria
 	}
@@ -102,7 +104,7 @@ func (f *field) GtEq(value interface{}) *Criteria {
 }
 
 func (f *field) Lt(value interface{}) *Criteria {
-	normValue, err := normalize(value)
+	normValue, err := encoding.Normalize(value)
 	if err != nil {
 		return &falseCriteria
 	}
@@ -115,7 +117,7 @@ func (f *field) Lt(value interface{}) *Criteria {
 }
 
 func (f *field) LtEq(value interface{}) *Criteria {
-	normValue, err := normalize(value)
+	normValue, err := encoding.Normalize(value)
 	if err != nil {
 		return &falseCriteria
 	}
@@ -132,7 +134,7 @@ func (f *field) Neq(value interface{}) *Criteria {
 }
 
 func (f *field) In(values ...interface{}) *Criteria {
-	normValues, err := normalize(values)
+	normValues, err := encoding.Normalize(values)
 	if err != nil || normValues == nil {
 		return &falseCriteria
 	}

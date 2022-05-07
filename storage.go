@@ -1,8 +1,6 @@
 package clover
 
 import (
-	"bytes"
-	"encoding/gob"
 	"errors"
 	"log"
 	"sort"
@@ -12,6 +10,7 @@ import (
 	"time"
 
 	badger "github.com/dgraph-io/badger/v3"
+	"github.com/ostafen/clover/encoding"
 )
 
 var ErrDocumentNotExist = errors.New("no such document")
@@ -88,19 +87,9 @@ func (s *storageImpl) stopGC() {
 	close(s.chQuit)
 }
 
-func registerGobTypes() {
-	gob.Register(map[string]interface{}{})
-	gob.Register([]interface{}{})
-	gob.Register(time.Time{})
-}
-
 func (s *storageImpl) Open(path string) error {
 	db, err := badger.Open(badger.DefaultOptions(path).WithLoggingLevel(badger.ERROR))
 	s.db = db
-	if err == nil {
-		registerGobTypes()
-		s.startGC()
-	}
 	return err
 }
 
@@ -156,14 +145,12 @@ func (s *storageImpl) FindAll(q *Query) ([]*Document, error) {
 
 func decodeDoc(data []byte) (*Document, error) {
 	doc := NewDocument()
-	err := gob.NewDecoder(bytes.NewBuffer(data)).Decode(&doc.fields)
+	err := encoding.Decode(data, &doc.fields)
 	return doc, err
 }
 
 func encodeDoc(doc *Document) ([]byte, error) {
-	var buf bytes.Buffer
-	err := gob.NewEncoder(&buf).Encode(doc.fields)
-	return buf.Bytes(), err
+	return encoding.Encode(doc.fields)
 }
 
 func (s *storageImpl) FindById(collectionName string, id string) (*Document, error) {
