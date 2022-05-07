@@ -127,7 +127,7 @@ func (e *memEngine) Insert(collection string, docs ...*Document) error {
 	}
 
 	for _, d := range docs {
-		c[d.ObjectId()] = d
+		c[d.ObjectId()] = d.Copy()
 	}
 
 	return nil
@@ -144,7 +144,7 @@ func (e *memEngine) iterateDocs(q *Query, consumer docConsumer) error {
 
 	for _, d := range c {
 		if q.satisfy(d) {
-			allDocs = append(allDocs, d)
+			allDocs = append(allDocs, d.Copy())
 		}
 	}
 
