@@ -51,10 +51,13 @@ func TestNormalize(t *testing.T) {
 	require.Equal(t, m["IntPtr"], int64(100))
 
 	s1 := &TestStruct{}
-	err = Convert(ns.(map[string]interface{}), s1)
+	err = Convert(m, s1)
 	require.NoError(t, err)
 
 	require.Equal(t, s, s1)
+
+	err = Convert(m, 10)
+	require.Error(t, err)
 }
 
 func TestNormalize2(t *testing.T) {
@@ -63,6 +66,9 @@ func TestNormalize2(t *testing.T) {
 	require.Nil(t, norm)
 
 	_, err = Normalize(make(chan struct{}))
+	require.Error(t, err)
+
+	_, err = Normalize(make(map[int]interface{}))
 	require.Error(t, err)
 }
 
