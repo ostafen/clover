@@ -1017,3 +1017,30 @@ func TestExportAndImportCollection(t *testing.T) {
 		}
 	})
 }
+
+func TestCompareDocumentFields(t *testing.T) {
+	runCloverTest(t, airlinesPath, func(t *testing.T, db *c.DB) {
+		criteria := c.Field("Statistics.Flights.Diverted").Gt(c.Field("Statistics.Flights.Cancelled"))
+		docs, err := db.Query("airlines").Where(criteria).FindAll()
+		require.NoError(t, err)
+
+		require.Greater(t, len(docs), 0)
+		for _, doc := range docs {
+			diverted := doc.Get("Statistics.Flights.Diverted").(float64)
+			cancelled := doc.Get("Statistics.Flights.Cancelled").(float64)
+			require.Greater(t, diverted, cancelled)
+		}
+
+		//alternative syntax using $
+		criteria = c.Field("Statistics.Flights.Diverted").Gt("$Statistics.Flights.Cancelled")
+		docs, err = db.Query("airlines").Where(criteria).FindAll()
+		require.NoError(t, err)
+
+		require.Greater(t, len(docs), 0)
+		for _, doc := range docs {
+			diverted := doc.Get("Statistics.Flights.Diverted").(float64)
+			cancelled := doc.Get("Statistics.Flights.Cancelled").(float64)
+			require.Greater(t, diverted, cancelled)
+		}
+	})
+}
