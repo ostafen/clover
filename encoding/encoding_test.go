@@ -8,8 +8,8 @@ import (
 )
 
 type TestStruct struct {
-	IntField    int
-	UintField   uint
+	IntField    int  `clover:"int"`
+	UintField   uint `clover:"uint,omitempty"`
 	StringField string
 	TimeField   time.Time
 	SliceField  []int
@@ -31,6 +31,8 @@ func TestNormalize(t *testing.T) {
 	require.NoError(t, err)
 
 	require.IsType(t, ns, map[string]interface{}{})
+	m := ns.(map[string]interface{})
+	require.Nil(t, m["uint"]) // testing omitempty
 
 	s1 := &TestStruct{}
 	err = Convert(ns.(map[string]interface{}), s1)
