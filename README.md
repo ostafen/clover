@@ -190,7 +190,7 @@ db.Query("todos").DeleteById(docId)
 
 ## Data Types
 
-Internally, CloverDB supports the following primitive data types: **int64**, **uint64**, **float64** and **time.Time**. When possible, values having different types are silently converted to one of the internal types: signed integer values get converted to int64, while unsigned ones to uint64. Float32 values are extended to float64.
+Internally, CloverDB supports the following primitive data types: **int64**, **uint64**, **float64**, **string**, **bool** and **time.Time**. When possible, values having different types are silently converted to one of the internal types: signed integer values get converted to int64, while unsigned ones to uint64. Float32 values are extended to float64.
 
 For example, consider the following snippet, which sets an uint8 value on a given document field:
 
