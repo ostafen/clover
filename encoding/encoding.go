@@ -18,10 +18,7 @@ func init() {
 
 func processStructTag(tagStr string) (string, bool) {
 	tags := strings.Split(tagStr, ",")
-	if len(tags) == 0 {
-		return "", false
-	}
-	name := tags[0]
+	name := tags[0] // when tagStr is "", tags[0] will also be ""
 	omitempty := len(tags) > 1 && tags[1] == "omitempty"
 	return name, omitempty
 }
