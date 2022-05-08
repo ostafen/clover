@@ -1,7 +1,6 @@
 package clover
 
 import (
-	"reflect"
 	"regexp"
 
 	"github.com/ostafen/clover/encoding"
@@ -169,7 +168,7 @@ func (f *field) Contains(elems ...interface{}) *Criteria {
 
 				if err == nil {
 					for _, val := range slice {
-						if reflect.DeepEqual(normElem, val) {
+						if compareValues(normElem, val) == 0 {
 							found = true
 							break
 						}
