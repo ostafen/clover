@@ -38,3 +38,23 @@ func TestNormalize(t *testing.T) {
 
 	require.Equal(t, s, s1)
 }
+
+func TestEncodeDecode(t *testing.T) {
+	date := time.Date(2020, 01, 1, 0, 0, 0, 0, time.UTC)
+
+	s := &TestStruct{
+		TimeField:  date,
+		SliceField: []int{1, 2, 3, 4},
+		MapField: map[string]interface{}{
+			"hello": "clover",
+		},
+	}
+
+	data, err := Encode(s)
+	require.NoError(t, err)
+
+	s1 := &TestStruct{}
+	require.NoError(t, Decode(data, s1))
+
+	require.Equal(t, s, s1)
+}
