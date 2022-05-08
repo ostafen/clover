@@ -2,6 +2,7 @@ package clover_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"math/rand"
 	"os"
@@ -686,6 +687,54 @@ func TestInCriteria(t *testing.T) {
 			if userId != int64(5) && userId != int64(8) {
 				require.Fail(t, "userId is not in the correct range")
 			}
+		}
+	})
+}
+
+func TestContainsCriteria(t *testing.T) {
+	runCloverTest(t, "", func(t *testing.T, db *c.DB) {
+		err := db.CreateCollection("myCollection")
+		require.NoError(t, err)
+
+		vals := [][]int{
+			{
+				1, 2, 4,
+			},
+			{
+				5, 6, 7,
+			},
+			{
+				4, 10, 20,
+			},
+		}
+		docs := make([]*c.Document, 0, 3)
+		for _, val := range vals {
+			doc := c.NewDocument()
+			doc.Set("myField", val)
+			docs = append(docs, doc)
+		}
+		require.NoError(t, db.Insert("myCollection", docs...))
+
+		testElement := 4
+		docs, err = db.Query("myCollection").Where(c.Field("myField").Contains(testElement)).FindAll()
+		require.NoError(t, err)
+
+		require.Equal(t, 2, len(docs))
+
+		for _, doc := range docs {
+			myField := doc.Get("myField").([]interface{})
+			require.NotNil(t, myField)
+
+			found := false
+			for _, elem := range myField {
+				if elem.(float64) == 4 {
+					found = true
+					break
+				}
+			}
+
+			require.True(t, found, fmt.Sprintf("myField does not contain element %d\n", testElement))
+
 		}
 	})
 }
