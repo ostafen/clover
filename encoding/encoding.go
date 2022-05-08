@@ -193,17 +193,6 @@ func getElemType(rt reflect.Type) reflect.Type {
 	return rt
 }
 
-func getFieldName(m map[string]interface{}, sf reflect.StructField) string {
-	name := sf.Name
-
-	tagStr, found := sf.Tag.Lookup("clover")
-	if found {
-		name, _ = processStructTag(tagStr)
-	}
-
-	return name
-}
-
 func renameMapKeys(m map[string]interface{}, v interface{}) map[string]interface{} {
 	rv, rt := getElemValueAndType(v)
 	if rt.Kind() != reflect.Struct {
