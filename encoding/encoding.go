@@ -72,7 +72,11 @@ func normalizeStruct(structValue reflect.Value) (map[string]interface{}, error) 
 	return m, nil
 }
 
-func normalizeSlice(sliceValue reflect.Value) ([]interface{}, error) {
+func normalizeSlice(sliceValue reflect.Value) (interface{}, error) {
+	if sliceValue.Type().Elem().Kind() == reflect.Uint8 {
+		return sliceValue.Interface(), nil
+	}
+
 	s := make([]interface{}, 0)
 	for i := 0; i < sliceValue.Len(); i++ {
 		v, err := Normalize(sliceValue.Index(i).Interface())
