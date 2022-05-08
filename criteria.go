@@ -1,6 +1,7 @@
 package clover
 
 import (
+	"reflect"
 	"regexp"
 
 	"github.com/ostafen/clover/encoding"
@@ -164,7 +165,7 @@ func (f *field) Contains(elems ...interface{}) *Criteria {
 
 			for _, elem := range elems {
 				found := false
-				normElem, err := normalize(elem)
+				normElem, err := encoding.Normalize(elem)
 
 				if err == nil {
 					for _, val := range slice {

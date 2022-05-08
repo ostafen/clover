@@ -692,7 +692,7 @@ func TestInCriteria(t *testing.T) {
 }
 
 func TestContainsCriteria(t *testing.T) {
-	runCloverTest(t, "", func(t *testing.T, db *c.DB) {
+	runCloverTest(t, "", nil, func(t *testing.T, db *c.DB) {
 		err := db.CreateCollection("myCollection")
 		require.NoError(t, err)
 
@@ -727,7 +727,7 @@ func TestContainsCriteria(t *testing.T) {
 
 			found := false
 			for _, elem := range myField {
-				if elem.(float64) == 4 {
+				if elem.(int64) == 4 {
 					found = true
 					break
 				}
