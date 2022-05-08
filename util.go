@@ -29,8 +29,14 @@ func copyMap(m map[string]interface{}) map[string]interface{} {
 	return mapCopy
 }
 
-func normalize(value interface{}) (interface{}, error) {
+func normalize(doc *Document, value interface{}) (interface{}, error) {
 	var normalized interface{}
+	if cmpField, ok := value.(*field); ok {
+		value = doc.Get(cmpField.name)
+	} else if fStr, ok := value.(string); ok && strings.HasPrefix(fStr, "$") {
+		fieldName := strings.TrimLeft(fStr, "$")
+		value = doc.Get(fieldName)
+	}
 	bytes, err := json.Marshal(value)
 	if err != nil {
 		return nil, err

@@ -59,7 +59,7 @@ func (db *DB) Insert(collectionName string, docs ...*Document) error {
 	insertDocs := make([]*Document, 0, len(docs))
 	for _, doc := range docs {
 		insertDoc := NewDocument()
-		fields, err := normalize(doc.fields)
+		fields, err := normalize(doc, doc.fields)
 		if err != nil {
 			return err
 		}

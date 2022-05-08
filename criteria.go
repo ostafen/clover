@@ -57,7 +57,7 @@ func (f *field) IsNilOrNotExists() *Criteria {
 func (f *field) Eq(value interface{}) *Criteria {
 	return &Criteria{
 		p: func(doc *Document) bool {
-			normValue, err := normalize(value)
+			normValue, err := normalize(doc, value)
 			if err != nil {
 				return false
 			}
@@ -73,7 +73,7 @@ func (f *field) Eq(value interface{}) *Criteria {
 func (f *field) Gt(value interface{}) *Criteria {
 	return &Criteria{
 		p: func(doc *Document) bool {
-			normValue, err := normalize(value)
+			normValue, err := normalize(doc, value)
 			if err != nil {
 				return false
 			}
@@ -89,7 +89,7 @@ func (f *field) Gt(value interface{}) *Criteria {
 func (f *field) GtEq(value interface{}) *Criteria {
 	return &Criteria{
 		p: func(doc *Document) bool {
-			normValue, err := normalize(value)
+			normValue, err := normalize(doc, value)
 			if err != nil {
 				return false
 			}
@@ -105,7 +105,7 @@ func (f *field) GtEq(value interface{}) *Criteria {
 func (f *field) Lt(value interface{}) *Criteria {
 	return &Criteria{
 		p: func(doc *Document) bool {
-			normValue, err := normalize(value)
+			normValue, err := normalize(doc, value)
 			if err != nil {
 				return false
 			}
@@ -121,7 +121,7 @@ func (f *field) Lt(value interface{}) *Criteria {
 func (f *field) LtEq(value interface{}) *Criteria {
 	return &Criteria{
 		p: func(doc *Document) bool {
-			normValue, err := normalize(value)
+			normValue, err := normalize(doc, value)
 			if err != nil {
 				return false
 			}
@@ -144,7 +144,7 @@ func (f *field) In(values ...interface{}) *Criteria {
 		p: func(doc *Document) bool {
 			docValue := doc.Get(f.name)
 			for _, value := range values {
-				normValue, err := normalize(value)
+				normValue, err := normalize(doc, value)
 				if err == nil {
 					if reflect.DeepEqual(normValue, docValue) {
 						return true
@@ -168,7 +168,7 @@ func (f *field) Contains(elems ...interface{}) *Criteria {
 
 			for _, elem := range elems {
 				found := false
-				normElem, err := normalize(elem)
+				normElem, err := normalize(doc, elem)
 
 				if err == nil {
 					for _, val := range slice {
