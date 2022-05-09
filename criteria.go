@@ -132,12 +132,16 @@ func (f *field) Neq(value interface{}) *Criteria {
 func (f *field) In(values ...interface{}) *Criteria {
 	return &Criteria{
 		p: func(doc *Document) bool {
-			normValues, err := encoding.Normalize(getFieldOrValue(doc, values))
-			if err != nil || normValues == nil {
-				return false
+			normValues := make([]interface{}, 0, len(values))
+			for _, v := range values {
+				normValue, err := encoding.Normalize(getFieldOrValue(doc, v))
+				if err != nil {
+					return false
+				}
+				normValues = append(normValues, normValue)
 			}
 			docValue := doc.Get(f.name)
-			for _, value := range normValues.([]interface{}) {
+			for _, value := range normValues {
 				if compareValues(value, docValue) == 0 {
 					return true
 				}
