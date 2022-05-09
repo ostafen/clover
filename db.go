@@ -76,7 +76,7 @@ func (db *DB) Save(collectionName string, doc *Document) error {
 // InsertOne inserts a single document to an existing collection. It returns the id of the inserted document.
 func (db *DB) InsertOne(collectionName string, doc *Document) (string, error) {
 	err := db.Insert(collectionName, doc)
-	return doc.Get(objectIdField).(string), err
+	return doc.ObjectId(), err
 }
 
 // Open opens a new clover database on the supplied path. If such a folder doesn't exist, it is automatically created.
