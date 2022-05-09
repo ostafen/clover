@@ -1,8 +1,9 @@
 package clover
 
 import (
-	"encoding/json"
 	"strings"
+
+	"github.com/ostafen/clover/encoding"
 )
 
 // Document represents a document as a map.
@@ -26,8 +27,15 @@ func NewDocument() *Document {
 	}
 }
 
-// NewDocumentOf creates a new document and initializes it with the content of the provided map.
-func NewDocumentOf(fields map[string]interface{}) *Document {
+// NewDocumentOf creates a new document and initializes it with the content of the provided object.
+// It returns nil if the object cannot be converted to a valid Document.
+func NewDocumentOf(o interface{}) *Document {
+	normalized, _ := encoding.Normalize(o)
+	fields, _ := normalized.(map[string]interface{})
+	if fields == nil {
+		return nil
+	}
+
 	return &Document{
 		fields: fields,
 	}
@@ -82,8 +90,11 @@ func (doc *Document) Get(name string) interface{} {
 
 // Set maps a field to a value. Nested fields can be accessed using dot.
 func (doc *Document) Set(name string, value interface{}) {
-	m, _, fieldName := lookupField(name, doc.fields, true)
-	m[fieldName] = value
+	normalizedValue, err := encoding.Normalize(value)
+	if err == nil {
+		m, _, fieldName := lookupField(name, doc.fields, true)
+		m[fieldName] = normalizedValue
+	}
 }
 
 // SetAll sets each field specified in the input map to the corresponding value. Nested fields can be accessed using dot.
@@ -95,11 +106,7 @@ func (doc *Document) SetAll(values map[string]interface{}) {
 
 // Unmarshal stores the document in the value pointed by v.
 func (doc *Document) Unmarshal(v interface{}) error {
-	bytes, err := json.Marshal(doc.fields)
-	if err != nil {
-		return err
-	}
-	return json.Unmarshal(bytes, v)
+	return encoding.Convert(doc.fields, v)
 }
 
 func compareDocuments(first *Document, second *Document, sortOpts []SortOption) int {
@@ -119,11 +126,9 @@ func compareDocuments(first *Document, second *Document, sortOpts []SortOption) 
 		}
 
 		if firstHas && secondHas {
-			res, canCompare := compareValues(first.Get(field), second.Get(field))
-			if canCompare {
-				if res != 0 {
-					return res * direction
-				}
+			res := compareValues(first.Get(field), second.Get(field))
+			if res != 0 {
+				return res * direction
 			}
 		}
 	}

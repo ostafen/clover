@@ -111,9 +111,9 @@ The `FindAll()` method is used to retrieve all documents satisfying a given quer
 docs, _ := db.Query("myCollection").FindAll()
 
 todo := &struct {
-    Completed bool   `json:"completed"`
-    Title     string `json:"title"`
-    UserId    int    `json:"userId"`
+    Completed bool   `clover:"completed"`
+    Title     string `clover:"title"`
+    UserId    int    `clover:"userId"`
 }{}
 
 for _, doc := range docs {
@@ -186,6 +186,48 @@ docId := "1dbce353-d3c6-43b3-b5a8-80d8d876389b"
 db.Query("todos").UpdateById(docId, map[string]interface{}{"completed": true})
 // or delete it
 db.Query("todos").DeleteById(docId)
+```
+
+## Data Types
+
+Internally, CloverDB supports the following primitive data types: **int64**, **uint64**, **float64**, **string**, **bool** and **time.Time**. When possible, values having different types are silently converted to one of the internal types: signed integer values get converted to int64, while unsigned ones to uint64. Float32 values are extended to float64.
+
+For example, consider the following snippet, which sets an uint8 value on a given document field:
+
+```go
+doc := c.NewDocument()
+doc.Set("myField", uint8(10)) // "myField" is automatically promoted to uint64
+
+fmt.Println(doc.Get("myField").(uint64))
+```
+
+Pointer values are dereferenced until either **nil** or a **non-pointer** value is found:
+
+``` go
+var x int = 10
+var ptr *int = &x
+var ptr1 **int = &ptr
+
+doc.Set("ptr", ptr)
+doc.Set("ptr1", ptr1)
+
+fmt.Println(doc.Get("ptr").(int64) == 10)
+fmt.Println(doc.Get("ptr1").(int64) == 10)
+
+ptr = nil
+
+doc.Set("ptr1", ptr1)
+// ptr1 is not nil, but it points to the nil "ptr" pointer, so the field is set to nil
+fmt.Println(doc.Get("ptr1") == nil)
+```
+
+Invalid types leaves the document untouched:
+
+```go
+doc := c.NewDocument()
+doc.Set("myField", make(chan struct{}))
+
+log.Println(doc.Has("myField")) // will output false
 ```
 
 ## Contributing

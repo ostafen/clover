@@ -1,10 +1,7 @@
 package clover
 
 import (
-	"encoding/json"
-	"math/big"
 	"os"
-	"strings"
 )
 
 const defaultPermDir = 0777
@@ -29,16 +26,6 @@ func copyMap(m map[string]interface{}) map[string]interface{} {
 	return mapCopy
 }
 
-func normalize(value interface{}) (interface{}, error) {
-	var normalized interface{}
-	bytes, err := json.Marshal(value)
-	if err != nil {
-		return nil, err
-	}
-	err = json.Unmarshal(bytes, &normalized)
-	return normalized, err
-}
-
 func boolToInt(v bool) int {
 	if v {
 		return 1
@@ -46,30 +33,34 @@ func boolToInt(v bool) int {
 	return 0
 }
 
-func compareValues(v1 interface{}, v2 interface{}) (int, bool) {
-	v1Float, isFloat := v1.(float64)
-	if isFloat {
-		v2Float, isFloat := v2.(float64)
-		if isFloat {
-			return big.NewFloat(v1Float).Cmp(big.NewFloat(v2Float)), true
-		}
+func isNumber(v interface{}) bool {
+	switch v.(type) {
+	case int, uint, uint8, uint16, uint32, uint64,
+		int8, int16, int32, int64, float32, float64:
+		return true
+	default:
+		return false
 	}
+}
 
-	v1Str, isStr := v1.(string)
-	if isStr {
-		v2Str, isStr := v2.(string)
-		if isStr {
-			return strings.Compare(v1Str, v2Str), true
-		}
+func toFloat64(v interface{}) float64 {
+	switch vType := v.(type) {
+	case uint64:
+		return float64(vType)
+	case int64:
+		return float64(vType)
+	case float64:
+		return vType
 	}
+	panic("not a number")
+}
 
-	v1Bool, isBool := v1.(bool)
-	if isBool {
-		v2Bool, isBool := v2.(bool)
-		if isBool {
-			return boolToInt(v1Bool) - boolToInt(v2Bool), true
-		}
+func toInt64(v interface{}) int64 {
+	switch vType := v.(type) {
+	case uint64:
+		return int64(vType)
+	case int64:
+		return vType
 	}
-
-	return 0, false
+	panic("not a number")
 }

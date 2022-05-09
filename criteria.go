@@ -1,8 +1,9 @@
 package clover
 
 import (
-	"reflect"
 	"regexp"
+
+	"github.com/ostafen/clover/encoding"
 )
 
 const (
@@ -10,6 +11,12 @@ const (
 )
 
 type predicate func(doc *Document) bool
+
+var falseCriteria Criteria = Criteria{
+	p: func(_ *Document) bool {
+		return false
+	},
+}
 
 // Criteria represents a predicate for selecting documents.
 // It follows a fluent API style so that you can easily chain together multiple criteria.
@@ -55,100 +62,89 @@ func (f *field) IsNilOrNotExists() *Criteria {
 }
 
 func (f *field) Eq(value interface{}) *Criteria {
+	normalizedValue, err := encoding.Normalize(value)
+	if err != nil {
+		return &falseCriteria
+	}
+
 	return &Criteria{
 		p: func(doc *Document) bool {
-			normValue, err := normalize(value)
-			if err != nil {
-				return false
-			}
-
 			if !doc.Has(f.name) {
 				return false
 			}
-			return reflect.DeepEqual(doc.Get(f.name), normValue)
+			return compareValues(doc.Get(f.name), normalizedValue) == 0
 		},
 	}
 }
 
 func (f *field) Gt(value interface{}) *Criteria {
+	normValue, err := encoding.Normalize(value)
+	if err != nil {
+		return &falseCriteria
+	}
+
 	return &Criteria{
 		p: func(doc *Document) bool {
-			normValue, err := normalize(value)
-			if err != nil {
-				return false
-			}
-			v, ok := compareValues(doc.Get(f.name), normValue)
-			if !ok {
-				return false
-			}
-			return v > 0
+			return compareValues(doc.Get(f.name), normValue) > 0
 		},
 	}
 }
 
 func (f *field) GtEq(value interface{}) *Criteria {
+	normValue, err := encoding.Normalize(value)
+	if err != nil {
+		return &falseCriteria
+	}
+
 	return &Criteria{
 		p: func(doc *Document) bool {
-			normValue, err := normalize(value)
-			if err != nil {
-				return false
-			}
-			v, ok := compareValues(doc.Get(f.name), normValue)
-			if !ok {
-				return false
-			}
-			return v >= 0
+			return compareValues(doc.Get(f.name), normValue) >= 0
 		},
 	}
 }
 
 func (f *field) Lt(value interface{}) *Criteria {
+	normValue, err := encoding.Normalize(value)
+	if err != nil {
+		return &falseCriteria
+	}
+
 	return &Criteria{
 		p: func(doc *Document) bool {
-			normValue, err := normalize(value)
-			if err != nil {
-				return false
-			}
-			v, ok := compareValues(doc.Get(f.name), normValue)
-			if !ok {
-				return false
-			}
-			return v < 0
+			return compareValues(doc.Get(f.name), normValue) < 0
 		},
 	}
 }
 
 func (f *field) LtEq(value interface{}) *Criteria {
+	normValue, err := encoding.Normalize(value)
+	if err != nil {
+		return &falseCriteria
+	}
+
 	return &Criteria{
 		p: func(doc *Document) bool {
-			normValue, err := normalize(value)
-			if err != nil {
-				return false
-			}
-			v, ok := compareValues(doc.Get(f.name), normValue)
-			if !ok {
-				return false
-			}
-			return v <= 0
+			return compareValues(doc.Get(f.name), normValue) <= 0
 		},
 	}
 }
 
 func (f *field) Neq(value interface{}) *Criteria {
-	c := f.Eq(value)
-	return c.Not()
+	return f.Eq(value).Not()
 }
 
 func (f *field) In(values ...interface{}) *Criteria {
+	normValues, err := encoding.Normalize(values)
+	if err != nil || normValues == nil {
+		return &falseCriteria
+	}
+
 	return &Criteria{
 		p: func(doc *Document) bool {
 			docValue := doc.Get(f.name)
-			for _, value := range values {
-				normValue, err := normalize(value)
-				if err == nil {
-					if reflect.DeepEqual(normValue, docValue) {
-						return true
-					}
+			for _, value := range normValues.([]interface{}) {
+				if compareValues(value, docValue) == 0 {
+					return true
 				}
 			}
 			return false
@@ -168,11 +164,11 @@ func (f *field) Contains(elems ...interface{}) *Criteria {
 
 			for _, elem := range elems {
 				found := false
-				normElem, err := normalize(elem)
+				normElem, err := encoding.Normalize(elem)
 
 				if err == nil {
 					for _, val := range slice {
-						if reflect.DeepEqual(normElem, val) {
+						if compareValues(normElem, val) == 0 {
 							found = true
 							break
 						}
@@ -191,13 +187,12 @@ func (f *field) Contains(elems ...interface{}) *Criteria {
 
 func (f *field) Like(pattern string) *Criteria {
 	expr, err := regexp.Compile(pattern)
+	if err != nil {
+		return &falseCriteria
+	}
 
 	return &Criteria{
 		p: func(doc *Document) bool {
-			if err != nil {
-				return false
-			}
-
 			s, isString := doc.Get(f.name).(string)
 			if !isString {
 				return false
