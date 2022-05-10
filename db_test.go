@@ -688,6 +688,17 @@ func TestInCriteria(t *testing.T) {
 				require.Fail(t, "userId is not in the correct range")
 			}
 		}
+
+		criteria := c.Field("userId").In(c.Field("id"), 6)
+		docs, err = db.Query("todos").Where(criteria).FindAll()
+		require.NoError(t, err)
+
+		require.Greater(t, len(docs), 0)
+		for _, doc := range docs {
+			userId := doc.Get("userId").(int64)
+			id := doc.Get("id").(uint64)
+			require.True(t, uint64(userId) == id || userId == 6)
+		}
 	})
 }
 
@@ -1325,5 +1336,32 @@ func TestCompareObjects3(t *testing.T) {
 		require.Len(t, docs, 2)
 
 		require.Equal(t, docs[0].Get("data.SomeString"), "aStr")
+	})
+}
+
+func TestCompareDocumentFields(t *testing.T) {
+	runCloverTest(t, airlinesPath, nil, func(t *testing.T, db *c.DB) {
+		criteria := c.Field("Statistics.Flights.Diverted").Gt(c.Field("Statistics.Flights.Cancelled"))
+		docs, err := db.Query("airlines").Where(criteria).FindAll()
+		require.NoError(t, err)
+
+		require.Greater(t, len(docs), 0)
+		for _, doc := range docs {
+			diverted := doc.Get("Statistics.Flights.Diverted").(float64)
+			cancelled := doc.Get("Statistics.Flights.Cancelled").(float64)
+			require.Greater(t, diverted, cancelled)
+		}
+
+		//alternative syntax using $
+		criteria = c.Field("Statistics.Flights.Diverted").Gt("$Statistics.Flights.Cancelled")
+		docs, err = db.Query("airlines").Where(criteria).FindAll()
+		require.NoError(t, err)
+
+		require.Greater(t, len(docs), 0)
+		for _, doc := range docs {
+			diverted := doc.Get("Statistics.Flights.Diverted").(float64)
+			cancelled := doc.Get("Statistics.Flights.Cancelled").(float64)
+			require.Greater(t, diverted, cancelled)
+		}
 	})
 }

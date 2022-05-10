@@ -2,6 +2,7 @@ package clover
 
 import (
 	"regexp"
+	"strings"
 
 	"github.com/ostafen/clover/encoding"
 )
@@ -62,13 +63,12 @@ func (f *field) IsNilOrNotExists() *Criteria {
 }
 
 func (f *field) Eq(value interface{}) *Criteria {
-	normalizedValue, err := encoding.Normalize(value)
-	if err != nil {
-		return &falseCriteria
-	}
-
 	return &Criteria{
 		p: func(doc *Document) bool {
+			normalizedValue, err := encoding.Normalize(getFieldOrValue(doc, value))
+			if err != nil {
+				return false
+			}
 			if !doc.Has(f.name) {
 				return false
 			}
@@ -78,52 +78,48 @@ func (f *field) Eq(value interface{}) *Criteria {
 }
 
 func (f *field) Gt(value interface{}) *Criteria {
-	normValue, err := encoding.Normalize(value)
-	if err != nil {
-		return &falseCriteria
-	}
-
 	return &Criteria{
 		p: func(doc *Document) bool {
+			normValue, err := encoding.Normalize(getFieldOrValue(doc, value))
+			if err != nil {
+				return false
+			}
 			return compareValues(doc.Get(f.name), normValue) > 0
 		},
 	}
 }
 
 func (f *field) GtEq(value interface{}) *Criteria {
-	normValue, err := encoding.Normalize(value)
-	if err != nil {
-		return &falseCriteria
-	}
-
 	return &Criteria{
 		p: func(doc *Document) bool {
+			normValue, err := encoding.Normalize(getFieldOrValue(doc, value))
+			if err != nil {
+				return false
+			}
 			return compareValues(doc.Get(f.name), normValue) >= 0
 		},
 	}
 }
 
 func (f *field) Lt(value interface{}) *Criteria {
-	normValue, err := encoding.Normalize(value)
-	if err != nil {
-		return &falseCriteria
-	}
-
 	return &Criteria{
 		p: func(doc *Document) bool {
+			normValue, err := encoding.Normalize(getFieldOrValue(doc, value))
+			if err != nil {
+				return false
+			}
 			return compareValues(doc.Get(f.name), normValue) < 0
 		},
 	}
 }
 
 func (f *field) LtEq(value interface{}) *Criteria {
-	normValue, err := encoding.Normalize(value)
-	if err != nil {
-		return &falseCriteria
-	}
-
 	return &Criteria{
 		p: func(doc *Document) bool {
+			normValue, err := encoding.Normalize(getFieldOrValue(doc, value))
+			if err != nil {
+				return false
+			}
 			return compareValues(doc.Get(f.name), normValue) <= 0
 		},
 	}
@@ -142,8 +138,9 @@ func (f *field) In(values ...interface{}) *Criteria {
 	return &Criteria{
 		p: func(doc *Document) bool {
 			docValue := doc.Get(f.name)
-			for _, value := range normValues.([]interface{}) {
-				if compareValues(value, docValue) == 0 {
+			for _, v := range values {
+				normValue, err := encoding.Normalize(getFieldOrValue(doc, v))
+				if err == nil && compareValues(normValue, docValue) == 0 {
 					return true
 				}
 			}
@@ -164,7 +161,7 @@ func (f *field) Contains(elems ...interface{}) *Criteria {
 
 			for _, elem := range elems {
 				found := false
-				normElem, err := encoding.Normalize(elem)
+				normElem, err := encoding.Normalize(getFieldOrValue(doc, elem))
 
 				if err == nil {
 					for _, val := range slice {
@@ -240,4 +237,16 @@ func (c *Criteria) Not() *Criteria {
 	return &Criteria{
 		p: negatePredicate(c.p),
 	}
+}
+
+// getFieldOrValue returns dereferenced value if value denotes another document field,
+// otherwise returns the value itself directly
+func getFieldOrValue(doc *Document, value interface{}) interface{} {
+	if cmpField, ok := value.(*field); ok {
+		value = doc.Get(cmpField.name)
+	} else if fStr, ok := value.(string); ok && strings.HasPrefix(fStr, "$") {
+		fieldName := strings.TrimLeft(fStr, "$")
+		value = doc.Get(fieldName)
+	}
+	return value
 }
