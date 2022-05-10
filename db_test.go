@@ -688,6 +688,17 @@ func TestInCriteria(t *testing.T) {
 				require.Fail(t, "userId is not in the correct range")
 			}
 		}
+
+		criteria := c.Field("userId").In(c.Field("id"), 6)
+		docs, err = db.Query("todos").Where(criteria).FindAll()
+		require.NoError(t, err)
+
+		require.Greater(t, len(docs), 0)
+		for _, doc := range docs {
+			userId := doc.Get("userId").(int64)
+			id := doc.Get("id").(uint64)
+			require.True(t, uint64(userId) == id || userId == 6)
+		}
 	})
 }
 
