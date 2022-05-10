@@ -174,6 +174,39 @@ db.Query("todos").DeleteById(docId)
 ```
 
 
+## 数据类型
+CloverDB内部支持以下原始数据类型：**int64**、**uint64**、**flat64**、**string**、**bool** 和 **time.Time**。CloverDB会尝试对非内部类型进行转化：有符号整数值被转换为int64、而无符号整数值被转换为uint64、Float32值扩展为Float64。
+
+
+例如，以下代码中的`uint8`类型的值会被CloverDB自动转化：
+
+```go
+doc := c.NewDocument()
+doc.Set("myField", uint8(10)) // "myField" 被自动转为 uint64 类型
+
+fmt.Println(doc.Get("myField").(uint64))
+```
+
+关于指针，取消自动引用指针，采取值拷贝方式：
+
+``` go
+var x int = 10
+var ptr *int = &x
+var ptr1 **int = &ptr
+
+doc.Set("ptr", ptr) // 这里 ptr 为 x 的指针地址，并非 x 的值
+doc.Set("ptr1", ptr1) // 这里 ptr1 为 ptr 的指针地址 
+
+fmt.Println(doc.Get("ptr").(int64) == 10) // 由于断言错误，会触发panic，下面同理
+fmt.Println(doc.Get("ptr1").(int64) == 10)
+
+ptr = nil
+
+doc.Set("ptr1", ptr1)
+// 此处也是值拷贝，下面的判断为false
+fmt.Println(doc.Get("ptr1") == nil)
+```
+
 ## 贡献
 
 **CloverDB** 正在积极开发中。任何以建议、错误报告或拉请求的形式做出的贡献，都是可以接受的。 :blush:
