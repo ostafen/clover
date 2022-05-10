@@ -38,7 +38,8 @@
 ```
 
 ## 数据库和集合
-CloverDB将数据记录存储为JSON文档，这些文档被分组在集合中。数据库由一个或多个集合组成。
+CloverDB将数据记录存储为JSON“文档”，这些“文档“被分组在集合中。数据库由一个或多个集合组成。
+以下简称“文档”为文档
 
 ### 数据库
 要在集合中存储文档，必须使用open()函数打开Clover数据库。 
@@ -70,7 +71,7 @@ db.CreateCollection("myCollection") // 创建一个名为"mycollection"的新集
 doc := c.NewDocument()
 doc.Set("hello", "clover!")
 
-// Insertone返回插入文档的ID
+// Insertone返回插入文档的ID，此处执行将doc插入到"myCollection"这个collection中
 docId, _ := db.InsertOne("myCollection", doc)
 fmt.Println(docId)
 
@@ -141,7 +142,7 @@ db.Query("todos").Where(c.Field("completed").Eq(true).And(c.Field("userId").In(5
 db.Query("todos").Sort(c.SortOption{"userId", -1}).FindFirst()
 ```
 ### 跳过/限制文档
-有时，从输出中丢弃一些文档，或者简单地设置查询返回结果的最大数量可能很有用。为此，CloverDB提供了Skip()和Limit()函数，它们都接受整数$n$作为参数。
+有时，从输出中跳过一些文档，或者简单地设置查询返回结果的最大数量可能很有用。为此，CloverDB提供了Skip()和Limit()函数，它们都接受整数$n$作为参数。
 ```go
 // 丢弃输出中的前10个文档
 // 还将查询结果的最大数量限制为100个
@@ -173,6 +174,48 @@ db.Query("todos").UpdateById(docId, map[string]interface{}{"completed": true})
 db.Query("todos").DeleteById(docId)
 ```
 
+
+## 数据类型
+CloverDB内部支持以下原始数据类型：**int64**、**uint64**、**flat64**、**string**、**bool** 和 **time.Time**。CloverDB会尝试对非内部类型进行转化：有符号整数值被转换为int64、而无符号整数值被转换为uint64、Float32值扩展为Float64。
+
+
+例如，以下代码中的`uint8`类型的值会被CloverDB自动转化：
+
+```go
+doc := c.NewDocument()
+doc.Set("myField", uint8(10)) // "myField" 被自动转为 uint64 类型
+
+fmt.Println(doc.Get("myField").(uint64))
+```
+
+关于指针，将会自动迭代引用，直到迭代出空指针`nil`，或者非指针类型停止：
+
+``` go
+var x int = 10
+var ptr *int = &x
+var ptr1 **int = &ptr
+
+doc.Set("ptr", ptr) // ptr自动迭代指针引用，存入的值为10，下面同理
+doc.Set("ptr1", ptr1) 
+
+fmt.Println(doc.Get("ptr").(int64) == 10) // 比较结果为 true
+fmt.Println(doc.Get("ptr1").(int64) == 10)
+
+ptr = nil
+
+doc.Set("ptr1", ptr1)
+// ptr1为指向ptr的指针，但ptr是一个空指针，所以最终迭代到nil停止，存入值为nil，下方判断为true
+fmt.Println(doc.Get("ptr1") == nil)
+```
+
+非法数据类型将会被直接丢弃，不触发存入：
+
+```go
+doc := c.NewDocument()
+doc.Set("myField", make(chan struct{})) // 由于chan非法，所以直接丢弃，不会触发存入
+
+log.Println(doc.Has("myField")) // 这里将会直接打印false
+```
 
 ## 贡献
 
