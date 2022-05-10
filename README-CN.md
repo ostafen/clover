@@ -106,9 +106,9 @@ FindAll()方法用于检索满足给定查询的所有文档。
 docs, _ := db.Query("myCollection").FindAll()
 
 todo := &struct {
-    Completed bool   `json:"completed"`
-    Title     string `json:"title"`
-    UserId    int    `json:"userId"`
+    Completed bool   `clover:"completed"`
+    Title     string `clover:"title"`
+    UserId    int    `clover:"userId"`
 }{}
 
 for _, doc := range docs {
