@@ -27,6 +27,7 @@ type StorageEngine interface {
 	ListCollections() ([]string, error)
 	DropCollection(name string) error
 	HasCollection(name string) (bool, error)
+	Count(q *Query) (int, error)
 	FindAll(q *Query) ([]*Document, error)
 	FindById(collectionName string, id string) (*Document, error)
 	UpdateById(collectionName string, docId string, updater func(doc *Document) *Document) error
@@ -129,6 +130,17 @@ func (s *storageImpl) DropCollection(name string) error {
 	}
 
 	return txn.Commit()
+}
+
+func (s *storageImpl) Count(q *Query) (int, error) {
+	num := 0
+	err := s.IterateDocs(q, func(doc *Document) error {
+		if q.satisfy(doc) {
+			num++
+		}
+		return nil
+	})
+	return num, err
 }
 
 func (s *storageImpl) FindAll(q *Query) ([]*Document, error) {
