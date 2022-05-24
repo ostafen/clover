@@ -133,7 +133,7 @@ func (s *storageImpl) DropCollection(name string) error {
 }
 
 func (s *storageImpl) Count(q *Query) (int, error) {
-	var num int
+	num := 0
 	err := s.IterateDocs(q, func(doc *Document) error {
 		if q.satisfy(doc) {
 			num++

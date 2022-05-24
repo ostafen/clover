@@ -76,7 +76,7 @@ func (e *memEngine) DropCollection(name string) error {
 }
 
 func (e *memEngine) Count(q *Query) (int, error) {
-	var num int
+	num := 0
 	err := e.IterateDocs(q, func(doc *Document) error {
 		if q.satisfy(doc) {
 			num++
