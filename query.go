@@ -34,8 +34,8 @@ func (q *Query) satisfy(doc *Document) bool {
 
 // Count returns the number of documents which satisfy the query (i.e. len(q.FindAll()) == q.Count()).
 func (q *Query) Count() (int, error) {
-	docs, err := q.FindAll()
-	return len(docs), err
+	num, err := q.engine.Count(q)
+	return num, err
 }
 
 // Exists returns true if and only if the query result set is not empty.

@@ -75,6 +75,17 @@ func (e *memEngine) DropCollection(name string) error {
 	return nil
 }
 
+func (e *memEngine) Count(q *Query) (int, error) {
+	var num int
+	err := e.IterateDocs(q, func(doc *Document) error {
+		if q.satisfy(doc) {
+			num++
+		}
+		return nil
+	})
+	return num, err
+}
+
 // FindAll implements StorageEngine
 func (e *memEngine) FindAll(q *Query) ([]*Document, error) {
 	docs := []*Document{}
