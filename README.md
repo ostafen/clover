@@ -143,6 +143,14 @@ In order to build very complex queries, we chain multiple Criteria objects by us
 db.Query("todos").Where(c.Field("completed").Eq(true).And(c.Field("userId").In(5, 8))).FindAll()
 ```
 
+Naturally, you can also create Criteria involving multiple fields. CloverDB provides you with two equivalent ways to accomplish this:
+
+```go
+db.Query("myCollection").Where(c.Field("myField1").Gt(c.Field("myField2")))
+// or, if you prefer
+db.Query("myCollection").Where(c.Field("myField1").Gt("$myField2"))
+```
+
 ### Sorting Documents
 
 To sort documents in CloverDB, you need to use `Sort()`. It is a variadic function which accepts a sequence of SortOption, each allowing to specify a field and a sorting direction.
