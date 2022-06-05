@@ -49,7 +49,6 @@ func (doc *Document) Copy() *Document {
 	}
 }
 
-// force tells that if we did not finding anything we should create
 func lookupField(name string, fieldMap map[string]interface{}, force bool) (map[string]interface{}, interface{}, string) {
 	fields := strings.Split(name, ".")
 
