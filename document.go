@@ -1,6 +1,7 @@
 package clover
 
 import (
+	"strconv"
 	"strings"
 
 	"github.com/ostafen/clover/encoding"
@@ -54,7 +55,10 @@ func lookupField(name string, fieldMap map[string]interface{}, force bool) (map[
 	var exists bool
 	var f interface{}
 	currMap := fieldMap
-	for i, field := range fields {
+	end := len(fields)
+	i := 0
+	for i < end {
+		field := fields[i]
 		f, exists = currMap[field]
 
 		m, isMap := f.(map[string]interface{})
@@ -69,11 +73,47 @@ func lookupField(name string, fieldMap map[string]interface{}, force bool) (map[
 			return nil, nil, ""
 		}
 
-		if i < len(fields)-1 {
+		s, isSlice := f.([]interface{})
+		if isSlice {
+			if i < end-1 {
+				v, increment := lookupSliceField(fields[i+1:], 2, s)
+				if m, isMap := v.(map[string]interface{}); isMap {
+					currMap = m
+				} else if v == nil {
+					return nil, nil, ""
+				} else {
+					f = v
+				}
+
+				i += increment
+				continue
+			}
+		} else if i < end-1 {
 			currMap = m
 		}
+
+		i += 1
 	}
 	return currMap, f, fields[len(fields)-1]
+}
+
+func lookupSliceField(fields []string, increment int, s []interface{}) (interface{}, int) {
+	fidx := fields[0]
+	idx, err := strconv.Atoi(fidx)
+	if err != nil {
+		return nil, 1
+	}
+	if idx > len(s)-1 {
+		return nil, 1
+	}
+
+	value, isSlice := s[idx].([]interface{})
+	if isSlice {
+		return lookupSliceField(fields[1:], increment+1, value)
+	}
+
+	return s[idx], increment
+
 }
 
 // Has tells returns true if the document contains a field with the supplied name.

@@ -1,0 +1,38 @@
+[
+    {
+        "title": "A Study in Scarlet",
+        "publisher": "Ward Lock & Co",
+        "genre": ["Detective Fiction", "Crime"],
+        "authors": [
+            {
+                "name": "Sir Arthur Conan Doyle",
+                "bio": {
+                    "born": "Scotland",
+                    "year": 1859,
+                    "best_sellers": [
+                        [
+                            "The Hound of the Baskerville",
+                            "The Adventure of the Speckled Band",
+                            "The final problem"
+                        ]
+                    ]
+                }
+            }
+        ]
+    },
+    {
+        "title": "The Hound of The Baskervilles",
+        "publisher": "George Newnes Ltd",
+        "genre": ["Detective Fiction", "Crime"],
+        "authors": [
+            {
+                "name": "Sir Arthur Conan Doyle",
+                "bio": {
+                    "born": "Scotland",
+                    "year": 1859,
+                    "best_sellers": []
+                }
+            }
+        ]
+    }
+]

@@ -21,6 +21,7 @@ const (
 	airlinesPath = "test/data/airlines.json"
 	todosPath    = "test/data/todos.json"
 	earthquakes  = "test/data/earthquakes.json"
+	booksPath    = "test/data/books.json"
 )
 
 type TodoModel struct {
@@ -1363,5 +1364,28 @@ func TestCompareDocumentFields(t *testing.T) {
 			cancelled := doc.Get("Statistics.Flights.Cancelled").(float64)
 			require.Greater(t, diverted, cancelled)
 		}
+	})
+}
+
+func TestSliceIndexing(t *testing.T) {
+	runCloverTest(t, booksPath, nil, func(t *testing.T, db *c.DB) {
+		docs, err := db.Query("books").Where(c.Field("title").Eq("A Study in Scarlet")).FindAll()
+		require.NoError(t, err)
+		d0 := docs[0]
+
+		docs, err = db.Query("books").Where(c.Field("title").Eq("The Hound of The Baskervilles")).FindAll()
+		require.NoError(t, err)
+		d1 := docs[0]
+
+		require.Equal(t, "Scotland", d0.Get("authors.0.bio.born"))
+		require.Equal(t, float64(1859), d1.Get("authors.0.bio.year"))
+		require.Equal(t, "Sir Arthur Conan Doyle", d1.Get("authors.0.name"))
+		require.Equal(t, "Crime", d1.Get("genre.1"))
+		require.Equal(t, "Detective Fiction", d0.Get("genre.0"))
+		require.Nil(t, d1.Get("genre.10"))
+		require.Nil(t, d1.Get("genre.first"))
+		require.Nil(t, d1.Get("authors.name"))
+		require.Equal(t, "The final problem", d0.Get("authors.0.bio.best_sellers.0.2"))
+		require.Nil(t,  d1.Get("authors.0.bio.best_sellers.0"))
 	})
 }
