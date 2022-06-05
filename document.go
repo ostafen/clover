@@ -49,6 +49,7 @@ func (doc *Document) Copy() *Document {
 	}
 }
 
+// force tells that if we did not finding anything we should create
 func lookupField(name string, fieldMap map[string]interface{}, force bool) (map[string]interface{}, interface{}, string) {
 	fields := strings.Split(name, ".")
 
@@ -76,7 +77,7 @@ func lookupField(name string, fieldMap map[string]interface{}, force bool) (map[
 		s, isSlice := f.([]interface{})
 		if isSlice {
 			if i < end-1 {
-				v, increment := lookupSliceField(fields[i+1:], 2, s)
+				v, increment := lookupSliceField(fields[i+1:], 1, s)
 				if v == nil {
 					return nil, nil, ""
 				} else if m, isMap := v.(map[string]interface{}); isMap {
@@ -86,7 +87,6 @@ func lookupField(name string, fieldMap map[string]interface{}, force bool) (map[
 				}
 
 				i += increment
-				continue
 			}
 		} else if i < end-1 {
 			currMap = m
