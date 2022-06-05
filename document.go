@@ -77,10 +77,10 @@ func lookupField(name string, fieldMap map[string]interface{}, force bool) (map[
 		if isSlice {
 			if i < end-1 {
 				v, increment := lookupSliceField(fields[i+1:], 2, s)
-				if m, isMap := v.(map[string]interface{}); isMap {
-					currMap = m
-				} else if v == nil {
+				if v == nil {
 					return nil, nil, ""
+				} else if m, isMap := v.(map[string]interface{}); isMap {
+					currMap = m
 				} else {
 					f = v
 				}

@@ -1386,6 +1386,6 @@ func TestSliceIndexing(t *testing.T) {
 		require.Nil(t, d1.Get("genre.first"))
 		require.Nil(t, d1.Get("authors.name"))
 		require.Equal(t, "The final problem", d0.Get("authors.0.bio.best_sellers.0.2"))
-		require.Nil(t,  d1.Get("authors.0.bio.best_sellers.0"))
+		require.Nil(t, d1.Get("authors.0.bio.best_sellers.0"))
 	})
 }
