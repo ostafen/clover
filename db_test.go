@@ -13,8 +13,9 @@ import (
 	"testing"
 	"time"
 
-	c "github.com/ostafen/clover"
 	"github.com/stretchr/testify/require"
+
+	c "github.com/ostafen/clover"
 )
 
 const (
@@ -855,9 +856,9 @@ func TestTimeRangeQuery(t *testing.T) {
 		require.Len(t, docs, n)
 
 		for _, doc := range docs {
-			date := doc.Get("completed_date")
-			require.GreaterOrEqual(t, date, start)
-			require.Less(t, date, end)
+			date := doc.Get("completed_date").(time.Time)
+			require.Positive(t, date.Sub(start))
+			require.Negative(t, date.Sub(end))
 		}
 	})
 }
