@@ -104,6 +104,29 @@ func (doc *Document) SetAll(values map[string]interface{}) {
 	}
 }
 
+// GetAll returns a map of all available fields in the document. Nested fields are represented by sub-maps. This is a deep copy, but values are note cloned.
+func (doc *Document) GetAll() map[string]interface{} {
+	return copyMap(doc.fields)
+}
+
+// GetKeys returns a slice of all available field names in the document. Nested fields are represented using dot notation (in such case parent fields are not represented standalone).
+func (doc *Document) GetKeys() []string {
+	return getKeysRecursive(doc.fields, "")
+}
+
+func getKeysRecursive(fields map[string]interface{}, prefix string) []string {
+	result := []string{}
+	for key, value := range fields {	
+		subMap, isMap := value.(map[string]interface{})
+		if isMap {
+			result = append(result, getKeysRecursive(subMap, key + ".")...)
+		} else {
+			result = append(result, prefix + key)
+		}
+	}
+	return result
+}
+
 // Unmarshal stores the document in the value pointed by v.
 func (doc *Document) Unmarshal(v interface{}) error {
 	return encoding.Convert(doc.fields, v)
