@@ -64,3 +64,17 @@ func toInt64(v interface{}) int64 {
 	}
 	panic("not a number")
 }
+
+// Returns a flat list of keys of the map. Recurses on sub-maps, in which case the dot notation is used (ex. a.b.c)
+func getKeysRecursive(fields map[string]interface{}, prefix string) []string {
+	result := []string{}
+	for key, value := range fields {	
+		subMap, isMap := value.(map[string]interface{})
+		if isMap {
+			result = append(result, getKeysRecursive(subMap, key + ".")...)
+		} else {
+			result = append(result, prefix + key)
+		}
+	}
+	return result
+}

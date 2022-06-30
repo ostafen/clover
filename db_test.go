@@ -1136,25 +1136,25 @@ func TestDocumentUnmarshal(t *testing.T) {
 	})
 }
 
-func TestDocumentGetAll(t *testing.T) {
+func TestDocumentToMap(t *testing.T) {
 	runCloverTest(t, airlinesPath, nil, func(t *testing.T, db *c.DB) {
 		doc, err := db.Query("airlines").Where(c.Field("Airport.Code").Eq("CLT")).FindFirst()
 		require.NoError(t, err)
 		require.NotNil(t, doc)
 		
-		fields := doc.GetAll()
+		fields := doc.ToMap()
 		require.Equal(t, fields["Airport"].(map[string]interface{})["Code"], "CLT")
 		require.Equal(t, len(fields), 4)		
 	})
 }
 
-func TestDocumentGetFields(t *testing.T) {
+func TestDocumentFields(t *testing.T) {
 	runCloverTest(t, airlinesPath, nil, func(t *testing.T, db *c.DB) {
 		doc, err := db.Query("airlines").Where(c.Field("Airport.Code").Eq("CLT")).FindFirst()
 		require.NoError(t, err)
 		require.NotNil(t, doc)
 		
-		keys := doc.GetKeys()
+		keys := doc.Fields()
 		require.Equal(t, len(keys), 25)
 		require.Contains(t, keys, "Airport.Code")
 		require.Contains(t, keys, "# of Delays.National Aviation System")		
