@@ -1157,7 +1157,7 @@ func TestDocumentFields(t *testing.T) {
 		keys := doc.Fields()
 		require.Equal(t, len(keys), 25)
 		require.Contains(t, keys, "Airport.Code")
-		require.Contains(t, keys, "# of Delays.National Aviation System")		
+		require.Contains(t, keys, "Statistics.# of Delays.National Aviation System")		
 	})
 }
 

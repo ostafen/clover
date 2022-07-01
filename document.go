@@ -111,7 +111,7 @@ func (doc *Document) ToMap() map[string]interface{} {
 
 // GetKeys returns a slice of all available field names in the document. Nested fields are represented using dot notation (in such case parent fields are not represented standalone). There is no guarantee on the order.
 func (doc *Document) Fields() []string {
-	return getKeysRecursive(doc.fields, "")
+	return getAllKeys(doc.fields)
 }
 
 // Unmarshal stores the document in the value pointed by v.
