@@ -8,7 +8,7 @@ import (
 type Query struct {
 	engine     StorageEngine
 	collection string
-	criteria   *Criteria
+	criteria   Criteria
 	limit      int
 	skip       int
 	sortOpts   []SortOption
@@ -29,7 +29,7 @@ func (q *Query) satisfy(doc *Document) bool {
 	if q.criteria == nil {
 		return true
 	}
-	return q.criteria.p(doc)
+	return q.criteria.Satisfy(doc)
 }
 
 // Count returns the number of documents which satisfy the query (i.e. len(q.FindAll()) == q.Count()).
@@ -46,11 +46,11 @@ func (q *Query) Exists() (bool, error) {
 
 // MatchPredicate selects all the documents which satisfy the supplied predicate function.
 func (q *Query) MatchPredicate(p func(doc *Document) bool) *Query {
-	return q.Where(&Criteria{p})
+	return q.Where(newCriterion(function, "", p))
 }
 
 // Where returns a new Query which select all the documents fullfilling both the base query and the provided Criteria.
-func (q *Query) Where(c *Criteria) *Query {
+func (q *Query) Where(c Criteria) *Query {
 	newCriteria := q.criteria
 	if newCriteria == nil {
 		newCriteria = c
