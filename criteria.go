@@ -299,24 +299,6 @@ func (f *field) Contains(elems ...interface{}) Criteria {
 	return newCriterion(ContainsOp, f.name, elems)
 }
 
-func negatePredicate(p predicate) predicate {
-	return func(doc *Document) bool {
-		return !p(doc)
-	}
-}
-
-func andPredicates(p1 predicate, p2 predicate) predicate {
-	return func(doc *Document) bool {
-		return p1(doc) && p2(doc)
-	}
-}
-
-func orPredicates(p1 predicate, p2 predicate) predicate {
-	return func(doc *Document) bool {
-		return p1(doc) || p2(doc)
-	}
-}
-
 // getFieldOrValue returns dereferenced value if value denotes another document field,
 // otherwise returns the value itself directly
 func getFieldOrValue(doc *Document, value interface{}) interface{} {
