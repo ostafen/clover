@@ -46,14 +46,14 @@ type Criteria interface {
 
 type binaryPredicate struct {
 	opType int
-	c1, c2 Predicate
+	p1, p2 Predicate
 }
 
 func (p *binaryPredicate) Satisfy(doc *Document) bool {
 	if p.opType == LogicalAnd {
-		return p.c1.Satisfy(doc) && p.c2.Satisfy(doc)
+		return p.p1.Satisfy(doc) && p.p2.Satisfy(doc)
 	}
-	return p.c1.Satisfy(doc) || p.c2.Satisfy(doc)
+	return p.p1.Satisfy(doc) || p.p2.Satisfy(doc)
 }
 
 type predicateDecorator struct {
@@ -61,37 +61,37 @@ type predicateDecorator struct {
 	p      Predicate
 }
 
-func (c *predicateDecorator) Satisfy(doc *Document) bool {
-	res := c.p.Satisfy(doc)
-	if c.negate {
+func (p *predicateDecorator) Satisfy(doc *Document) bool {
+	res := p.p.Satisfy(doc)
+	if p.negate {
 		return !res
 	}
 	return res
 }
 
-func (c *predicateDecorator) Not() Criteria {
+func (p *predicateDecorator) Not() Criteria {
 	return &predicateDecorator{
-		negate: !c.negate,
-		p:      c.p,
+		negate: !p.negate,
+		p:      p.p,
 	}
 }
 
-func (c *predicateDecorator) And(p Criteria) Criteria {
+func (p *predicateDecorator) And(c Criteria) Criteria {
 	return &predicateDecorator{
 		p: &binaryPredicate{
 			opType: LogicalAnd,
-			c1:     c.p,
-			c2:     p,
+			p1:     p.p,
+			p2:     c,
 		},
 	}
 }
 
-func (c *predicateDecorator) Or(p Criteria) Criteria {
+func (p *predicateDecorator) Or(c Criteria) Criteria {
 	return &predicateDecorator{
 		p: &binaryPredicate{
 			opType: LogicalOr,
-			c1:     c.p,
-			c2:     p,
+			p1:     p.p,
+			p2:     c,
 		},
 	}
 }
@@ -113,43 +113,43 @@ func newCriterion(opType int, field string, value interface{}) Criteria {
 	}
 }
 
-func (c *simplePredicate) Satisfy(doc *Document) bool {
-	switch c.opType {
+func (p *simplePredicate) Satisfy(doc *Document) bool {
+	switch p.opType {
 	case ExistsOp:
-		return c.exist(doc)
+		return p.exist(doc)
 	case EqOp:
-		return c.eq(doc)
+		return p.eq(doc)
 	case LikeOp:
-		return c.like(doc)
+		return p.like(doc)
 	case InOp:
-		return c.in(doc)
+		return p.in(doc)
 	case GtOp, GtEqOp, LtOp, LtEqOp:
-		return c.compare(doc)
+		return p.compare(doc)
 	case ContainsOp:
-		return c.contains(doc)
+		return p.contains(doc)
 	case FunctionOp:
-		return c.value.(func(*Document) bool)(doc)
+		return p.value.(func(*Document) bool)(doc)
 	}
 	return false
 }
 
-func (c *simplePredicate) exist(doc *Document) bool {
-	return doc.Has(c.field)
+func (p *simplePredicate) exist(doc *Document) bool {
+	return doc.Has(p.field)
 }
 
-func (c *simplePredicate) notExists(doc *Document) bool {
-	return !c.exist(doc)
+func (p *simplePredicate) notExists(doc *Document) bool {
+	return !p.exist(doc)
 }
 
-func (c *simplePredicate) compare(doc *Document) bool {
-	normValue, err := encoding.Normalize(getFieldOrValue(doc, c.value))
+func (p *simplePredicate) compare(doc *Document) bool {
+	normValue, err := encoding.Normalize(getFieldOrValue(doc, p.value))
 	if err != nil {
 		return false
 	}
 
-	res := compareValues(doc.Get(c.field), normValue)
+	res := compareValues(doc.Get(p.field), normValue)
 
-	switch c.opType {
+	switch p.opType {
 	case GtOp:
 		return res > 0
 	case GtEqOp:
@@ -162,23 +162,23 @@ func (c *simplePredicate) compare(doc *Document) bool {
 	panic("unreachable code")
 }
 
-func (c *simplePredicate) eq(doc *Document) bool {
-	normValue, err := encoding.Normalize(getFieldOrValue(doc, c.value))
+func (p *simplePredicate) eq(doc *Document) bool {
+	normValue, err := encoding.Normalize(getFieldOrValue(doc, p.value))
 	if err != nil {
 		return false
 	}
 
-	if !doc.Has(c.field) {
+	if !doc.Has(p.field) {
 		return false
 	}
 
-	return compareValues(doc.Get(c.field), normValue) == 0
+	return compareValues(doc.Get(p.field), normValue) == 0
 }
 
-func (c *simplePredicate) in(doc *Document) bool {
-	values := c.value.([]interface{})
+func (p *simplePredicate) in(doc *Document) bool {
+	values := p.value.([]interface{})
 
-	docValue := doc.Get(c.field)
+	docValue := doc.Get(p.field)
 	for _, value := range values {
 		normValue, err := encoding.Normalize(getFieldOrValue(doc, value))
 		if err == nil && compareValues(normValue, docValue) == 0 {
@@ -188,10 +188,10 @@ func (c *simplePredicate) in(doc *Document) bool {
 	return false
 }
 
-func (c *simplePredicate) contains(doc *Document) bool {
-	elems := c.value.([]interface{})
+func (p *simplePredicate) contains(doc *Document) bool {
+	elems := p.value.([]interface{})
 
-	fieldValue := doc.Get(c.field)
+	fieldValue := doc.Get(p.field)
 	slice, _ := fieldValue.([]interface{})
 
 	if fieldValue == nil || slice == nil {
