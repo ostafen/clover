@@ -18,21 +18,21 @@ type Predicate interface {
 }
 
 const (
-	exists = iota
-	eq
-	gt
-	gtEq
-	lt
-	ltEq
-	like
-	in
-	contains
-	function
+	ExistsOp = iota
+	EqOp
+	GtOp
+	GtEqOp
+	LtOp
+	LtEqOp
+	LikeOp
+	InOp
+	ContainsOp
+	FunctionOp
 )
 
 const (
-	logicalAnd = iota
-	logicalOr
+	LogicalAnd = iota
+	LogicalOr
 )
 
 // Criteria represents a predicate for selecting documents.
@@ -50,7 +50,7 @@ type binaryPredicate struct {
 }
 
 func (p *binaryPredicate) Satisfy(doc *Document) bool {
-	if p.opType == logicalAnd {
+	if p.opType == LogicalAnd {
 		return p.c1.Satisfy(doc) && p.c2.Satisfy(doc)
 	}
 	return p.c1.Satisfy(doc) || p.c2.Satisfy(doc)
@@ -79,7 +79,7 @@ func (c *predicateDecorator) Not() Criteria {
 func (c *predicateDecorator) And(p Criteria) Criteria {
 	return &predicateDecorator{
 		p: &binaryPredicate{
-			opType: logicalAnd,
+			opType: LogicalAnd,
 			c1:     c.p,
 			c2:     p,
 		},
@@ -89,7 +89,7 @@ func (c *predicateDecorator) And(p Criteria) Criteria {
 func (c *predicateDecorator) Or(p Criteria) Criteria {
 	return &predicateDecorator{
 		p: &binaryPredicate{
-			opType: logicalOr,
+			opType: LogicalOr,
 			c1:     c.p,
 			c2:     p,
 		},
@@ -115,19 +115,19 @@ func newCriterion(opType int, field string, value interface{}) Criteria {
 
 func (c *simplePredicate) Satisfy(doc *Document) bool {
 	switch c.opType {
-	case exists:
+	case ExistsOp:
 		return c.exist(doc)
-	case eq:
+	case EqOp:
 		return c.eq(doc)
-	case like:
+	case LikeOp:
 		return c.like(doc)
-	case in:
+	case InOp:
 		return c.in(doc)
-	case gt, gtEq, lt, ltEq:
+	case GtOp, GtEqOp, LtOp, LtEqOp:
 		return c.compare(doc)
-	case contains:
+	case ContainsOp:
 		return c.contains(doc)
-	case function:
+	case FunctionOp:
 		return c.value.(func(*Document) bool)(doc)
 	}
 	return false
@@ -150,13 +150,13 @@ func (c *simplePredicate) compare(doc *Document) bool {
 	res := compareValues(doc.Get(c.field), normValue)
 
 	switch c.opType {
-	case gt:
+	case GtOp:
 		return res > 0
-	case gtEq:
+	case GtEqOp:
 		return res >= 0
-	case lt:
+	case LtOp:
 		return res < 0
-	case ltEq:
+	case LtEqOp:
 		return res <= 0
 	}
 	panic("unreachable code")
@@ -240,11 +240,11 @@ func Field(name string) *field {
 }
 
 func (f *field) Exists() Criteria {
-	return newCriterion(exists, f.name, nil)
+	return newCriterion(ExistsOp, f.name, nil)
 }
 
 func (f *field) NotExists() Criteria {
-	return newCriterion(exists, f.name, nil).Not()
+	return newCriterion(ExistsOp, f.name, nil).Not()
 }
 
 func (f *field) IsNil() Criteria {
@@ -264,23 +264,23 @@ func (f *field) IsNilOrNotExists() Criteria {
 }
 
 func (f *field) Eq(value interface{}) Criteria {
-	return newCriterion(eq, f.name, value)
+	return newCriterion(EqOp, f.name, value)
 }
 
 func (f *field) Gt(value interface{}) Criteria {
-	return newCriterion(gt, f.name, value)
+	return newCriterion(GtOp, f.name, value)
 }
 
 func (f *field) GtEq(value interface{}) Criteria {
-	return newCriterion(gtEq, f.name, value)
+	return newCriterion(GtEqOp, f.name, value)
 }
 
 func (f *field) Lt(value interface{}) Criteria {
-	return newCriterion(lt, f.name, value)
+	return newCriterion(LtOp, f.name, value)
 }
 
 func (f *field) LtEq(value interface{}) Criteria {
-	return newCriterion(ltEq, f.name, value)
+	return newCriterion(LtEqOp, f.name, value)
 }
 
 func (f *field) Neq(value interface{}) Criteria {
@@ -288,15 +288,15 @@ func (f *field) Neq(value interface{}) Criteria {
 }
 
 func (f *field) In(values ...interface{}) Criteria {
-	return newCriterion(in, f.name, values)
+	return newCriterion(InOp, f.name, values)
 }
 
 func (f *field) Like(pattern string) Criteria {
-	return newCriterion(like, f.name, pattern)
+	return newCriterion(LikeOp, f.name, pattern)
 }
 
 func (f *field) Contains(elems ...interface{}) Criteria {
-	return newCriterion(contains, f.name, elems)
+	return newCriterion(ContainsOp, f.name, elems)
 }
 
 func negatePredicate(p predicate) predicate {
