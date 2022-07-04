@@ -1,25 +1,15 @@
 package clover
 
-import (
-	"regexp"
-	"strings"
-
-	"github.com/ostafen/clover/encoding"
-)
-
 const (
 	objectIdField = "_id"
 )
 
 type predicate func(doc *Document) bool
 
-type Predicate interface {
-	Satisfy(doc *Document) bool
-}
-
 const (
 	ExistsOp = iota
 	EqOp
+	NeqOp
 	GtOp
 	GtEqOp
 	LtOp
@@ -38,196 +28,101 @@ const (
 // Criteria represents a predicate for selecting documents.
 // It follows a fluent API style so that you can easily chain together multiple criteria.
 type Criteria interface {
-	Predicate
+	Accept(v CriteriaVisitor) interface{}
 	Not() Criteria
 	And(c Criteria) Criteria
 	Or(c Criteria) Criteria
 }
 
-type binaryPredicate struct {
-	opType int
-	p1, p2 Predicate
+type BinaryCriteria struct {
+	OpType int
+	C1, C2 Criteria
 }
 
-func (p *binaryPredicate) Satisfy(doc *Document) bool {
-	if p.opType == LogicalAnd {
-		return p.p1.Satisfy(doc) && p.p2.Satisfy(doc)
+func (c *BinaryCriteria) Accept(v CriteriaVisitor) interface{} {
+	return v.VisitBinaryCriteria(c)
+}
+
+type NotCriteria struct {
+	C Criteria
+}
+
+func (c *NotCriteria) Not() Criteria {
+	return not(c)
+}
+
+func (c *NotCriteria) And(other Criteria) Criteria {
+	return and(c, other)
+}
+
+func (c *NotCriteria) Or(other Criteria) Criteria {
+	return or(c, other)
+}
+
+func (c *NotCriteria) Accept(v CriteriaVisitor) interface{} {
+	return v.VisitNotCriteria(c)
+}
+
+func (c *BinaryCriteria) Not() Criteria {
+	return not(c)
+}
+
+func (c *BinaryCriteria) And(other Criteria) Criteria {
+	return and(c, other)
+}
+
+func (c *BinaryCriteria) Or(other Criteria) Criteria {
+	return or(c, other)
+}
+
+type SimpleCriteria struct {
+	OpType int
+	Field  string
+	Value  interface{}
+}
+
+func (c *SimpleCriteria) Not() Criteria {
+	return not(c)
+}
+
+func (c *SimpleCriteria) And(other Criteria) Criteria {
+	return and(c, other)
+}
+
+func (c *SimpleCriteria) Or(other Criteria) Criteria {
+	return or(c, other)
+}
+
+func (c *SimpleCriteria) Accept(v CriteriaVisitor) interface{} {
+	return v.VisitSimpleCriteria(c)
+}
+
+func and(c1, c2 Criteria) Criteria {
+	return &BinaryCriteria{
+		OpType: LogicalAnd,
+		C1:     c1,
+		C2:     c2,
 	}
-	return p.p1.Satisfy(doc) || p.p2.Satisfy(doc)
 }
 
-type predicateDecorator struct {
-	negate bool
-	p      Predicate
-}
-
-func (p *predicateDecorator) Satisfy(doc *Document) bool {
-	res := p.p.Satisfy(doc)
-	if p.negate {
-		return !res
-	}
-	return res
-}
-
-func (p *predicateDecorator) Not() Criteria {
-	return &predicateDecorator{
-		negate: !p.negate,
-		p:      p.p,
+func or(c1, c2 Criteria) Criteria {
+	return &BinaryCriteria{
+		OpType: LogicalOr,
+		C1:     c1,
+		C2:     c2,
 	}
 }
 
-func (p *predicateDecorator) And(c Criteria) Criteria {
-	return &predicateDecorator{
-		p: &binaryPredicate{
-			opType: LogicalAnd,
-			p1:     p.p,
-			p2:     c,
-		},
-	}
-}
-
-func (p *predicateDecorator) Or(c Criteria) Criteria {
-	return &predicateDecorator{
-		p: &binaryPredicate{
-			opType: LogicalOr,
-			p1:     p.p,
-			p2:     c,
-		},
-	}
-}
-
-type simplePredicate struct {
-	opType int
-	field  string
-	value  interface{}
+func not(c Criteria) Criteria {
+	return &NotCriteria{c}
 }
 
 func newCriterion(opType int, field string, value interface{}) Criteria {
-	return &predicateDecorator{
-		negate: false,
-		p: &simplePredicate{
-			opType: opType,
-			field:  field,
-			value:  value,
-		},
+	return &SimpleCriteria{
+		OpType: opType,
+		Field:  field,
+		Value:  value,
 	}
-}
-
-func (p *simplePredicate) Satisfy(doc *Document) bool {
-	switch p.opType {
-	case ExistsOp:
-		return p.exist(doc)
-	case EqOp:
-		return p.eq(doc)
-	case LikeOp:
-		return p.like(doc)
-	case InOp:
-		return p.in(doc)
-	case GtOp, GtEqOp, LtOp, LtEqOp:
-		return p.compare(doc)
-	case ContainsOp:
-		return p.contains(doc)
-	case FunctionOp:
-		return p.value.(func(*Document) bool)(doc)
-	}
-	return false
-}
-
-func (p *simplePredicate) exist(doc *Document) bool {
-	return doc.Has(p.field)
-}
-
-func (p *simplePredicate) notExists(doc *Document) bool {
-	return !p.exist(doc)
-}
-
-func (p *simplePredicate) compare(doc *Document) bool {
-	normValue, err := encoding.Normalize(getFieldOrValue(doc, p.value))
-	if err != nil {
-		return false
-	}
-
-	res := compareValues(doc.Get(p.field), normValue)
-
-	switch p.opType {
-	case GtOp:
-		return res > 0
-	case GtEqOp:
-		return res >= 0
-	case LtOp:
-		return res < 0
-	case LtEqOp:
-		return res <= 0
-	}
-	panic("unreachable code")
-}
-
-func (p *simplePredicate) eq(doc *Document) bool {
-	normValue, err := encoding.Normalize(getFieldOrValue(doc, p.value))
-	if err != nil {
-		return false
-	}
-
-	if !doc.Has(p.field) {
-		return false
-	}
-
-	return compareValues(doc.Get(p.field), normValue) == 0
-}
-
-func (p *simplePredicate) in(doc *Document) bool {
-	values := p.value.([]interface{})
-
-	docValue := doc.Get(p.field)
-	for _, value := range values {
-		normValue, err := encoding.Normalize(getFieldOrValue(doc, value))
-		if err == nil && compareValues(normValue, docValue) == 0 {
-			return true
-		}
-	}
-	return false
-}
-
-func (p *simplePredicate) contains(doc *Document) bool {
-	elems := p.value.([]interface{})
-
-	fieldValue := doc.Get(p.field)
-	slice, _ := fieldValue.([]interface{})
-
-	if fieldValue == nil || slice == nil {
-		return false
-	}
-
-	for _, elem := range elems {
-		found := false
-		normElem, err := encoding.Normalize(getFieldOrValue(doc, elem))
-
-		if err == nil {
-			for _, val := range slice {
-				if compareValues(normElem, val) == 0 {
-					found = true
-					break
-				}
-			}
-		}
-
-		if !found {
-			return false
-		}
-
-	}
-	return true
-}
-
-func (c *simplePredicate) like(doc *Document) bool {
-	pattern := c.value.(string)
-
-	s, isString := doc.Get(c.field).(string)
-	if !isString {
-		return false
-	}
-	matched, err := regexp.MatchString(pattern, s)
-	return matched && err == nil
 }
 
 type field struct {
@@ -299,14 +194,8 @@ func (f *field) Contains(elems ...interface{}) Criteria {
 	return newCriterion(ContainsOp, f.name, elems)
 }
 
-// getFieldOrValue returns dereferenced value if value denotes another document field,
-// otherwise returns the value itself directly
-func getFieldOrValue(doc *Document, value interface{}) interface{} {
-	if cmpField, ok := value.(*field); ok {
-		value = doc.Get(cmpField.name)
-	} else if fStr, ok := value.(string); ok && strings.HasPrefix(fStr, "$") {
-		fieldName := strings.TrimLeft(fStr, "$")
-		value = doc.Get(fieldName)
-	}
-	return value
+type CriteriaVisitor interface {
+	VisitSimpleCriteria(c *SimpleCriteria) interface{}
+	VisitNotCriteria(c *NotCriteria) interface{}
+	VisitBinaryCriteria(c *BinaryCriteria) interface{}
 }

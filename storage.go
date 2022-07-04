@@ -133,9 +133,11 @@ func (s *storageImpl) DropCollection(name string) error {
 }
 
 func (s *storageImpl) Count(q *Query) (int, error) {
+	queryNode := toQueryNode(q.criteria)
+
 	num := 0
 	err := s.IterateDocs(q, func(doc *Document) error {
-		if q.satisfy(doc) {
+		if queryNode.Satisfy(doc) {
 			num++
 		}
 		return nil
@@ -144,10 +146,12 @@ func (s *storageImpl) Count(q *Query) (int, error) {
 }
 
 func (s *storageImpl) FindAll(q *Query) ([]*Document, error) {
+	queryNode := toQueryNode(q.criteria)
+
 	docs := make([]*Document, 0)
 
 	err := s.IterateDocs(q, func(doc *Document) error {
-		if q.satisfy(doc) {
+		if queryNode.Satisfy(doc) {
 			docs = append(docs, doc)
 		}
 		return nil
@@ -245,9 +249,11 @@ func (s *storageImpl) replaceDocs(txn *badger.Txn, q *Query, updater docUpdater)
 		return ErrCollectionNotExist
 	}
 
+	queryNode := toQueryNode(q.criteria)
+
 	docs := make([]*Document, 0)
 	s.iterateDocs(txn, q, func(doc *Document) error {
-		if q.satisfy(doc) {
+		if queryNode.Satisfy(doc) {
 			docs = append(docs, doc)
 		}
 		return nil
@@ -255,7 +261,7 @@ func (s *storageImpl) replaceDocs(txn *badger.Txn, q *Query, updater docUpdater)
 
 	for _, doc := range docs {
 		key := []byte(getDocumentKey(q.collection, doc.ObjectId()))
-		if q.satisfy(doc) {
+		if queryNode.Satisfy(doc) {
 			newDoc := updater(doc)
 			if newDoc == nil {
 				if err := txn.Delete(key); err != nil {
@@ -393,6 +399,8 @@ func (s *storageImpl) iterateDocs(txn *badger.Txn, q *Query, consumer docConsume
 		it.Next()
 	}
 
+	queryNode := toQueryNode(q.criteria)
+
 	for n := 0; (q.limit < 0 || n < q.limit) && it.ValidForPrefix(prefix); it.Next() {
 		err := it.Item().Value(func(data []byte) error {
 			doc, err := decodeDoc(data)
@@ -400,7 +408,7 @@ func (s *storageImpl) iterateDocs(txn *badger.Txn, q *Query, consumer docConsume
 				return err
 			}
 
-			if q.satisfy(doc) {
+			if queryNode.Satisfy(doc) {
 				n++
 				return consumer(doc)
 			}

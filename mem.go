@@ -76,9 +76,11 @@ func (e *memEngine) DropCollection(name string) error {
 }
 
 func (e *memEngine) Count(q *Query) (int, error) {
+	queryNode := toQueryNode(q.criteria)
+
 	num := 0
 	err := e.IterateDocs(q, func(doc *Document) error {
-		if q.satisfy(doc) {
+		if queryNode.Satisfy(doc) {
 			num++
 		}
 		return nil
@@ -88,9 +90,11 @@ func (e *memEngine) Count(q *Query) (int, error) {
 
 // FindAll implements StorageEngine
 func (e *memEngine) FindAll(q *Query) ([]*Document, error) {
+	queryNode := toQueryNode(q.criteria)
+
 	docs := []*Document{}
 	err := e.IterateDocs(q, func(doc *Document) error {
-		if q.satisfy(doc) {
+		if queryNode.Satisfy(doc) {
 			docs = append(docs, doc)
 		}
 		return nil
@@ -153,8 +157,10 @@ func (e *memEngine) iterateDocs(q *Query, consumer docConsumer) error {
 	sortDocs := len(q.sortOpts) > 0
 	allDocs := []*Document{}
 
+	queryNode := toQueryNode(q.criteria)
+
 	for _, d := range c {
-		if q.satisfy(d) {
+		if queryNode.Satisfy(d) {
 			allDocs = append(allDocs, d.Copy())
 		}
 	}
@@ -233,9 +239,11 @@ func (e *memEngine) replaceDocs(q *Query, updater docUpdater) error {
 		return ErrCollectionNotExist
 	}
 
+	queryNode := toQueryNode(q.criteria)
+
 	docs := make([]*Document, 0)
 	e.iterateDocs(q, func(doc *Document) error {
-		if q.satisfy(doc) {
+		if queryNode.Satisfy(doc) {
 			docs = append(docs, doc)
 		}
 		return nil
@@ -243,7 +251,7 @@ func (e *memEngine) replaceDocs(q *Query, updater docUpdater) error {
 
 	for _, doc := range docs {
 		key := doc.ObjectId()
-		if q.satisfy(doc) {
+		if queryNode.Satisfy(doc) {
 			newDoc := updater(doc)
 			if newDoc == nil {
 				delete(c, key)

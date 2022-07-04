@@ -1,8 +1,6 @@
 package clover
 
-import (
-	"fmt"
-)
+import "fmt"
 
 // Query represents a generic query which is submitted to a specific collection.
 type Query struct {
@@ -23,13 +21,6 @@ func (q *Query) copy() *Query {
 		skip:       q.skip,
 		sortOpts:   q.sortOpts,
 	}
-}
-
-func (q *Query) satisfy(doc *Document) bool {
-	if q.criteria == nil {
-		return true
-	}
-	return q.criteria.Satisfy(doc)
 }
 
 // Count returns the number of documents which satisfy the query (i.e. len(q.FindAll()) == q.Count()).
