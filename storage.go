@@ -745,7 +745,7 @@ func (s *storageImpl) listIndexes(collection string, txn *badger.Txn) ([]*indexI
 	defer it.Close()
 
 	indexes := make([]*indexImpl, 0)
-	prefix := []byte("idx:" + collection + ":")
+	prefix := getIndexKeyPrefix(collection)
 	for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
 		item := it.Item()
 		key := string(item.Key())
