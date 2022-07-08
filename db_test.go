@@ -1482,3 +1482,20 @@ func TestIndexUpdate(t *testing.T) {
 		require.Equal(t, n, m)
 	})
 }
+
+func TestIndexDelete(t *testing.T) {
+	runCloverTest(t, airlinesPath, nil, func(t *testing.T, db *c.DB) {
+		criteria := c.Field("Statistics.Flights.Cancelled").Gt(100).And(c.Field("Statistics.Flights.Cancelled").Lt(200))
+
+		err := db.CreateIndex("airlines", "Statistics.Flights.Cancelled")
+		require.NoError(t, err)
+
+		err = db.Query("airlines").Where(criteria).Delete()
+		require.NoError(t, err)
+
+		n, err := db.Query("airlines").Where(criteria).Count()
+		require.NoError(t, err)
+
+		require.Equal(t, n, 0)
+	})
+}

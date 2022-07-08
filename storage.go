@@ -310,8 +310,10 @@ func (s *storageImpl) updateIndexesOnDocUpdate(txn *badger.Txn, collection strin
 		return err
 	}
 
-	if s.addDocToIndexes(txn, indexes, newDoc); err != nil {
-		return err
+	if newDoc != nil {
+		if s.addDocToIndexes(txn, indexes, newDoc); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -344,16 +346,17 @@ func (s *storageImpl) replaceDocs(txn *badger.Txn, q *Query, updater docUpdater)
 
 		docKey := []byte(getDocumentKey(q.collection, doc.ObjectId()))
 		newDoc := updater(doc)
+
+		if err := s.updateIndexesOnDocUpdate(txn, q.collection, doc, newDoc); err != nil {
+			return err
+		}
+
 		if newDoc == nil {
 			return txn.Delete(docKey)
 		}
 
 		data, err := encodeDoc(newDoc)
 		if err != nil {
-			return err
-		}
-
-		if err := s.updateIndexesOnDocUpdate(txn, q.collection, doc, newDoc); err != nil {
 			return err
 		}
 
