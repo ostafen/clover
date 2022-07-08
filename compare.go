@@ -3,7 +3,6 @@ package clover
 import (
 	"math/big"
 	"reflect"
-	"sort"
 	"strings"
 	"time"
 
@@ -112,22 +111,9 @@ func CompareValues(v1 interface{}, v2 interface{}) int {
 	return compareObjects(v1.(map[string]interface{}), v2.(map[string]interface{}))
 }
 
-func getKeys(m map[string]interface{}) []string {
-	keys := make([]string, 0, len(m))
-	for key := range m {
-		keys = append(keys, key)
-	}
-
-	sort.Slice(keys, func(i, j int) bool {
-		return keys[i] < keys[j]
-	})
-
-	return keys
-}
-
 func compareObjects(m1 map[string]interface{}, m2 map[string]interface{}) int {
-	m1Keys := getKeys(m1)
-	m2Keys := getKeys(m2)
+	m1Keys := util.MapKeys(m1, true)
+	m2Keys := util.MapKeys(m2, true)
 
 	for i := 0; i < len(m1Keys) && i < len(m2Keys); i++ {
 		k1 := m1Keys[i]

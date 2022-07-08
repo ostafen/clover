@@ -70,7 +70,7 @@ func encodeSlice(buf []byte, s []interface{}) ([]byte, error) {
 }
 
 func encodeObject(buf []byte, o map[string]interface{}) ([]byte, error) {
-	for _, key := range getKeys(o) {
+	for _, key := range util.MapKeys(o, true) {
 		value := o[key]
 
 		encoded, err := orderedcode.Append(buf, key)
