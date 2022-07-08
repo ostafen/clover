@@ -1,6 +1,8 @@
 package clover
 
-import "fmt"
+import (
+	"fmt"
+)
 
 // Query represents a generic query which is submitted to a specific collection.
 type Query struct {

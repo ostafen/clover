@@ -126,7 +126,7 @@ func compareDocuments(first *Document, second *Document, sortOpts []SortOption) 
 		}
 
 		if firstHas && secondHas {
-			res := compareValues(first.Get(field), second.Get(field))
+			res := CompareValues(first.Get(field), second.Get(field))
 			if res != 0 {
 				return res * direction
 			}

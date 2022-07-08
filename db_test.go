@@ -2,6 +2,7 @@ package clover_test
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"math/rand"
@@ -513,19 +514,19 @@ func TestCompareWithWrongType(t *testing.T) {
 	runCloverTest(t, todosPath, &TodoModel{}, func(t *testing.T, db *c.DB) {
 		n, err := db.Query("todos").Where(c.Field("completed").Gt("true")).Count()
 		require.NoError(t, err)
-		require.Equal(t, n, 0)
+		require.Equal(t, 200, n)
 
 		n, err = db.Query("todos").Where(c.Field("completed").GtEq("true")).Count()
 		require.NoError(t, err)
-		require.Equal(t, n, 0)
+		require.Equal(t, 200, n)
 
 		n, err = db.Query("todos").Where(c.Field("completed").Lt("true")).Count()
 		require.NoError(t, err)
-		require.Equal(t, n, 200)
+		require.Equal(t, 0, n)
 
 		n, err = db.Query("todos").Where(c.Field("completed").LtEq("true")).Count()
 		require.NoError(t, err)
-		require.Equal(t, n, 200)
+		require.Equal(t, 0, n)
 	})
 }
 
@@ -1364,5 +1365,95 @@ func TestCompareDocumentFields(t *testing.T) {
 			cancelled := doc.Get("Statistics.Flights.Cancelled").(float64)
 			require.Greater(t, diverted, cancelled)
 		}
+	})
+}
+
+func testIndexedQuery(t *testing.T, db *c.DB, criteria c.Criteria, collection, field string) {
+	allDocs, err := db.Query(collection).Where(criteria).Sort().FindAll()
+	require.NoError(t, err)
+
+	err = db.DropIndex(collection, field)
+	if !errors.Is(err, c.ErrIndexNotExist) {
+		require.NoError(t, err)
+	}
+
+	err = db.CreateIndex(collection, field)
+	require.NoError(t, err)
+
+	indexAllDocs, err := db.Query(collection).Where(criteria).Sort().FindAll()
+	require.NoError(t, err)
+	require.Len(t, indexAllDocs, len(allDocs))
+
+	for i := 0; i < len(indexAllDocs); i++ {
+		require.Equal(t, allDocs[i], indexAllDocs[i])
+	}
+}
+
+func TestIndex(t *testing.T) {
+	runCloverTest(t, todosPath, nil, func(t *testing.T, db *c.DB) {
+		criteria := c.Field("userId").Gt(5).And(c.Field("userId").LtEq(10))
+		testIndexedQuery(t, db, criteria, "todos", "userId")
+
+		criteria = c.Field("userId").GtEq(5).And(c.Field("userId").LtEq(8))
+		testIndexedQuery(t, db, criteria, "todos", "userId")
+
+		criteria = c.Field("userId").Gt(5)
+		testIndexedQuery(t, db, criteria, "todos", "userId")
+
+		criteria = c.Field("userId").GtEq(5)
+		testIndexedQuery(t, db, criteria, "todos", "userId")
+	})
+}
+
+func TestIndexNested(t *testing.T) {
+	runCloverTest(t, airlinesPath, nil, func(t *testing.T, db *c.DB) {
+		criteria := c.Field("Statistics.Flights.Cancelled").Gt(100).And(c.Field("Statistics.Flights.Cancelled").Lt(200))
+		testIndexedQuery(t, db, criteria, "airlines", "Statistics.Flights.Cancelled")
+	})
+}
+
+func TestIndexObjectField(t *testing.T) {
+	runCloverTest(t, airlinesPath, nil, func(t *testing.T, db *c.DB) {
+		criteria := c.Field("Statistics.Flights").Gt(map[string]interface{}{
+			"Cancelled": float64(106),
+		}).And(c.Field("Statistics.Flights").LtEq(map[string]interface{}{
+			"Cancelled": float64(250),
+		}))
+		testIndexedQuery(t, db, criteria, "airlines", "Statistics.Flights")
+	})
+}
+
+func TestIndexWithMixedTypes(t *testing.T) {
+	runCloverTest(t, "", nil, func(t *testing.T, db *c.DB) {
+		err := db.CreateCollection("test")
+		require.NoError(t, err)
+
+		for i := 0; i < 1000; i++ {
+			doc := c.NewDocument()
+
+			var value interface{}
+			typeId := rand.Intn(5)
+			switch typeId {
+			case 0:
+				value = rand.Intn(2) == 1
+			case 1:
+				value = rand.Intn(1000)
+			case 2:
+				value = rand.Float64() * 1000
+			case 3:
+				value = time.Now()
+			case 4:
+				value = nil
+			}
+
+			doc.Set("myField", value)
+			require.NoError(t, db.Insert("test", doc))
+		}
+
+		criteria := c.Field("myField").Lt(true)
+		testIndexedQuery(t, db, criteria, "test", "myField")
+
+		criteria = c.Field("myField").Gt(100.10)
+		testIndexedQuery(t, db, criteria, "test", "myField")
 	})
 }

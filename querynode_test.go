@@ -60,3 +60,31 @@ func TestMergeAndNodes(t *testing.T) {
 	require.False(t, vRange.includeStart)
 	require.False(t, vRange.includeEnd)
 }
+
+func TestSelectIndexes(t *testing.T) {
+	c := Field("a").Gt(1).And(Field("a").Lt(2)).Or(Field("b").Eq(100))
+
+	nd := flattenAndNodes(flattenNot(toQueryNode(c)))
+
+	require.Len(t, selectIndexes(nd, map[string]*indexImpl{
+		"a": {
+			fieldName: "a",
+		},
+	}), 0)
+
+	require.Len(t, selectIndexes(nd, map[string]*indexImpl{
+		"b": {
+			fieldName: "b",
+		},
+	}), 0)
+
+	indexes := selectIndexes(nd, map[string]*indexImpl{
+		"a": {fieldName: "a"},
+		"b": {fieldName: "b"},
+	})
+
+	require.Len(t, indexes, 2)
+
+	require.Equal(t, indexes[0].index.fieldName, "a")
+	require.Equal(t, indexes[1].index.fieldName, "b")
+}

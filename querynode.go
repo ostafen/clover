@@ -63,7 +63,7 @@ func (nd *unaryQueryNode) compare(doc *Document) bool {
 		return false
 	}
 
-	res := compareValues(doc.Get(nd.field), normValue)
+	res := CompareValues(doc.Get(nd.field), normValue)
 
 	switch nd.opType {
 	case GtOp:
@@ -89,7 +89,7 @@ func (nd *unaryQueryNode) eq(doc *Document) bool {
 		return false
 	}
 
-	return compareValues(doc.Get(nd.field), value) == 0
+	return CompareValues(doc.Get(nd.field), value) == 0
 }
 
 func (nd *unaryQueryNode) in(doc *Document) bool {
@@ -98,7 +98,7 @@ func (nd *unaryQueryNode) in(doc *Document) bool {
 	docValue := doc.Get(nd.field)
 	for _, value := range values {
 		actualValue := getFieldOrValue(doc, value)
-		if compareValues(actualValue, docValue) == 0 {
+		if CompareValues(actualValue, docValue) == 0 {
 			return true
 		}
 	}
@@ -120,7 +120,7 @@ func (nd *unaryQueryNode) contains(doc *Document) bool {
 		actualValue := getFieldOrValue(doc, elem)
 
 		for _, val := range slice {
-			if compareValues(actualValue, val) == 0 {
+			if CompareValues(actualValue, val) == 0 {
 				found = true
 				break
 			}
@@ -273,7 +273,7 @@ func tryToRemoveNot(nd *notQueryNode) queryNode {
 }
 
 func flattenNot(node queryNode) queryNode {
-	notNd := node.(*notQueryNode)
+	notNd, _ := node.(*notQueryNode)
 	if notNd != nil {
 		innerNode := notNd.queryNode
 		switch ndType := innerNode.(type) {
@@ -354,7 +354,7 @@ func (r1 *valueRange) intersect(r2 *valueRange) *valueRange {
 		includeEnd:   r1.includeEnd,
 	}
 
-	res := compareValues(r2.start, intersection.start)
+	res := CompareValues(r2.start, intersection.start)
 	if res > 0 {
 		intersection.start = r2.start
 		intersection.includeStart = r2.includeStart
@@ -365,7 +365,7 @@ func (r1 *valueRange) intersect(r2 *valueRange) *valueRange {
 		intersection.includeStart = r2.includeStart
 	}
 
-	res = compareValues(r2.end, intersection.end)
+	res = CompareValues(r2.end, intersection.end)
 	if res < 0 {
 		intersection.end = r2.end
 		intersection.includeEnd = r2.includeEnd
@@ -422,10 +422,12 @@ func flattenAndNodes(node queryNode) queryNode {
 		n1 := flattenAndNodes(ndType.n1)
 		n2 := flattenAndNodes(ndType.n2)
 
-		n1AndNode := n1.(*andQueryNode)
-		n2AndNode := n2.(*andQueryNode)
-		if n1AndNode != nil && n2AndNode != nil {
-			return mergeAndNodes(n1AndNode, n2AndNode)
+		if ndType.OpType == LogicalAnd {
+			n1AndNode, _ := n1.(*andQueryNode)
+			n2AndNode, _ := n2.(*andQueryNode)
+			if n1AndNode != nil && n2AndNode != nil {
+				return mergeAndNodes(n1AndNode, n2AndNode)
+			}
 		}
 
 		return &binaryQueryNode{

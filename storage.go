@@ -36,6 +36,9 @@ type StorageEngine interface {
 	Insert(collection string, docs ...*Document) error
 	Update(q *Query, updater func(doc *Document) *Document) error
 	Delete(q *Query) error
+	CreateIndex(collection, field string) error
+	DropIndex(collection, field string) error
+	HasIndex(collection, field string) (bool, error)
 }
 
 var errStopIteration = errors.New("iteration stop")
@@ -169,19 +172,7 @@ func encodeDoc(doc *Document) ([]byte, error) {
 	return encoding.Encode(doc.fields)
 }
 
-func (s *storageImpl) FindById(collectionName string, id string) (*Document, error) {
-	txn := s.db.NewTransaction(false)
-	defer txn.Discard()
-
-	ok, err := s.hasCollection(collectionName, txn)
-	if err != nil {
-		return nil, err
-	}
-
-	if !ok {
-		return nil, ErrCollectionNotExist
-	}
-
+func (s *storageImpl) getDocumentById(collectionName string, id string, txn *badger.Txn) (*Document, error) {
 	item, err := txn.Get([]byte(getDocumentKey(collectionName, id)))
 	if errors.Is(err, badger.ErrKeyNotFound) {
 		return nil, nil
@@ -196,8 +187,41 @@ func (s *storageImpl) FindById(collectionName string, id string) (*Document, err
 	return doc, err
 }
 
+func (s *storageImpl) FindById(collectionName string, id string) (*Document, error) {
+	txn := s.db.NewTransaction(false)
+	defer txn.Discard()
+
+	ok, err := s.hasCollection(collectionName, txn)
+	if err != nil {
+		return nil, err
+	}
+
+	if !ok {
+		return nil, ErrCollectionNotExist
+	}
+
+	return s.getDocumentById(collectionName, id, txn)
+}
+
+func getDocumentKeyPrefix(collection string) string {
+	return "c:" + collection + ";" + "d:"
+}
+
 func getDocumentKey(collection string, id string) string {
-	return collection + ":" + id
+	return getDocumentKeyPrefix(collection) + id
+}
+
+func (s *storageImpl) addDocToIndexes(txn *badger.Txn, indexes []*indexImpl, doc *Document) error {
+	// update indexes
+	for _, idx := range indexes {
+		fieldVal := doc.Get(idx.fieldName) // missing fields are treated as null
+
+		err := idx.Set(txn, fieldVal, doc.ObjectId())
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (s *storageImpl) Insert(collection string, docs ...*Document) error {
@@ -213,9 +237,15 @@ func (s *storageImpl) Insert(collection string, docs ...*Document) error {
 		return ErrCollectionNotExist
 	}
 
+	indexes, err := s.listIndexes(collection, txn)
+
 	for _, doc := range docs {
 		data, err := encodeDoc(doc)
 		if err != nil {
+			return err
+		}
+
+		if err := s.addDocToIndexes(txn, indexes, doc); err != nil {
 			return err
 		}
 
@@ -230,6 +260,61 @@ func (s *storageImpl) Insert(collection string, docs ...*Document) error {
 		}
 	}
 	return txn.Commit()
+}
+
+func (s *storageImpl) deleteDocFromIndexes(txn *badger.Txn, indexes []*indexImpl, doc *Document) error {
+	for _, idx := range indexes {
+		value := doc.Get(idx.fieldName)
+		if err := idx.Delete(txn, value, doc.ObjectId()); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *storageImpl) getDocAndDeleteFromIndexes(txn *badger.Txn, collection string, docId string) error {
+	indexes, err := s.listIndexes(collection, txn)
+	if err != nil {
+		return err
+	}
+
+	if len(indexes) == 0 {
+		return nil
+	}
+
+	doc, err := s.getDocumentById(collection, docId, txn)
+	if err != nil {
+		return err
+	}
+
+	if doc == nil {
+		return nil
+	}
+
+	for _, idx := range indexes {
+		value := doc.Get(idx.fieldName)
+		if err := idx.Delete(txn, value, doc.ObjectId()); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *storageImpl) updateIndexesOnDocUpdate(txn *badger.Txn, collection string, oldDoc, newDoc *Document) error {
+	indexes, err := s.listIndexes(collection, txn)
+	if err != nil {
+		return err
+	}
+
+	if err := s.deleteDocFromIndexes(txn, indexes, oldDoc); err != nil {
+		return err
+	}
+
+	if s.addDocToIndexes(txn, indexes, newDoc); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 type docUpdater func(doc *Document) *Document
@@ -251,32 +336,32 @@ func (s *storageImpl) replaceDocs(txn *badger.Txn, q *Query, updater docUpdater)
 
 	queryNode := toQueryNode(q.criteria)
 
-	docs := make([]*Document, 0)
-	s.iterateDocs(txn, q, func(doc *Document) error {
-		if queryNode.Satisfy(doc) {
-			docs = append(docs, doc)
+	// TODO: we should clear sort and limit on update queries
+	err = s.iterateDocs(txn, q, func(doc *Document) error {
+		if !queryNode.Satisfy(doc) {
+			return nil
 		}
-		return nil
+
+		docKey := []byte(getDocumentKey(q.collection, doc.ObjectId()))
+		newDoc := updater(doc)
+		if newDoc == nil {
+			return txn.Delete(docKey)
+		}
+
+		data, err := encodeDoc(newDoc)
+		if err != nil {
+			return err
+		}
+
+		if err := s.updateIndexesOnDocUpdate(txn, q.collection, doc, newDoc); err != nil {
+			return err
+		}
+
+		return txn.Set(docKey, data)
 	})
 
-	for _, doc := range docs {
-		key := []byte(getDocumentKey(q.collection, doc.ObjectId()))
-		if queryNode.Satisfy(doc) {
-			newDoc := updater(doc)
-			if newDoc == nil {
-				if err := txn.Delete(key); err != nil {
-					return err
-				}
-			} else {
-				data, err := encodeDoc(newDoc)
-				if err != nil {
-					return err
-				}
-				if err := txn.Set([]byte(getDocumentKey(q.collection, doc.ObjectId())), data); err != nil {
-					return err
-				}
-			}
-		}
+	if err != nil {
+		return err
 	}
 	return txn.Commit()
 }
@@ -310,9 +395,14 @@ func (s *storageImpl) DeleteById(collName string, id string) error {
 		return ErrCollectionNotExist
 	}
 
+	if err := s.getDocAndDeleteFromIndexes(txn, collName, id); err != nil {
+		return err
+	}
+
 	if err := txn.Delete([]byte(getDocumentKey(collName, id))); err != nil {
 		return err
 	}
+
 	return txn.Commit()
 }
 
@@ -349,6 +439,11 @@ func (s *storageImpl) UpdateById(collectionName string, docId string, updater fu
 		if err != nil {
 			return err
 		}
+
+		if err := s.updateIndexesOnDocUpdate(txn, collectionName, doc, updatedDoc); err != nil {
+			return err
+		}
+
 		return txn.Set([]byte(docKey), encodedDoc)
 	})
 }
@@ -375,6 +470,16 @@ func (s *storageImpl) HasCollection(name string) (bool, error) {
 	return s.hasCollection(name, txn)
 }
 
+func (s *storageImpl) iterateDocsFromIndex(indexQuery *indexQuery, collection string, txn *badger.Txn, consumer docConsumer) error {
+	return indexQuery.index.Iterate(txn, indexQuery.vRange, func(docId string) error {
+		doc, err := s.getDocumentById(collection, docId, txn)
+		if err != nil {
+			return err
+		}
+		return consumer(doc)
+	})
+}
+
 func (s *storageImpl) iterateDocs(txn *badger.Txn, q *Query, consumer docConsumer) error {
 	if txn == nil {
 		txn = s.db.NewTransaction(false)
@@ -390,16 +495,24 @@ func (s *storageImpl) iterateDocs(txn *badger.Txn, q *Query, consumer docConsume
 		return ErrCollectionNotExist
 	}
 
+	queryNode := toQueryNode(q.criteria)
+	indexQueries, err := s.getQueryIndexes(queryNode, q.collection, txn)
+	if err != nil {
+		return err
+	}
+
+	if len(indexQueries) == 1 { // for now, we don't handle joining results from multiple index queries
+		return s.iterateDocsFromIndex(indexQueries[0], q.collection, txn, consumer)
+	}
+
 	it := txn.NewIterator(badger.DefaultIteratorOptions)
 	defer it.Close()
-	prefix := []byte(q.collection + ":")
+	prefix := []byte(getDocumentKeyPrefix(q.collection))
 
 	it.Seek(prefix)
 	for i := 0; i < q.skip && it.ValidForPrefix(prefix); i++ { // skip the first q.skip documents
 		it.Next()
 	}
-
-	queryNode := toQueryNode(q.criteria)
 
 	for n := 0; (q.limit < 0 || n < q.limit) && it.ValidForPrefix(prefix); it.Next() {
 		err := it.Item().Value(func(data []byte) error {
@@ -465,6 +578,24 @@ func (s *storageImpl) iterateDocsSlice(q *Query, consumer docConsumer) error {
 	return nil
 }
 
+func (s *storageImpl) getQueryIndexes(node queryNode, collection string, txn *badger.Txn) ([]*indexQuery, error) {
+	indexes, err := s.listIndexes(collection, txn)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(indexes) == 0 {
+		return nil, nil
+	}
+
+	indexesFields := make(map[string]*indexImpl)
+	for _, idx := range indexes {
+		indexesFields[idx.fieldName] = idx
+	}
+	queries := selectIndexes(flattenAndNodes(flattenNot(node)), indexesFields)
+	return queries, nil
+}
+
 func (s *storageImpl) IterateDocs(q *Query, consumer docConsumer) error {
 	sortDocs := len(q.sortOpts) > 0
 	if !sortDocs {
@@ -490,4 +621,146 @@ func (s *storageImpl) ListCollections() ([]string, error) {
 	}
 
 	return collections, nil
+}
+
+func (s *storageImpl) getIndexKey(collection, field string) []byte {
+	return []byte("idx:" + collection + ":" + field)
+}
+
+func (s *storageImpl) getIndex(collection, field string, txn *badger.Txn) (*indexImpl, error) {
+	_, err := txn.Get([]byte(s.getIndexKey(collection, field)))
+	if errors.Is(err, badger.ErrKeyNotFound) {
+		return nil, nil
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &indexImpl{
+		collectionName: collection,
+		fieldName:      field,
+	}, nil
+}
+
+func (s *storageImpl) CreateIndex(collection, field string) error {
+	txn := s.db.NewTransaction(true)
+	defer txn.Discard()
+
+	ok, err := s.hasCollection(collection, txn)
+	if err != nil {
+		return err
+	}
+
+	if !ok {
+		return ErrCollectionNotExist
+	}
+
+	idx, err := s.getIndex(collection, field, txn)
+	if err != nil {
+		return err
+	}
+
+	if idx != nil {
+		return ErrIndexExist
+	}
+
+	if err := txn.Set(s.getIndexKey(collection, field), []byte{0}); err != nil {
+		return err
+	}
+
+	idx = &indexImpl{
+		collectionName: collection,
+		fieldName:      field,
+	}
+
+	err = s.iterateDocs(txn, newQuery(collection, s), func(doc *Document) error {
+		value := doc.Get(field)
+		return idx.Set(txn, value, doc.ObjectId())
+	})
+
+	if err != nil {
+		return err
+	}
+
+	return txn.Commit()
+}
+
+func (s *storageImpl) DropIndex(collection, field string) error {
+	txn := s.db.NewTransaction(true)
+	defer txn.Discard()
+
+	ok, err := s.hasCollection(collection, txn)
+	if err != nil {
+		return err
+	}
+
+	if !ok {
+		return ErrCollectionNotExist
+	}
+
+	idx, err := s.getIndex(collection, field, txn)
+	if err != nil {
+		return err
+	}
+
+	if idx == nil {
+		return ErrIndexNotExist
+	}
+
+	if err := txn.Delete(s.getIndexKey(collection, field)); err != nil {
+		return err
+	}
+
+	idx = &indexImpl{
+		collectionName: collection,
+		fieldName:      field,
+	}
+
+	if err := idx.deleteAll(txn); err != nil {
+		return err
+	}
+
+	return txn.Commit()
+}
+
+func (s *storageImpl) HasIndex(collection, field string) (bool, error) {
+	txn := s.db.NewTransaction(false)
+	defer txn.Discard()
+
+	idx, err := s.getIndex(collection, field, txn)
+	return idx != nil, err
+}
+
+func (s *storageImpl) listIndexes(collection string, txn *badger.Txn) ([]*indexImpl, error) {
+	it := txn.NewIterator(badger.DefaultIteratorOptions)
+	defer it.Close()
+
+	indexes := make([]*indexImpl, 0)
+	prefix := []byte("idx:" + collection + ":")
+	for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
+		item := it.Item()
+		key := string(item.Key())
+		fieldName := strings.TrimPrefix(key, string(prefix))
+		indexes = append(indexes, &indexImpl{collectionName: collection, fieldName: fieldName})
+	}
+
+	return indexes, nil
+}
+
+// TODO: extractMethod iteratePrefix(prefix []byte, onValue func(byte[] value))
+func (s *storageImpl) ListIndexes(collection string) ([]string, error) {
+	txn := s.db.NewTransaction(true)
+	defer txn.Discard()
+
+	indexes, err := s.listIndexes(collection, txn)
+	if err != nil {
+		return nil, err
+	}
+
+	fields := make([]string, 0)
+	for _, idx := range indexes {
+		fields = append(fields, idx.fieldName)
+	}
+	return fields, nil
 }

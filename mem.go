@@ -271,3 +271,15 @@ func (e *memEngine) ListCollections() ([]string, error) {
 	}
 	return collections, nil
 }
+
+func (e *memEngine) CreateIndex(collection, field string) error {
+	return nil
+}
+
+func (e *memEngine) DropIndex(collection, field string) error {
+	return nil
+}
+
+func (e *memEngine) HasIndex(collection, field string) (bool, error) {
+	return false, nil
+}
