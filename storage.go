@@ -623,12 +623,16 @@ func (s *storageImpl) ListCollections() ([]string, error) {
 	return collections, nil
 }
 
-func (s *storageImpl) getIndexKey(collection, field string) []byte {
-	return []byte("idx:" + collection + ":" + field)
+func getIndexKeyPrefix(collection string) []byte {
+	return []byte("idx:" + collection + ":")
+}
+
+func getIndexKey(collection, field string) []byte {
+	return append(getIndexKeyPrefix(collection), []byte(field)...)
 }
 
 func (s *storageImpl) getIndex(collection, field string, txn *badger.Txn) (*indexImpl, error) {
-	_, err := txn.Get([]byte(s.getIndexKey(collection, field)))
+	_, err := txn.Get(getIndexKey(collection, field))
 	if errors.Is(err, badger.ErrKeyNotFound) {
 		return nil, nil
 	}
@@ -665,7 +669,7 @@ func (s *storageImpl) CreateIndex(collection, field string) error {
 		return ErrIndexExist
 	}
 
-	if err := txn.Set(s.getIndexKey(collection, field), []byte{0}); err != nil {
+	if err := txn.Set(getIndexKey(collection, field), []byte{0}); err != nil {
 		return err
 	}
 
@@ -708,7 +712,7 @@ func (s *storageImpl) DropIndex(collection, field string) error {
 		return ErrIndexNotExist
 	}
 
-	if err := txn.Delete(s.getIndexKey(collection, field)); err != nil {
+	if err := txn.Delete(getIndexKey(collection, field)); err != nil {
 		return err
 	}
 
