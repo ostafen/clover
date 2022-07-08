@@ -3,6 +3,7 @@ package clover
 import (
 	"errors"
 
+	"github.com/ostafen/clover/util"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -93,7 +94,7 @@ func Open(dir string, opts ...Option) (*DB, error) {
 	}
 
 	if !config.InMemory {
-		if err := makeDirIfNotExists(dir); err != nil {
+		if err := util.MakeDirIfNotExists(dir); err != nil {
 			return nil, err
 		}
 	}

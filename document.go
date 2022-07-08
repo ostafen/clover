@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/ostafen/clover/encoding"
+	"github.com/ostafen/clover/util"
 )
 
 // Document represents a document as a map.
@@ -44,7 +45,7 @@ func NewDocumentOf(o interface{}) *Document {
 // Copy returns a shallow copy of the underlying document.
 func (doc *Document) Copy() *Document {
 	return &Document{
-		fields: copyMap(doc.fields),
+		fields: util.CopyMap(doc.fields),
 	}
 }
 

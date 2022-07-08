@@ -4,21 +4,23 @@ import (
 	"time"
 
 	"github.com/google/orderedcode"
+	"github.com/ostafen/clover/util"
 )
 
 func getEncodeValue(value interface{}) interface{} {
-	if isNumber(value) {
-		return toFloat64(value) // each number is encoded as float64
+	if util.IsNumber(value) {
+		return util.ToFloat64(value) // each number is encoded as float64
 	}
 
 	switch vType := value.(type) {
 	case bool:
-		return uint64(boolToInt(vType))
+		return uint64(util.BoolToInt(vType))
 	case time.Time:
 		return uint64(vType.UnixNano())
 	}
 	return value
 }
+
 func encodePrimitive(buf []byte, value interface{}, includeType bool) ([]byte, error) {
 	var err error
 

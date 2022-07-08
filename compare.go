@@ -6,6 +6,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/ostafen/clover/util"
 )
 
 var typesMap map[string]int = map[string]int{
@@ -19,7 +21,7 @@ var typesMap map[string]int = map[string]int{
 }
 
 func getTypeName(v interface{}) string {
-	if isNumber(v) {
+	if util.IsNumber(v) {
 		return "number"
 	}
 
@@ -53,8 +55,8 @@ func compareNumbers(v1 interface{}, v2 interface{}) int {
 	_, isV2Float := v2.(float64)
 
 	if isV1Float || isV2Float {
-		v1Float := toFloat64(v1)
-		v2Float := toFloat64(v2)
+		v1Float := util.ToFloat64(v1)
+		v2Float := util.ToFloat64(v2)
 		return big.NewFloat(v1Float).Cmp(big.NewFloat(v2Float))
 	}
 
@@ -62,8 +64,8 @@ func compareNumbers(v1 interface{}, v2 interface{}) int {
 	_, isV2Int64 := v2.(int64)
 
 	if isV1Int64 || isV2Int64 {
-		v1Int64 := toInt64(v1)
-		v2Int64 := toInt64(v2)
+		v1Int64 := util.ToInt64(v1)
+		v2Int64 := util.ToInt64(v2)
 		return int(v1Int64 - v2Int64)
 	}
 
@@ -77,7 +79,7 @@ func CompareValues(v1 interface{}, v2 interface{}) int {
 		return res
 	}
 
-	if isNumber(v1) && isNumber(v2) {
+	if util.IsNumber(v1) && util.IsNumber(v2) {
 		return compareNumbers(v1, v2)
 	}
 
@@ -90,7 +92,7 @@ func CompareValues(v1 interface{}, v2 interface{}) int {
 	v1Bool, isBool := v1.(bool)
 	if isBool {
 		v2Bool := v2.(bool)
-		return boolToInt(v1Bool) - boolToInt(v2Bool)
+		return util.BoolToInt(v1Bool) - util.BoolToInt(v2Bool)
 	}
 
 	v1Time, isTime := v1.(time.Time)
