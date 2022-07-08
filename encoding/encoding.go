@@ -1,20 +1,14 @@
 package encoding
 
 import (
-	"bytes"
-	"encoding/gob"
 	"encoding/json"
 	"fmt"
 	"reflect"
 	"strings"
 	"time"
-)
 
-func init() {
-	gob.Register(map[string]interface{}{})
-	gob.Register([]interface{}{})
-	gob.Register(time.Time{})
-}
+	"github.com/vmihailenco/msgpack/v5"
+)
 
 func processStructTag(tagStr string) (string, bool) {
 	tags := strings.Split(tagStr, ",")
@@ -212,14 +206,11 @@ func renameMapKeys(m map[string]interface{}, v interface{}) map[string]interface
 }
 
 func Encode(v interface{}) ([]byte, error) {
-	var buf bytes.Buffer
-	err := gob.NewEncoder(&buf).Encode(v)
-	return buf.Bytes(), err
+	return msgpack.Marshal(v)
 }
 
 func Decode(data []byte, v interface{}) error {
-	buf := bytes.NewBuffer(data)
-	return gob.NewDecoder(buf).Decode(v)
+	return msgpack.Unmarshal(data, v)
 }
 
 func Convert(m map[string]interface{}, v interface{}) error {
