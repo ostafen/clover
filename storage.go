@@ -660,12 +660,12 @@ func (s *storageImpl) CreateIndex(collection, field string) error {
 		return ErrCollectionNotExist
 	}
 
-	idx, err := s.getIndex(collection, field, txn)
+	has, err := s.hasIndex(txn, collection, field)
 	if err != nil {
 		return err
 	}
 
-	if idx != nil {
+	if has {
 		return ErrIndexExist
 	}
 
@@ -673,7 +673,7 @@ func (s *storageImpl) CreateIndex(collection, field string) error {
 		return err
 	}
 
-	idx = &indexImpl{
+	idx := &indexImpl{
 		collectionName: collection,
 		fieldName:      field,
 	}
@@ -728,12 +728,16 @@ func (s *storageImpl) DropIndex(collection, field string) error {
 	return txn.Commit()
 }
 
+func (s *storageImpl) hasIndex(txn *badger.Txn, collection, field string) (bool, error) {
+	idx, err := s.getIndex(collection, field, txn)
+	return idx != nil, err
+}
+
 func (s *storageImpl) HasIndex(collection, field string) (bool, error) {
 	txn := s.db.NewTransaction(false)
 	defer txn.Discard()
 
-	idx, err := s.getIndex(collection, field, txn)
-	return idx != nil, err
+	return s.hasIndex(txn, collection, field)
 }
 
 func (s *storageImpl) listIndexes(collection string, txn *badger.Txn) ([]*indexImpl, error) {
