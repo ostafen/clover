@@ -1,4 +1,4 @@
-package encoding
+package internal
 
 import (
 	"math/big"

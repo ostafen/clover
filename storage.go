@@ -10,7 +10,7 @@ import (
 	"time"
 
 	badger "github.com/dgraph-io/badger/v3"
-	"github.com/ostafen/clover/encoding"
+	"github.com/ostafen/clover/internal"
 )
 
 var ErrDocumentNotExist = errors.New("no such document")
@@ -164,12 +164,12 @@ func (s *storageImpl) FindAll(q *Query) ([]*Document, error) {
 
 func decodeDoc(data []byte) (*Document, error) {
 	doc := NewDocument()
-	err := encoding.Decode(data, &doc.fields)
+	err := internal.Decode(data, &doc.fields)
 	return doc, err
 }
 
 func encodeDoc(doc *Document) ([]byte, error) {
-	return encoding.Encode(doc.fields)
+	return internal.Encode(doc.fields)
 }
 
 func (s *storageImpl) getDocumentById(collectionName string, id string, txn *badger.Txn) (*Document, error) {

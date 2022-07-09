@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/google/orderedcode"
-	"github.com/ostafen/clover/encoding"
+	"github.com/ostafen/clover/internal"
 	"github.com/ostafen/clover/util"
 )
 
@@ -27,7 +27,7 @@ func encodePrimitive(buf []byte, value interface{}, includeType bool) ([]byte, e
 
 	actualVal := getEncodeValue(value)
 	if includeType {
-		typeId := uint64(encoding.TypeId(value))
+		typeId := uint64(internal.TypeId(value))
 		buf, err = orderedcode.Append(buf, typeId)
 		if err != nil {
 			return nil, err

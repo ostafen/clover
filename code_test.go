@@ -5,7 +5,7 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/ostafen/clover/encoding"
+	"github.com/ostafen/clover/internal"
 	"github.com/stretchr/testify/require"
 )
 
@@ -40,7 +40,7 @@ func TestEncodeObject(t *testing.T) {
 	bEncoded, err := encodeObject(make([]byte, 0), b)
 	require.NoError(t, err)
 
-	require.Equal(t, getSign(encoding.Compare(a, b)),
+	require.Equal(t, getSign(internal.Compare(a, b)),
 		getSign(bytes.Compare(aEncoded, bEncoded)))
 }
 
@@ -60,7 +60,7 @@ func TestEncodeObject1(t *testing.T) {
 	bEncoded, err := encodeObject(make([]byte, 0), b)
 	require.NoError(t, err)
 
-	require.Equal(t, getSign(encoding.Compare(a, b)),
+	require.Equal(t, getSign(internal.Compare(a, b)),
 		getSign(bytes.Compare(aEncoded, bEncoded)))
 }
 
@@ -80,7 +80,7 @@ func TestEncodeObject2(t *testing.T) {
 	bEncoded, err := encodeObject(make([]byte, 0), b)
 	require.NoError(t, err)
 
-	require.Equal(t, getSign(encoding.Compare(a, b)),
+	require.Equal(t, getSign(internal.Compare(a, b)),
 		getSign(bytes.Compare(aEncoded, bEncoded)))
 }
 
@@ -100,6 +100,6 @@ func TestEncodeObject4(t *testing.T) {
 	bEncoded, err := encodeObject(make([]byte, 0), b)
 	require.NoError(t, err)
 
-	require.Equal(t, getSign(encoding.Compare(a, b)),
+	require.Equal(t, getSign(internal.Compare(a, b)),
 		getSign(bytes.Compare(aEncoded, bEncoded)))
 }

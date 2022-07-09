@@ -4,7 +4,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/ostafen/clover/encoding"
+	"github.com/ostafen/clover/internal"
 )
 
 type queryNode interface {
@@ -58,12 +58,12 @@ func (nd *unaryQueryNode) Satisfy(doc *Document) bool {
 }
 
 func (nd *unaryQueryNode) compare(doc *Document) bool {
-	normValue, err := encoding.Normalize(getFieldOrValue(doc, nd.value))
+	normValue, err := internal.Normalize(getFieldOrValue(doc, nd.value))
 	if err != nil {
 		return false
 	}
 
-	res := encoding.Compare(doc.Get(nd.field), normValue)
+	res := internal.Compare(doc.Get(nd.field), normValue)
 
 	switch nd.opType {
 	case GtOp:
@@ -89,7 +89,7 @@ func (nd *unaryQueryNode) eq(doc *Document) bool {
 		return false
 	}
 
-	return encoding.Compare(doc.Get(nd.field), value) == 0
+	return internal.Compare(doc.Get(nd.field), value) == 0
 }
 
 func (nd *unaryQueryNode) in(doc *Document) bool {
@@ -98,7 +98,7 @@ func (nd *unaryQueryNode) in(doc *Document) bool {
 	docValue := doc.Get(nd.field)
 	for _, value := range values {
 		actualValue := getFieldOrValue(doc, value)
-		if encoding.Compare(actualValue, docValue) == 0 {
+		if internal.Compare(actualValue, docValue) == 0 {
 			return true
 		}
 	}
@@ -120,7 +120,7 @@ func (nd *unaryQueryNode) contains(doc *Document) bool {
 		actualValue := getFieldOrValue(doc, elem)
 
 		for _, val := range slice {
-			if encoding.Compare(actualValue, val) == 0 {
+			if internal.Compare(actualValue, val) == 0 {
 				found = true
 				break
 			}
@@ -152,7 +152,7 @@ func newUnaryQueryNode(c *SimpleCriteria) *unaryQueryNode {
 		_, isField := c.Value.(*field)
 		if !isField {
 			var err error
-			normValue, err = encoding.Normalize(c.Value)
+			normValue, err = internal.Normalize(c.Value)
 			if err != nil {
 				return nil
 			}
@@ -354,7 +354,7 @@ func (r1 *valueRange) intersect(r2 *valueRange) *valueRange {
 		includeEnd:   r1.includeEnd,
 	}
 
-	res := encoding.Compare(r2.start, intersection.start)
+	res := internal.Compare(r2.start, intersection.start)
 	if res > 0 {
 		intersection.start = r2.start
 		intersection.includeStart = r2.includeStart
@@ -365,7 +365,7 @@ func (r1 *valueRange) intersect(r2 *valueRange) *valueRange {
 		intersection.includeStart = r2.includeStart
 	}
 
-	res = encoding.Compare(r2.end, intersection.end)
+	res = internal.Compare(r2.end, intersection.end)
 	if res < 0 {
 		intersection.end = r2.end
 		intersection.includeEnd = r2.includeEnd

@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	badger "github.com/dgraph-io/badger/v3"
-	"github.com/ostafen/clover/encoding"
+	"github.com/ostafen/clover/internal"
 )
 
 type indexImpl struct {
@@ -25,7 +25,7 @@ func extractDocId(key []byte) ([]byte, []byte) {
 }
 
 func (idx *indexImpl) getKey(v interface{}) ([]byte, error) {
-	prefix := idx.getKeyPrefix(encoding.TypeId(v))
+	prefix := idx.getKeyPrefix(internal.TypeId(v))
 	return encode(prefix, v)
 }
 
