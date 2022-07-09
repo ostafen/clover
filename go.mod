@@ -3,6 +3,7 @@ module github.com/ostafen/clover
 go 1.13
 
 require (
+	github.com/brianvoe/gofakeit/v6 v6.17.0 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/dgraph-io/badger/v3 v3.2103.2
 	github.com/golang/glog v1.0.0 // indirect
