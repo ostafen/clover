@@ -59,29 +59,31 @@ func orderedCode(buf []byte, v interface{}, includeType bool) ([]byte, error) {
 }
 
 func orderedCodeSlice(buf []byte, s []interface{}) ([]byte, error) {
+	sliceEncoding := make([]byte, 0)
 	for _, v := range s {
 		var err error
-		buf, err = orderedCode(buf, v, true)
+		sliceEncoding, err = orderedCode(sliceEncoding, v, true)
 		if err != nil {
 			return nil, err
 		}
 	}
-	return orderedcode.Append(make([]byte, 0), string(buf))
+	return orderedcode.Append(buf, uint64(TypeId(s)), string(sliceEncoding))
 }
 
 func orderedCodeObject(buf []byte, o map[string]interface{}) ([]byte, error) {
+	objEncoding := make([]byte, 0)
 	for _, key := range util.MapKeys(o, true) {
 		value := o[key]
 
-		encoded, err := orderedcode.Append(buf, key)
+		encoded, err := orderedcode.Append(objEncoding, key)
 		if err != nil {
 			return nil, err
 		}
 
-		buf, err = orderedCode(encoded, value, true)
+		objEncoding, err = orderedCode(encoded, value, true)
 		if err != nil {
 			return nil, err
 		}
 	}
-	return orderedcode.Append(make([]byte, 0), string(buf))
+	return orderedcode.Append(buf, uint64(TypeId(o)), string(objEncoding))
 }
