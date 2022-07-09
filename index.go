@@ -13,8 +13,12 @@ type indexImpl struct {
 	fieldName      string
 }
 
-func (idx *indexImpl) getKeyPrefix(typeId int) []byte {
-	return []byte(fmt.Sprintf("c:%s;i:%s;t:%d;v:", idx.collectionName, idx.fieldName, typeId))
+func (idx *indexImpl) getKeyPrefix() []byte {
+	return []byte(fmt.Sprintf("c:%s;i:%s;", idx.collectionName, idx.fieldName))
+}
+
+func (idx *indexImpl) getKeyPrefixForType(typeId int) []byte {
+	return []byte(fmt.Sprintf("%s;t:%d;v:", idx.getKeyPrefix(), typeId))
 }
 
 func extractDocId(key []byte) ([]byte, []byte) {
@@ -25,12 +29,12 @@ func extractDocId(key []byte) ([]byte, []byte) {
 }
 
 func (idx *indexImpl) getKey(v interface{}) ([]byte, error) {
-	prefix := idx.getKeyPrefix(internal.TypeId(v))
+	prefix := idx.getKeyPrefixForType(internal.TypeId(v))
 	return internal.OrderedCode(prefix, v)
 }
 
 func (idx *indexImpl) lowestKeyPrefix() []byte {
-	return idx.getKeyPrefix(0)
+	return idx.getKeyPrefixForType(0)
 }
 
 func (idx *indexImpl) encodeValueAndId(value interface{}, docId string) ([]byte, error) {
@@ -62,7 +66,7 @@ func (idx *indexImpl) deleteAll(txn *badger.Txn) error {
 	it := txn.NewIterator(badger.DefaultIteratorOptions)
 	defer it.Close()
 
-	prefix := []byte(fmt.Sprintf("c:%s;i:%s;", idx.collectionName, idx.fieldName))
+	prefix := idx.getKeyPrefix()
 	for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
 		key := it.Item().Key()
 		if err := txn.Delete(key); err != nil {
@@ -111,7 +115,7 @@ func (idx *indexImpl) Iterate(txn *badger.Txn, vRange *valueRange, onValue func(
 		}
 	}
 
-	prefix := []byte(fmt.Sprintf("c:%s;i:%s;", idx.collectionName, idx.fieldName))
+	prefix := idx.getKeyPrefix()
 	for ; it.ValidForPrefix(prefix); it.Next() {
 		key := it.Item().Key()
 
