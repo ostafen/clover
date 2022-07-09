@@ -2,7 +2,6 @@ package internal
 
 import (
 	"bytes"
-	"log"
 	"testing"
 
 	"github.com/brianvoe/gofakeit/v6"
@@ -33,7 +32,5 @@ func TestOrderedCodeObject(t *testing.T) {
 
 		require.Equal(t, getSign(Compare(a, b)),
 			getSign(bytes.Compare(aEncoded, bEncoded)))
-
-		log.Println(len(aEncoded), len(bEncoded))
 	}
 }
