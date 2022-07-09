@@ -117,7 +117,7 @@ func not(c Criteria) Criteria {
 	return &NotCriteria{c}
 }
 
-func newCriterion(opType int, field string, value interface{}) Criteria {
+func newCriteria(opType int, field string, value interface{}) Criteria {
 	return &SimpleCriteria{
 		OpType: opType,
 		Field:  field,
@@ -135,11 +135,11 @@ func Field(name string) *field {
 }
 
 func (f *field) Exists() Criteria {
-	return newCriterion(ExistsOp, f.name, nil)
+	return newCriteria(ExistsOp, f.name, nil)
 }
 
 func (f *field) NotExists() Criteria {
-	return newCriterion(ExistsOp, f.name, nil).Not()
+	return newCriteria(ExistsOp, f.name, nil).Not()
 }
 
 func (f *field) IsNil() Criteria {
@@ -159,23 +159,23 @@ func (f *field) IsNilOrNotExists() Criteria {
 }
 
 func (f *field) Eq(value interface{}) Criteria {
-	return newCriterion(EqOp, f.name, value)
+	return newCriteria(EqOp, f.name, value)
 }
 
 func (f *field) Gt(value interface{}) Criteria {
-	return newCriterion(GtOp, f.name, value)
+	return newCriteria(GtOp, f.name, value)
 }
 
 func (f *field) GtEq(value interface{}) Criteria {
-	return newCriterion(GtEqOp, f.name, value)
+	return newCriteria(GtEqOp, f.name, value)
 }
 
 func (f *field) Lt(value interface{}) Criteria {
-	return newCriterion(LtOp, f.name, value)
+	return newCriteria(LtOp, f.name, value)
 }
 
 func (f *field) LtEq(value interface{}) Criteria {
-	return newCriterion(LtEqOp, f.name, value)
+	return newCriteria(LtEqOp, f.name, value)
 }
 
 func (f *field) Neq(value interface{}) Criteria {
@@ -183,15 +183,15 @@ func (f *field) Neq(value interface{}) Criteria {
 }
 
 func (f *field) In(values ...interface{}) Criteria {
-	return newCriterion(InOp, f.name, values)
+	return newCriteria(InOp, f.name, values)
 }
 
 func (f *field) Like(pattern string) Criteria {
-	return newCriterion(LikeOp, f.name, pattern)
+	return newCriteria(LikeOp, f.name, pattern)
 }
 
 func (f *field) Contains(elems ...interface{}) Criteria {
-	return newCriterion(ContainsOp, f.name, elems)
+	return newCriteria(ContainsOp, f.name, elems)
 }
 
 type CriteriaVisitor interface {

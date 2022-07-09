@@ -39,7 +39,7 @@ func (q *Query) Exists() (bool, error) {
 
 // MatchPredicate selects all the documents which satisfy the supplied predicate function.
 func (q *Query) MatchPredicate(p func(doc *Document) bool) *Query {
-	return q.Where(newCriterion(FunctionOp, "", p))
+	return q.Where(newCriteria(FunctionOp, "", p))
 }
 
 // Where returns a new Query which select all the documents fullfilling both the base query and the provided Criteria.
