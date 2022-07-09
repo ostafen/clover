@@ -342,10 +342,6 @@ func unaryNodeToRange(nd *unaryQueryNode) *valueRange {
 	return nil
 }
 
-func (r *valueRange) isSingleType() bool {
-	return true
-}
-
 func (r1 *valueRange) intersect(r2 *valueRange) *valueRange {
 	intersection := &valueRange{
 		start:        r1.start,
