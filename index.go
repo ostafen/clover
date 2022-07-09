@@ -26,7 +26,7 @@ func extractDocId(key []byte) ([]byte, []byte) {
 
 func (idx *indexImpl) getKey(v interface{}) ([]byte, error) {
 	prefix := idx.getKeyPrefix(internal.TypeId(v))
-	return encode(prefix, v)
+	return internal.OrderedCode(prefix, v)
 }
 
 func (idx *indexImpl) lowestKeyPrefix() []byte {

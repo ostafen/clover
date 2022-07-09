@@ -1,10 +1,9 @@
-package clover
+package internal
 
 import (
 	"time"
 
 	"github.com/google/orderedcode"
-	"github.com/ostafen/clover/internal"
 	"github.com/ostafen/clover/util"
 )
 
@@ -22,12 +21,12 @@ func getEncodeValue(value interface{}) interface{} {
 	return value
 }
 
-func encodePrimitive(buf []byte, value interface{}, includeType bool) ([]byte, error) {
+func orderedCodePrimitive(buf []byte, value interface{}, includeType bool) ([]byte, error) {
 	var err error
 
 	actualVal := getEncodeValue(value)
 	if includeType {
-		typeId := uint64(internal.TypeId(value))
+		typeId := uint64(TypeId(value))
 		buf, err = orderedcode.Append(buf, typeId)
 		if err != nil {
 			return nil, err
@@ -45,24 +44,24 @@ func encodePrimitive(buf []byte, value interface{}, includeType bool) ([]byte, e
 	return buf, nil
 }
 
-func encode(buf []byte, v interface{}) ([]byte, error) {
-	return encodeWithType(buf, v, false)
+func OrderedCode(buf []byte, v interface{}) ([]byte, error) {
+	return orderedCode(buf, v, false)
 }
 
-func encodeWithType(buf []byte, v interface{}, includeType bool) ([]byte, error) {
+func orderedCode(buf []byte, v interface{}, includeType bool) ([]byte, error) {
 	switch vType := v.(type) {
 	case map[string]interface{}:
-		return encodeObject(buf, vType)
+		return orderedCodeObject(buf, vType)
 	case []interface{}:
-		return encodeSlice(buf, vType)
+		return orderedCodeSlice(buf, vType)
 	}
-	return encodePrimitive(buf, v, includeType)
+	return orderedCodePrimitive(buf, v, includeType)
 }
 
-func encodeSlice(buf []byte, s []interface{}) ([]byte, error) {
+func orderedCodeSlice(buf []byte, s []interface{}) ([]byte, error) {
 	for _, v := range s {
 		var err error
-		buf, err = encodeWithType(buf, v, true)
+		buf, err = orderedCode(buf, v, true)
 		if err != nil {
 			return nil, err
 		}
@@ -70,7 +69,7 @@ func encodeSlice(buf []byte, s []interface{}) ([]byte, error) {
 	return orderedcode.Append(make([]byte, 0), string(buf))
 }
 
-func encodeObject(buf []byte, o map[string]interface{}) ([]byte, error) {
+func orderedCodeObject(buf []byte, o map[string]interface{}) ([]byte, error) {
 	for _, key := range util.MapKeys(o, true) {
 		value := o[key]
 
@@ -79,7 +78,7 @@ func encodeObject(buf []byte, o map[string]interface{}) ([]byte, error) {
 			return nil, err
 		}
 
-		buf, err = encodeWithType(encoded, value, true)
+		buf, err = orderedCode(encoded, value, true)
 		if err != nil {
 			return nil, err
 		}

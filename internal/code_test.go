@@ -1,11 +1,10 @@
-package clover
+package internal
 
 import (
 	"bytes"
 	"math/rand"
 	"testing"
 
-	"github.com/ostafen/clover/internal"
 	"github.com/stretchr/testify/require"
 )
 
@@ -35,12 +34,12 @@ func TestEncodeObject(t *testing.T) {
 		},
 	}
 
-	aEncoded, err := encodeObject(make([]byte, 0), a)
+	aEncoded, err := orderedCodeObject(make([]byte, 0), a)
 	require.NoError(t, err)
-	bEncoded, err := encodeObject(make([]byte, 0), b)
+	bEncoded, err := orderedCodeObject(make([]byte, 0), b)
 	require.NoError(t, err)
 
-	require.Equal(t, getSign(internal.Compare(a, b)),
+	require.Equal(t, getSign(Compare(a, b)),
 		getSign(bytes.Compare(aEncoded, bEncoded)))
 }
 
@@ -55,12 +54,12 @@ func TestEncodeObject1(t *testing.T) {
 		"b": int64(11),
 	}
 
-	aEncoded, err := encodeObject(make([]byte, 0), a)
+	aEncoded, err := orderedCodeObject(make([]byte, 0), a)
 	require.NoError(t, err)
-	bEncoded, err := encodeObject(make([]byte, 0), b)
+	bEncoded, err := orderedCodeObject(make([]byte, 0), b)
 	require.NoError(t, err)
 
-	require.Equal(t, getSign(internal.Compare(a, b)),
+	require.Equal(t, getSign(Compare(a, b)),
 		getSign(bytes.Compare(aEncoded, bEncoded)))
 }
 
@@ -75,12 +74,12 @@ func TestEncodeObject2(t *testing.T) {
 		"b": int64(11),
 	}
 
-	aEncoded, err := encodeObject(make([]byte, 0), a)
+	aEncoded, err := orderedCodeObject(make([]byte, 0), a)
 	require.NoError(t, err)
-	bEncoded, err := encodeObject(make([]byte, 0), b)
+	bEncoded, err := orderedCodeObject(make([]byte, 0), b)
 	require.NoError(t, err)
 
-	require.Equal(t, getSign(internal.Compare(a, b)),
+	require.Equal(t, getSign(Compare(a, b)),
 		getSign(bytes.Compare(aEncoded, bEncoded)))
 }
 
@@ -95,11 +94,11 @@ func TestEncodeObject4(t *testing.T) {
 		"b": int64(0),
 	}
 
-	aEncoded, err := encodeObject(make([]byte, 0), a)
+	aEncoded, err := orderedCodeObject(make([]byte, 0), a)
 	require.NoError(t, err)
-	bEncoded, err := encodeObject(make([]byte, 0), b)
+	bEncoded, err := orderedCodeObject(make([]byte, 0), b)
 	require.NoError(t, err)
 
-	require.Equal(t, getSign(internal.Compare(a, b)),
+	require.Equal(t, getSign(Compare(a, b)),
 		getSign(bytes.Compare(aEncoded, bEncoded)))
 }
