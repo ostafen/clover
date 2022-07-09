@@ -39,9 +39,7 @@ func TypeId(v interface{}) int {
 }
 
 func compareTypes(v1 interface{}, v2 interface{}) int {
-	t1 := TypeName(v1)
-	t2 := TypeName(v2)
-	return typesMap[t1] - typesMap[t2]
+	return TypeId(v1) - TypeId(v2)
 }
 
 func compareSlices(s1 []interface{}, s2 []interface{}) int {
