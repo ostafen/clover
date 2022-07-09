@@ -1,4 +1,4 @@
-package clover
+package encoding
 
 import (
 	"math/big"
@@ -19,7 +19,7 @@ var typesMap map[string]int = map[string]int{
 	"time":   6,
 }
 
-func getTypeName(v interface{}) string {
+func TypeName(v interface{}) string {
 	if util.IsNumber(v) {
 		return "number"
 	}
@@ -34,15 +34,19 @@ func getTypeName(v interface{}) string {
 	return reflect.TypeOf(v).Kind().String()
 }
 
+func TypeId(v interface{}) int {
+	return typesMap[TypeName(v)]
+}
+
 func compareTypes(v1 interface{}, v2 interface{}) int {
-	t1 := getTypeName(v1)
-	t2 := getTypeName(v2)
+	t1 := TypeName(v1)
+	t2 := TypeName(v2)
 	return typesMap[t1] - typesMap[t2]
 }
 
 func compareSlices(s1 []interface{}, s2 []interface{}) int {
 	for i := 0; i < len(s1) && i < len(s2); i++ {
-		if res := CompareValues(s1[i], s2[i]); res != 0 {
+		if res := Compare(s1[i], s2[i]); res != 0 {
 			return res
 		}
 	}
@@ -73,7 +77,7 @@ func compareNumbers(v1 interface{}, v2 interface{}) int {
 	return int(v1Uint64 - v2Uint64)
 }
 
-func CompareValues(v1 interface{}, v2 interface{}) int {
+func Compare(v1 interface{}, v2 interface{}) int {
 	if res := compareTypes(v1, v2); res != 0 {
 		return res
 	}
@@ -126,7 +130,7 @@ func compareObjects(m1 map[string]interface{}, m2 map[string]interface{}) int {
 		v1 := m1[k1]
 		v2 := m2[k2]
 
-		if res := CompareValues(v1, v2); res != 0 {
+		if res := Compare(v1, v2); res != 0 {
 			return res
 		}
 	}

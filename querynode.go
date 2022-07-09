@@ -63,7 +63,7 @@ func (nd *unaryQueryNode) compare(doc *Document) bool {
 		return false
 	}
 
-	res := CompareValues(doc.Get(nd.field), normValue)
+	res := encoding.Compare(doc.Get(nd.field), normValue)
 
 	switch nd.opType {
 	case GtOp:
@@ -89,7 +89,7 @@ func (nd *unaryQueryNode) eq(doc *Document) bool {
 		return false
 	}
 
-	return CompareValues(doc.Get(nd.field), value) == 0
+	return encoding.Compare(doc.Get(nd.field), value) == 0
 }
 
 func (nd *unaryQueryNode) in(doc *Document) bool {
@@ -98,7 +98,7 @@ func (nd *unaryQueryNode) in(doc *Document) bool {
 	docValue := doc.Get(nd.field)
 	for _, value := range values {
 		actualValue := getFieldOrValue(doc, value)
-		if CompareValues(actualValue, docValue) == 0 {
+		if encoding.Compare(actualValue, docValue) == 0 {
 			return true
 		}
 	}
@@ -120,7 +120,7 @@ func (nd *unaryQueryNode) contains(doc *Document) bool {
 		actualValue := getFieldOrValue(doc, elem)
 
 		for _, val := range slice {
-			if CompareValues(actualValue, val) == 0 {
+			if encoding.Compare(actualValue, val) == 0 {
 				found = true
 				break
 			}
@@ -354,7 +354,7 @@ func (r1 *valueRange) intersect(r2 *valueRange) *valueRange {
 		includeEnd:   r1.includeEnd,
 	}
 
-	res := CompareValues(r2.start, intersection.start)
+	res := encoding.Compare(r2.start, intersection.start)
 	if res > 0 {
 		intersection.start = r2.start
 		intersection.includeStart = r2.includeStart
@@ -365,7 +365,7 @@ func (r1 *valueRange) intersect(r2 *valueRange) *valueRange {
 		intersection.includeStart = r2.includeStart
 	}
 
-	res = CompareValues(r2.end, intersection.end)
+	res = encoding.Compare(r2.end, intersection.end)
 	if res < 0 {
 		intersection.end = r2.end
 		intersection.includeEnd = r2.includeEnd
