@@ -64,3 +64,20 @@ func toInt64(v interface{}) int64 {
 	}
 	panic("not a number")
 }
+
+// Returns a flat list of all keys of the map, including sub-maps, in which case the dot notation is used (ex. a.b.c)
+func getAllKeys(fields map[string]interface{}) []string {
+	result := []string{}
+	for key, value := range fields {
+		subMap, isMap := value.(map[string]interface{})
+		if isMap {
+			subFields := getAllKeys(subMap)
+			for _, subKey := range subFields {
+				result = append(result, key + "." + subKey)
+			}
+		} else {
+			result = append(result, key)
+		}
+	}
+	return result
+}
