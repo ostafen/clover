@@ -75,26 +75,26 @@ func (c *BinaryCriteria) Or(other Criteria) Criteria {
 	return or(c, other)
 }
 
-type SimpleCriteria struct {
+type UnaryCriteria struct {
 	OpType int
 	Field  string
 	Value  interface{}
 }
 
-func (c *SimpleCriteria) Not() Criteria {
+func (c *UnaryCriteria) Not() Criteria {
 	return not(c)
 }
 
-func (c *SimpleCriteria) And(other Criteria) Criteria {
+func (c *UnaryCriteria) And(other Criteria) Criteria {
 	return and(c, other)
 }
 
-func (c *SimpleCriteria) Or(other Criteria) Criteria {
+func (c *UnaryCriteria) Or(other Criteria) Criteria {
 	return or(c, other)
 }
 
-func (c *SimpleCriteria) Accept(v CriteriaVisitor) interface{} {
-	return v.VisitSimpleCriteria(c)
+func (c *UnaryCriteria) Accept(v CriteriaVisitor) interface{} {
+	return v.VisitUnaryCriteria(c)
 }
 
 func and(c1, c2 Criteria) Criteria {
@@ -118,7 +118,7 @@ func not(c Criteria) Criteria {
 }
 
 func newCriteria(opType int, field string, value interface{}) Criteria {
-	return &SimpleCriteria{
+	return &UnaryCriteria{
 		OpType: opType,
 		Field:  field,
 		Value:  value,
@@ -195,7 +195,7 @@ func (f *field) Contains(elems ...interface{}) Criteria {
 }
 
 type CriteriaVisitor interface {
-	VisitSimpleCriteria(c *SimpleCriteria) interface{}
+	VisitUnaryCriteria(c *UnaryCriteria) interface{}
 	VisitNotCriteria(c *NotCriteria) interface{}
 	VisitBinaryCriteria(c *BinaryCriteria) interface{}
 }

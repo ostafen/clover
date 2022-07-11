@@ -145,7 +145,7 @@ func (nd *unaryQueryNode) like(doc *Document) bool {
 	return matched && err == nil
 }
 
-func newUnaryQueryNode(c *SimpleCriteria) *unaryQueryNode {
+func newUnaryQueryNode(c *UnaryCriteria) *unaryQueryNode {
 	normValue := c.Value
 
 	if c.OpType != FunctionOp {
@@ -188,7 +188,7 @@ func (nd *emptyQueryNode) Satisfy(_ *Document) bool {
 
 func toQueryNode(c Criteria) queryNode {
 	switch cType := c.(type) {
-	case *SimpleCriteria:
+	case *UnaryCriteria:
 		return toUnaryNode(cType)
 	case *NotCriteria:
 		return toNotNode(cType)
@@ -200,7 +200,7 @@ func toQueryNode(c Criteria) queryNode {
 	panic("unspected criteria")
 }
 
-func toUnaryNode(c *SimpleCriteria) queryNode {
+func toUnaryNode(c *UnaryCriteria) queryNode {
 	nd := newUnaryQueryNode(c)
 	if nd == nil {
 		return &emptyQueryNode{false}
