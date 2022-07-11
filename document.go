@@ -109,7 +109,7 @@ func (doc *Document) ToMap() map[string]interface{} {
 	return copyMap(doc.fields)
 }
 
-// GetKeys returns a slice of all available field names in the document. Nested fields are represented using dot notation (in such case parent fields are not represented standalone). There is no guarantee on the order.
+// Fields returns a slice of all available field names in the document. Nested fields are represented using dot notation (in such case parent fields are not represented standalone). There is no guarantee on the order.
 func (doc *Document) Fields() []string {
 	return getAllKeys(doc.fields)
 }
