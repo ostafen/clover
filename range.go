@@ -40,3 +40,44 @@ func (r1 *valueRange) intersect(r2 *valueRange) *valueRange {
 	}
 	return intersection
 }
+
+func unaryCriteriaToRange(c *UnaryCriteria) *valueRange {
+	switch c.OpType {
+	case EqOp:
+		return &valueRange{
+			start:        c.Value,
+			end:          c.Value,
+			includeStart: true,
+			includeEnd:   true,
+		}
+	case LtOp:
+		return &valueRange{
+			start:        nil,
+			end:          c.Value,
+			includeStart: false,
+			includeEnd:   false,
+		}
+	case LtEqOp:
+		return &valueRange{
+			start:        nil,
+			end:          c.Value,
+			includeStart: false,
+			includeEnd:   true,
+		}
+	case GtOp:
+		return &valueRange{
+			start:        c.Value,
+			end:          nil,
+			includeStart: false,
+			includeEnd:   false,
+		}
+	case GtEqOp:
+		return &valueRange{
+			start:        c.Value,
+			end:          nil,
+			includeStart: true,
+			includeEnd:   false,
+		}
+	}
+	return nil
+}
