@@ -274,5 +274,5 @@ func (e *memEngine) DropIndex(collection, field string) error {
 }
 
 func (e *memEngine) HasIndex(collection, field string) (bool, error) {
-	return false, nil
+	return true, nil
 }

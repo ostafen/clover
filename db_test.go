@@ -1370,6 +1370,10 @@ func testIndexedQuery(t *testing.T, db *c.DB, criteria c.Criteria, collection, f
 	err = db.CreateIndex(collection, field)
 	require.NoError(t, err)
 
+	has, err := db.HasIndex(collection, field)
+	require.NoError(t, err)
+	require.True(t, has)
+
 	indexAllDocs, err := db.Query(collection).Where(criteria).Sort().FindAll()
 	require.NoError(t, err)
 	require.Len(t, indexAllDocs, len(allDocs))
