@@ -80,7 +80,7 @@ func (idx *indexImpl) encodeRange(vRange *valueRange) ([]byte, []byte, error) {
 	var err error
 	var startKey, endKey []byte
 
-	if vRange.start != nil {
+	if vRange.isNil() || vRange.start != nil {
 		startKey, err = idx.getKey(vRange.start)
 		if err != nil {
 			return nil, nil, err
@@ -89,7 +89,7 @@ func (idx *indexImpl) encodeRange(vRange *valueRange) ([]byte, []byte, error) {
 		startKey = idx.lowestKeyPrefix()
 	}
 
-	if vRange.end != nil {
+	if vRange.isNil() || vRange.end != nil {
 		var err error
 		endKey, err = idx.getKey(vRange.end)
 		if err != nil {
@@ -110,7 +110,7 @@ func (idx *indexImpl) Iterate(txn *badger.Txn, vRange *valueRange, onValue func(
 
 	it.Seek(startKey)
 
-	if vRange.start != nil && !vRange.includeStart { // skip all values equals to first range.start
+	if vRange.start != nil && !vRange.startIncluded { // skip all values equals to first range.start
 		for ; it.ValidForPrefix(startKey); it.Next() {
 		}
 	}
@@ -122,11 +122,7 @@ func (idx *indexImpl) Iterate(txn *badger.Txn, vRange *valueRange, onValue func(
 		p, docId := extractDocId(key)
 
 		endCmp := bytes.Compare(p, endKey)
-		if vRange.end != nil && !vRange.includeEnd && endCmp == 0 {
-			continue
-		}
-
-		if vRange.end != nil && endCmp > 0 {
+		if (vRange.end != nil || vRange.isNil()) && (endCmp > 0 || (endCmp == 0 && !vRange.endIncluded)) {
 			break
 		}
 
