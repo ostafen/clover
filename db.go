@@ -109,6 +109,10 @@ func (db *DB) CreateIndex(collection, field string) error {
 	return db.engine.CreateIndex(collection, field)
 }
 
+func (db *DB) HasIndex(collection, field string) (bool, error) {
+	return db.engine.HasIndex(collection, field)
+}
+
 func (db *DB) DropIndex(collection, field string) error {
 	return db.engine.DropIndex(collection, field)
 }
