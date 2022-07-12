@@ -498,8 +498,7 @@ func (s *storageImpl) iterateDocs(txn *badger.Txn, q *Query, consumer docConsume
 	}
 
 	if q.criteria != nil {
-		// TODO: passare q a getQueryIndexes
-		indexQueries, err := s.getQueryIndexes(q, q.collection, txn)
+		indexQueries, err := s.getQueryIndexes(q, txn)
 		if err != nil {
 			return err
 		}
@@ -587,8 +586,8 @@ func (*storageImpl) applySkipAndLimit(q *Query, allDocs []*Document) []*Document
 	return allDocs
 }
 
-func (s *storageImpl) getQueryIndexes(q *Query, collection string, txn *badger.Txn) ([]*indexQuery, error) {
-	indexes, err := s.listIndexes(collection, txn)
+func (s *storageImpl) getQueryIndexes(q *Query, txn *badger.Txn) ([]*indexQuery, error) {
+	indexes, err := s.listIndexes(q.collection, txn)
 	if err != nil {
 		return nil, err
 	}
