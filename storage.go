@@ -559,15 +559,7 @@ func (s *storageImpl) iterateDocsSlice(q *Query, consumer docConsumer) error {
 		return compareDocuments(allDocs[i], allDocs[j], q.sortOpts) < 0
 	})
 
-	docsToSkip := q.skip
-	if len(allDocs) < q.skip {
-		docsToSkip = len(allDocs)
-	}
-	allDocs = allDocs[docsToSkip:]
-
-	if q.limit >= 0 && len(allDocs) > q.limit {
-		allDocs = allDocs[:q.limit]
-	}
+	allDocs = s.applySkipAndLimit(q, allDocs)
 
 	for _, doc := range allDocs {
 		err = consumer(doc)
@@ -580,6 +572,19 @@ func (s *storageImpl) iterateDocsSlice(q *Query, consumer docConsumer) error {
 		}
 	}
 	return nil
+}
+
+func (*storageImpl) applySkipAndLimit(q *Query, allDocs []*Document) []*Document {
+	docsToSkip := q.skip
+	if len(allDocs) < q.skip {
+		docsToSkip = len(allDocs)
+	}
+	allDocs = allDocs[docsToSkip:]
+
+	if q.limit >= 0 && len(allDocs) > q.limit {
+		allDocs = allDocs[:q.limit]
+	}
+	return allDocs
 }
 
 func (s *storageImpl) getQueryIndexes(q *Query, collection string, txn *badger.Txn) ([]*indexQuery, error) {
