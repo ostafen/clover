@@ -29,3 +29,11 @@ func MapKeys(m map[string]interface{}, sorted bool) []string {
 
 	return keys
 }
+
+func StringSliceToSet(s []string) map[string]bool {
+	set := make(map[string]bool)
+	for _, str := range s {
+		set[str] = true
+	}
+	return set
+}

@@ -14,6 +14,17 @@ type Query struct {
 	sortOpts   []SortOption
 }
 
+func newQuery(collection string, engine StorageEngine) *Query {
+	return &Query{
+		collection: collection,
+		criteria:   nil,
+		engine:     engine,
+		limit:      -1,
+		skip:       0,
+		sortOpts:   nil,
+	}
+}
+
 func (q *Query) copy() *Query {
 	return &Query{
 		engine:     q.engine,
@@ -25,8 +36,19 @@ func (q *Query) copy() *Query {
 	}
 }
 
+func (q *Query) satisfy(doc *Document) bool {
+	if q.criteria == nil {
+		return true
+	}
+	return q.criteria.Satisfy(doc)
+}
+
 // Count returns the number of documents which satisfy the query (i.e. len(q.FindAll()) == q.Count()).
 func (q *Query) Count() (int, error) {
+	if err := q.normalizeCriteria(); err != nil {
+		return -1, err
+	}
+
 	num, err := q.engine.Count(q)
 	return num, err
 }
@@ -115,6 +137,9 @@ func (q *Query) FindById(id string) (*Document, error) {
 
 // FindAll selects all the documents satisfying q.
 func (q *Query) FindAll() ([]*Document, error) {
+	if err := q.normalizeCriteria(); err != nil {
+		return nil, err
+	}
 	return q.engine.FindAll(q)
 }
 
@@ -143,6 +168,10 @@ func (q *Query) ForEach(consumer func(_ *Document) bool) error {
 // Update updates all the document selected by q using the provided updateMap.
 // Each update is specified by a mapping fieldName -> newValue.
 func (q *Query) Update(updateMap map[string]interface{}) error {
+	if err := q.normalizeCriteria(); err != nil {
+		return err
+	}
+
 	return q.engine.Update(q, func(doc *Document) *Document {
 		newDoc := doc.Copy()
 		newDoc.SetAll(updateMap)
@@ -178,5 +207,22 @@ func (q *Query) DeleteById(id string) error {
 
 // Delete removes all the documents selected by q from the underlying collection.
 func (q *Query) Delete() error {
+	if err := q.normalizeCriteria(); err != nil {
+		return err
+	}
 	return q.engine.Delete(q)
+}
+
+func (q *Query) normalizeCriteria() error {
+	if q.criteria != nil {
+		v := &CriteriaNormalizeVisitor{}
+		c := q.criteria.Accept(v)
+
+		if v.err != nil {
+			return v.err
+		}
+
+		q.criteria = c.(Criteria)
+	}
+	return nil
 }

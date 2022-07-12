@@ -136,11 +136,9 @@ func (s *storageImpl) DropCollection(name string) error {
 }
 
 func (s *storageImpl) Count(q *Query) (int, error) {
-	queryNode := toQueryNode(q.criteria)
-
 	num := 0
 	err := s.IterateDocs(q, func(doc *Document) error {
-		if queryNode.Satisfy(doc) {
+		if q.satisfy(doc) {
 			num++
 		}
 		return nil
@@ -149,12 +147,10 @@ func (s *storageImpl) Count(q *Query) (int, error) {
 }
 
 func (s *storageImpl) FindAll(q *Query) ([]*Document, error) {
-	queryNode := toQueryNode(q.criteria)
-
 	docs := make([]*Document, 0)
 
 	err := s.IterateDocs(q, func(doc *Document) error {
-		if queryNode.Satisfy(doc) {
+		if q.satisfy(doc) {
 			docs = append(docs, doc)
 		}
 		return nil
@@ -336,11 +332,9 @@ func (s *storageImpl) replaceDocs(txn *badger.Txn, q *Query, updater docUpdater)
 		return ErrCollectionNotExist
 	}
 
-	queryNode := toQueryNode(q.criteria)
-
 	// TODO: we should clear sort and limit on update queries
 	err = s.iterateDocs(txn, q, func(doc *Document) error {
-		if !queryNode.Satisfy(doc) {
+		if !q.satisfy(doc) {
 			return nil
 		}
 
@@ -498,14 +492,16 @@ func (s *storageImpl) iterateDocs(txn *badger.Txn, q *Query, consumer docConsume
 		return ErrCollectionNotExist
 	}
 
-	queryNode := toQueryNode(q.criteria)
-	indexQueries, err := s.getQueryIndexes(queryNode, q.collection, txn)
-	if err != nil {
-		return err
-	}
+	if q.criteria != nil {
+		// TODO: passare q a getQueryIndexes
+		indexQueries, err := s.getQueryIndexes(q, q.collection, txn)
+		if err != nil {
+			return err
+		}
 
-	if len(indexQueries) == 1 { // for now, we don't handle joining results from multiple index queries
-		return s.iterateDocsFromIndex(indexQueries[0], q.collection, txn, consumer)
+		if len(indexQueries) == 1 { // for now, we don't handle joining results from multiple index queries
+			return s.iterateDocsFromIndex(indexQueries[0], q.collection, txn, consumer)
+		}
 	}
 
 	it := txn.NewIterator(badger.DefaultIteratorOptions)
@@ -524,7 +520,7 @@ func (s *storageImpl) iterateDocs(txn *badger.Txn, q *Query, consumer docConsume
 				return err
 			}
 
-			if queryNode.Satisfy(doc) {
+			if q.satisfy(doc) {
 				n++
 				return consumer(doc)
 			}
@@ -581,7 +577,7 @@ func (s *storageImpl) iterateDocsSlice(q *Query, consumer docConsumer) error {
 	return nil
 }
 
-func (s *storageImpl) getQueryIndexes(node queryNode, collection string, txn *badger.Txn) ([]*indexQuery, error) {
+func (s *storageImpl) getQueryIndexes(q *Query, collection string, txn *badger.Txn) ([]*indexQuery, error) {
 	indexes, err := s.listIndexes(collection, txn)
 	if err != nil {
 		return nil, err
@@ -591,11 +587,35 @@ func (s *storageImpl) getQueryIndexes(node queryNode, collection string, txn *ba
 		return nil, nil
 	}
 
-	indexesFields := make(map[string]*indexImpl)
+	indexesMap := make(map[string]*indexImpl)
 	for _, idx := range indexes {
-		indexesFields[idx.fieldName] = idx
+		indexesMap[idx.fieldName] = idx
 	}
-	queries := selectIndexes(flattenAndNodes(flattenNot(node)), indexesFields)
+
+	indexedFields := make(map[string]bool)
+	for _, idx := range indexes {
+		indexedFields[idx.fieldName] = true
+	}
+
+	c := q.criteria.Accept(&NotFlattenVisitor{}).(Criteria)
+	selectedFields := c.Accept(&IndexSelectVisitor{
+		Fields: indexedFields,
+	}).([]string)
+
+	if len(selectedFields) == 0 {
+		return nil, nil
+	}
+
+	fieldRanges := c.Accept(NewFieldRangeVisitor(selectedFields)).(map[string]*valueRange)
+
+	queries := make([]*indexQuery, 0)
+	for field, vRange := range fieldRanges {
+		queries = append(queries, &indexQuery{
+			vRange: vRange,
+			index:  indexesMap[field],
+		})
+	}
+
 	return queries, nil
 }
 

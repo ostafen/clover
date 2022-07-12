@@ -396,33 +396,23 @@ func TestReloadIndex(t *testing.T) {
 
 func TestInvalidCriteria(t *testing.T) {
 	runCloverTest(t, todosPath, &TodoModel{}, func(t *testing.T, db *c.DB) {
-		docs, err := db.Query("todos").Where(c.Field("completed").Eq(func() {})).FindAll()
-		require.NoError(t, err)
-		require.Equal(t, len(docs), 0)
+		_, err := db.Query("todos").Where(c.Field("completed").Eq(func() {})).FindAll()
+		require.Error(t, err)
 
-		docs, err = db.Query("todos").Where(c.Field("completed").Neq(func() {})).FindAll()
-		require.NoError(t, err)
+		_, err = db.Query("todos").Where(c.Field("completed").Neq(func() {})).FindAll()
+		require.Error(t, err)
 
-		n, err := db.Query("todos").Count()
-		require.NoError(t, err)
-		require.Equal(t, len(docs), n)
+		_, err = db.Query("todos").Where(c.Field("completed").Lt(func() {})).FindAll()
+		require.Error(t, err)
 
-		docs, err = db.Query("todos").Where(c.Field("completed").Lt(func() {})).FindAll()
-		require.NoError(t, err)
+		_, err = db.Query("todos").Where(c.Field("completed").LtEq(func() {})).FindAll()
+		require.Error(t, err)
 
-		require.Equal(t, len(docs), 0)
+		_, err = db.Query("todos").Where(c.Field("completed").Gt(func() {})).FindAll()
+		require.Error(t, err)
 
-		docs, err = db.Query("todos").Where(c.Field("completed").LtEq(func() {})).FindAll()
-		require.NoError(t, err)
-		require.Equal(t, len(docs), 0)
-
-		docs, err = db.Query("todos").Where(c.Field("completed").Gt(func() {})).FindAll()
-		require.NoError(t, err)
-		require.Equal(t, len(docs), 0)
-
-		docs, err = db.Query("todos").Where(c.Field("completed").GtEq(func() {})).FindAll()
-		require.NoError(t, err)
-		require.Equal(t, len(docs), 0)
+		_, err = db.Query("todos").Where(c.Field("completed").GtEq(func() {})).FindAll()
+		require.Error(t, err)
 	})
 }
 

@@ -21,17 +21,6 @@ type DB struct {
 	engine StorageEngine
 }
 
-func newQuery(collection string, engine StorageEngine) *Query {
-	return &Query{
-		collection: collection,
-		criteria:   nil,
-		engine:     engine,
-		limit:      -1,
-		skip:       0,
-		sortOpts:   nil,
-	}
-}
-
 // Query simply returns the collection with the supplied name. Use it to initialize a new query.
 func (db *DB) Query(name string) *Query {
 	return newQuery(name, db.engine)
