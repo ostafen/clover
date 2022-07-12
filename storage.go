@@ -1,6 +1,7 @@
 package clover
 
 import (
+	"bytes"
 	"errors"
 	"log"
 	"sort"
@@ -97,8 +98,12 @@ func (s *storageImpl) Open(path string) error {
 	return err
 }
 
+func getCollectionKeyPrefix() string {
+	return "coll:"
+}
+
 func getCollectionKey(name string) string {
-	return "coll:" + name
+	return getCollectionKeyPrefix() + name
 }
 
 func (s *storageImpl) CreateCollection(name string) error {
@@ -587,11 +592,6 @@ func (s *storageImpl) getQueryIndexes(q *Query, collection string, txn *badger.T
 		return nil, nil
 	}
 
-	indexesMap := make(map[string]*indexImpl)
-	for _, idx := range indexes {
-		indexesMap[idx.fieldName] = idx
-	}
-
 	indexedFields := make(map[string]bool)
 	for _, idx := range indexes {
 		indexedFields[idx.fieldName] = true
@@ -607,6 +607,11 @@ func (s *storageImpl) getQueryIndexes(q *Query, collection string, txn *badger.T
 	}
 
 	fieldRanges := c.Accept(NewFieldRangeVisitor(selectedFields)).(map[string]*valueRange)
+
+	indexesMap := make(map[string]*indexImpl)
+	for _, idx := range indexes {
+		indexesMap[idx.fieldName] = idx
+	}
 
 	queries := make([]*indexQuery, 0)
 	for field, vRange := range fieldRanges {
@@ -635,11 +640,11 @@ func (s *storageImpl) ListCollections() ([]string, error) {
 	defer it.Close()
 
 	collections := make([]string, 0)
-	prefix := []byte("coll:")
+	prefix := []byte(getCollectionKeyPrefix())
 	for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
 		item := it.Item()
-		key := string(item.Key())
-		collectionName := strings.TrimPrefix(key, "coll:")
+		key := item.Key()
+		collectionName := string(bytes.TrimPrefix(key, prefix))
 		collections = append(collections, collectionName)
 	}
 
