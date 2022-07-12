@@ -158,7 +158,7 @@ func (v *FieldRangeVisitor) VisitUnaryCriteria(c *UnaryCriteria) interface{} {
 
 func (v *FieldRangeVisitor) VisitBinaryCriteria(c *BinaryCriteria) interface{} {
 	leftRanges := c.C1.Accept(v).(map[string]*valueRange)
-	rightRanges := c.C1.Accept(v).(map[string]*valueRange)
+	rightRanges := c.C2.Accept(v).(map[string]*valueRange)
 
 	mergedMap := make(map[string]*valueRange)
 	for key, value := range leftRanges {
