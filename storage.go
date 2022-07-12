@@ -473,7 +473,7 @@ func (s *storageImpl) HasCollection(name string) (bool, error) {
 }
 
 func (s *storageImpl) iterateDocsFromIndex(indexQuery *indexQuery, collection string, txn *badger.Txn, consumer docConsumer) error {
-	return indexQuery.index.Iterate(txn, indexQuery.vRange, func(docId string) error {
+	return indexQuery.index.IterateRange(txn, indexQuery.vRange, func(docId string) error {
 		doc, err := s.getDocumentById(collection, docId, txn)
 		if err != nil {
 			return err

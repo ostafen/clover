@@ -99,7 +99,7 @@ func (idx *indexImpl) encodeRange(vRange *valueRange) ([]byte, []byte, error) {
 	return startKey, endKey, nil
 }
 
-func (idx *indexImpl) Iterate(txn *badger.Txn, vRange *valueRange, onValue func(docId string) error) error {
+func (idx *indexImpl) IterateRange(txn *badger.Txn, vRange *valueRange, onValue func(docId string) error) error {
 	it := txn.NewIterator(badger.DefaultIteratorOptions)
 	defer it.Close()
 
