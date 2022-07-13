@@ -127,6 +127,9 @@ func (idx *indexImpl) IterateRange(txn *badger.Txn, vRange *valueRange, onValue 
 		}
 
 		if err := onValue(string(docId)); err != nil {
+			if err == errStopIteration {
+				return nil
+			}
 			return err
 		}
 	}
