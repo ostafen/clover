@@ -155,9 +155,7 @@ func (s *storageImpl) FindAll(q *Query) ([]*Document, error) {
 	docs := make([]*Document, 0)
 
 	err := s.IterateDocs(q, func(doc *Document) error {
-		if q.satisfy(doc) {
-			docs = append(docs, doc)
-		}
+		docs = append(docs, doc)
 		return nil
 	})
 	return docs, err
@@ -504,7 +502,32 @@ func (s *storageImpl) iterateDocs(txn *badger.Txn, q *Query, consumer docConsume
 		}
 
 		if len(indexQueries) == 1 { // for now, we don't handle joining results from multiple index queries
-			return s.iterateDocsFromIndex(indexQueries[0], q.collection, txn, consumer)
+			consumed := 0
+			skipped := 0
+			return s.iterateDocsFromIndex(indexQueries[0], q.collection, txn, func(doc *Document) error {
+				if !q.satisfy(doc) {
+					return nil
+				}
+
+				if skipped < q.skip {
+					skipped++
+					return nil
+				}
+
+				if q.limit >= 0 && consumed >= q.limit {
+					return errStopIteration
+				}
+
+				if err := consumer(doc); err != nil {
+					return err
+				}
+				consumed++
+
+				if q.limit >= 0 && consumed >= q.limit {
+					return errStopIteration
+				}
+				return nil
+			})
 		}
 	}
 
