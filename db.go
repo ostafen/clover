@@ -116,3 +116,7 @@ func (db *DB) HasIndex(collection, field string) (bool, error) {
 func (db *DB) DropIndex(collection, field string) error {
 	return db.engine.DropIndex(collection, field)
 }
+
+func (db *DB) ListIndexes(collection string) ([]string, error) {
+	return db.engine.ListIndexes(collection)
+}

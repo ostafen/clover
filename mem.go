@@ -276,3 +276,7 @@ func (e *memEngine) DropIndex(collection, field string) error {
 func (e *memEngine) HasIndex(collection, field string) (bool, error) {
 	return true, nil
 }
+
+func (e *memEngine) ListIndexes(collection string) ([]string, error) {
+	return []string{}, nil
+}

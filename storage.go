@@ -40,6 +40,7 @@ type StorageEngine interface {
 	CreateIndex(collection, field string) error
 	DropIndex(collection, field string) error
 	HasIndex(collection, field string) (bool, error)
+	ListIndexes(collection string) ([]string, error)
 }
 
 var errStopIteration = errors.New("iteration stop")
