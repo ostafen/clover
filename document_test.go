@@ -2,7 +2,6 @@ package clover_test
 
 import (
 	"testing"
-	"time"
 
 	c "github.com/ostafen/clover"
 	"github.com/stretchr/testify/require"
@@ -121,16 +120,12 @@ func TestDocumentSetInvalidType(t *testing.T) {
 }
 
 func TestDocumentUnmarshal(t *testing.T) {
-	runCloverTest(t, todosPath, &TodoModel{}, func(t *testing.T, db *c.DB) {
+	runCloverTest(t, func(t *testing.T, db *c.DB) {
+		require.NoError(t, loadFromJson(db, todosPath, &TodoModel{}))
 		docs, err := db.Query("todos").FindAll()
 		require.NoError(t, err)
 
-		todo := &struct {
-			Completed     bool       `clover:"completed"`
-			Title         string     `clover:"title"`
-			UserId        float32    `clover:"userId"`
-			CompletedDate *time.Time `clover:"completed_date"`
-		}{}
+		todo := &TodoModel{}
 
 		require.Greater(t, len(docs), 0)
 		for _, doc := range docs {
