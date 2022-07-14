@@ -470,6 +470,25 @@ func (s *storageImpl) HasCollection(name string) (bool, error) {
 	return s.hasCollection(name, txn)
 }
 
+func iteratePrefix(prefix []byte, txn *badger.Txn, itemConsumer func(item *badger.Item) error) error {
+	it := txn.NewIterator(badger.DefaultIteratorOptions)
+	defer it.Close()
+
+	for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
+		err := itemConsumer(it.Item())
+
+		// do not propagate iteration stop error
+		if err == errStopIteration {
+			return nil
+		}
+
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (s *storageImpl) iterateDocsFromIndex(indexQuery *indexQuery, collection string, txn *badger.Txn, consumer docConsumer) error {
 	return indexQuery.index.IterateRange(txn, indexQuery.vRange, func(docId string) error {
 		doc, err := s.getDocumentById(collection, docId, txn)
@@ -535,30 +554,20 @@ func (s *storageImpl) iterateDocs(txn *badger.Txn, q *Query, consumer docConsume
 			return s.iterateDocsFromIndex(indexQueries[0], q.collection, txn, consumer)
 		}
 	}
+	return s.iterateCollection(q, txn, consumer)
+}
 
-	it := txn.NewIterator(badger.DefaultIteratorOptions)
-	defer it.Close()
-
+func (s *storageImpl) iterateCollection(q *Query, txn *badger.Txn, consumer docConsumer) error {
 	prefix := []byte(getDocumentKeyPrefix(q.collection))
-	for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
-		err := it.Item().Value(func(data []byte) error {
+	return iteratePrefix(prefix, txn, func(item *badger.Item) error {
+		return item.Value(func(data []byte) error {
 			doc, err := decodeDoc(data)
 			if err != nil {
 				return err
 			}
 			return consumer(doc)
 		})
-
-		// do not propagate iteration stop error
-		if err == errStopIteration {
-			return nil
-		}
-
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+	})
 }
 
 func (s *storageImpl) iterateDocsSlice(q *Query, consumer docConsumer) error {
@@ -658,19 +667,16 @@ func (s *storageImpl) ListCollections() ([]string, error) {
 	txn := s.db.NewTransaction(true)
 	defer txn.Discard()
 
-	it := txn.NewIterator(badger.DefaultIteratorOptions)
-	defer it.Close()
-
 	collections := make([]string, 0)
+
 	prefix := []byte(getCollectionKeyPrefix())
-	for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
-		item := it.Item()
+	err := iteratePrefix(prefix, txn, func(item *badger.Item) error {
 		key := item.Key()
 		collectionName := string(bytes.TrimPrefix(key, prefix))
 		collections = append(collections, collectionName)
-	}
-
-	return collections, nil
+		return nil
+	})
+	return collections, err
 }
 
 func getIndexKeyPrefix(collection string) []byte {
@@ -791,22 +797,18 @@ func (s *storageImpl) HasIndex(collection, field string) (bool, error) {
 }
 
 func (s *storageImpl) listIndexes(collection string, txn *badger.Txn) ([]*indexImpl, error) {
-	it := txn.NewIterator(badger.DefaultIteratorOptions)
-	defer it.Close()
-
 	indexes := make([]*indexImpl, 0)
+
 	prefix := getIndexKeyPrefix(collection)
-	for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
-		item := it.Item()
+	err := iteratePrefix(prefix, txn, func(item *badger.Item) error {
 		key := string(item.Key())
 		fieldName := strings.TrimPrefix(key, string(prefix))
 		indexes = append(indexes, &indexImpl{collectionName: collection, fieldName: fieldName})
-	}
-
-	return indexes, nil
+		return nil
+	})
+	return indexes, err
 }
 
-// TODO: extractMethod iteratePrefix(prefix []byte, onValue func(byte[] value))
 func (s *storageImpl) ListIndexes(collection string) ([]string, error) {
 	txn := s.db.NewTransaction(true)
 	defer txn.Discard()
