@@ -165,6 +165,12 @@ func (q *Query) ForEach(consumer func(_ *Document) bool) error {
 	})
 }
 
+func (q *Query) clearSortSkipAndLimit() *Query {
+	q.sortOpts = nil
+	q = q.Skip(0).Limit(-1)
+	return q
+}
+
 // Update updates all the document selected by q using the provided updateMap.
 // Each update is specified by a mapping fieldName -> newValue.
 func (q *Query) Update(updateMap map[string]interface{}) error {
@@ -172,7 +178,7 @@ func (q *Query) Update(updateMap map[string]interface{}) error {
 		return err
 	}
 
-	return q.engine.Update(q, func(doc *Document) *Document {
+	return q.engine.Update(q.clearSortSkipAndLimit(), func(doc *Document) *Document {
 		newDoc := doc.Copy()
 		newDoc.SetAll(updateMap)
 		return newDoc
@@ -210,7 +216,7 @@ func (q *Query) Delete() error {
 	if err := q.normalizeCriteria(); err != nil {
 		return err
 	}
-	return q.engine.Delete(q)
+	return q.engine.Delete(q.clearSortSkipAndLimit())
 }
 
 func (q *Query) normalizeCriteria() error {

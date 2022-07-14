@@ -143,9 +143,7 @@ func (s *storageImpl) DropCollection(name string) error {
 func (s *storageImpl) Count(q *Query) (int, error) {
 	num := 0
 	err := s.IterateDocs(q, func(doc *Document) error {
-		if q.satisfy(doc) {
-			num++
-		}
+		num++
 		return nil
 	})
 	return num, err
@@ -335,12 +333,7 @@ func (s *storageImpl) replaceDocs(txn *badger.Txn, q *Query, updater docUpdater)
 		return ErrCollectionNotExist
 	}
 
-	// TODO: we should clear sort and limit on update queries
 	err = s.iterateDocs(txn, q, func(doc *Document) error {
-		if !q.satisfy(doc) {
-			return nil
-		}
-
 		docKey := []byte(getDocumentKey(q.collection, doc.ObjectId()))
 		newDoc := updater(doc)
 
@@ -499,7 +492,7 @@ func (s *storageImpl) iterateDocsFromIndex(indexQuery *indexQuery, collection st
 	})
 }
 
-func withSkipAndLimit(q *Query, consumer docConsumer) docConsumer {
+func withQuery(q *Query, consumer docConsumer) docConsumer {
 	skipped := 0
 	consumed := 0
 	return func(doc *Document) error {
@@ -543,7 +536,7 @@ func (s *storageImpl) iterateDocs(txn *badger.Txn, q *Query, consumer docConsume
 		return ErrCollectionNotExist
 	}
 
-	consumer = withSkipAndLimit(q, consumer)
+	consumer = withQuery(q, consumer)
 	if q.criteria != nil {
 		indexQueries, err := s.getQueryIndexes(q, txn)
 		if err != nil {
@@ -554,11 +547,11 @@ func (s *storageImpl) iterateDocs(txn *badger.Txn, q *Query, consumer docConsume
 			return s.iterateDocsFromIndex(indexQueries[0], q.collection, txn, consumer)
 		}
 	}
-	return s.iterateCollection(q, txn, consumer)
+	return s.iterateCollection(q.collection, txn, consumer)
 }
 
-func (s *storageImpl) iterateCollection(q *Query, txn *badger.Txn, consumer docConsumer) error {
-	prefix := []byte(getDocumentKeyPrefix(q.collection))
+func (s *storageImpl) iterateCollection(collection string, txn *badger.Txn, consumer docConsumer) error {
+	prefix := []byte(getDocumentKeyPrefix(collection))
 	return iteratePrefix(prefix, txn, func(item *badger.Item) error {
 		return item.Value(func(data []byte) error {
 			doc, err := decodeDoc(data)
