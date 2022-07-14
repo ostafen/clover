@@ -1225,14 +1225,14 @@ func TestIndexWithMixedTypes(t *testing.T) {
 			require.NoError(t, db.Insert("test", doc))
 		}
 
-		/*criteria := c.Field("myField").Lt(true)
-		testIndexedQuery(t, db, criteria, "test", "myField")
-		*/
-		criteria := c.Field("myField").Gt(100.10)
+		criteria := c.Field("myField").Lt(true)
 		testIndexedQuery(t, db, criteria, "test", "myField")
 
-		/*criteria = c.Field("myField").Eq(nil)
-		testIndexedQuery(t, db, criteria, "test", "myField")*/
+		criteria = c.Field("myField").Gt(100.10)
+		testIndexedQuery(t, db, criteria, "test", "myField")
+
+		criteria = c.Field("myField").Eq(nil)
+		testIndexedQuery(t, db, criteria, "test", "myField")
 	})
 }
 
