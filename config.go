@@ -9,7 +9,6 @@ type Config struct {
 func defaultConfig() *Config {
 	return &Config{
 		InMemory: false,
-		Storage:  newDefaultStorageImpl(),
 	}
 }
 
@@ -28,22 +27,7 @@ type Option func(c *Config) error
 // InMemoryMode allows to enable/disable in-memory mode.
 func InMemoryMode(enable bool) Option {
 	return func(c *Config) error {
-		if enable {
-			c.Storage = newMemStorageEngine()
-		} else {
-			c.Storage = newDefaultStorageImpl()
-		}
 		c.InMemory = enable
-		return nil
-	}
-}
-
-// WithStorageEngine allows to specify a custom storage engine.
-func WithStorageEngine(engine StorageEngine) Option {
-	return func(c *Config) error {
-		if engine != nil {
-			c.Storage = engine
-		}
 		return nil
 	}
 }

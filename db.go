@@ -90,7 +90,7 @@ func Open(dir string, opts ...Option) (*DB, error) {
 
 	db := &DB{
 		dir:    dir,
-		engine: config.Storage,
+		engine: newDefaultStorageImpl(),
 	}
 	return db, db.engine.Open(dir)
 }
