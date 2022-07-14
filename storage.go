@@ -95,9 +95,11 @@ func (s *storageImpl) Open(path string, c *Config) error {
 		if err := util.MakeDirIfNotExists(path); err != nil {
 			return err
 		}
+	} else {
+		path = ""
 	}
 
-	db, err := badger.Open(badger.DefaultOptions(path).WithLoggingLevel(badger.ERROR))
+	db, err := badger.Open(badger.DefaultOptions(path).WithLoggingLevel(badger.ERROR).WithInMemory(c.InMemory))
 
 	s.db = db
 	s.conf = c

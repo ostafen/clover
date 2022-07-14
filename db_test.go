@@ -1291,3 +1291,22 @@ func TestListIndexes(t *testing.T) {
 		require.Empty(t, indexes)
 	})
 }
+
+func TestInMemoryMode(t *testing.T) {
+	db, err := c.Open("clover-db", c.InMemoryMode(true))
+	require.NoError(t, err)
+
+	require.NoError(t, db.CreateCollection("test"))
+	has, err := db.HasCollection("test")
+	require.NoError(t, err)
+	require.True(t, has)
+
+	require.NoError(t, db.Close())
+
+	db, err = c.Open("clover-db", c.InMemoryMode(true))
+	require.NoError(t, err)
+
+	has, err = db.HasCollection("test")
+	require.NoError(t, err)
+	require.False(t, has)
+}
