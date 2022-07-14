@@ -1269,3 +1269,25 @@ func TestIndexDelete(t *testing.T) {
 		require.Equal(t, n, 0)
 	})
 }
+
+func TestListIndexes(t *testing.T) {
+	runCloverTest(t, "", nil, func(t *testing.T, db *c.DB) {
+		require.NoError(t, db.CreateCollection("test"))
+
+		indexes, err := db.ListIndexes("test")
+		require.NoError(t, err)
+		require.Empty(t, indexes)
+
+		require.NoError(t, db.CreateIndex("test", "index"))
+
+		indexes, err = db.ListIndexes("test")
+		require.NoError(t, err)
+		require.Equal(t, []string{"index"}, indexes)
+
+		require.NoError(t, db.DropIndex("test", "index"))
+
+		indexes, err = db.ListIndexes("test")
+		require.NoError(t, err)
+		require.Empty(t, indexes)
+	})
+}
