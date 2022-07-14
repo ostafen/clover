@@ -1,14 +1,24 @@
 package clover
 
+import "time"
+
+const (
+	GCReclaimIntervalDefault = time.Minute * 5
+	GCDiscardRatioDefault    = 0.5
+)
+
 // Config contains clover configuration parameters
 type Config struct {
-	InMemory bool
-	Storage  StorageEngine
+	InMemory          bool
+	GCReclaimInterval time.Duration
+	GCDiscardRatio    float64
 }
 
 func defaultConfig() *Config {
 	return &Config{
-		InMemory: false,
+		InMemory:          false,
+		GCReclaimInterval: GCReclaimIntervalDefault,
+		GCDiscardRatio:    GCDiscardRatioDefault,
 	}
 }
 

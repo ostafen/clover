@@ -3,7 +3,6 @@ package clover
 import (
 	"errors"
 
-	"github.com/ostafen/clover/util"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -82,17 +81,11 @@ func Open(dir string, opts ...Option) (*DB, error) {
 		return nil, err
 	}
 
-	if !config.InMemory {
-		if err := util.MakeDirIfNotExists(dir); err != nil {
-			return nil, err
-		}
-	}
-
 	db := &DB{
 		dir:    dir,
 		engine: newDefaultStorageImpl(),
 	}
-	return db, db.engine.Open(dir)
+	return db, db.engine.Open(dir, config)
 }
 
 // Close releases all the resources and closes the database. After the call, the instance will no more be usable.

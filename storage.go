@@ -12,6 +12,7 @@ import (
 
 	badger "github.com/dgraph-io/badger/v3"
 	"github.com/ostafen/clover/internal"
+	"github.com/ostafen/clover/util"
 )
 
 var ErrDocumentNotExist = errors.New("no such document")
@@ -21,7 +22,7 @@ type docConsumer func(doc *Document) error
 
 // StorageEngine represents the persistance layer and abstracts how collections are stored.
 type StorageEngine interface {
-	Open(path string) error
+	Open(path string, c *Config) error
 	Close() error
 
 	CreateCollection(name string) error
@@ -47,6 +48,7 @@ var errStopIteration = errors.New("iteration stop")
 
 type storageImpl struct {
 	db     *badger.DB
+	conf   *Config
 	chQuit chan struct{}
 	chWg   sync.WaitGroup
 	closed uint32
@@ -58,18 +60,13 @@ func newDefaultStorageImpl() *storageImpl {
 	}
 }
 
-const (
-	reclaimInterval = 5 * time.Minute
-	discardRatio    = 0.5
-)
-
 func (s *storageImpl) startGC() {
 	s.chWg.Add(1)
 
 	go func() {
 		defer s.chWg.Done()
 
-		ticker := time.NewTicker(reclaimInterval)
+		ticker := time.NewTicker(s.conf.GCReclaimInterval)
 		defer ticker.Stop()
 
 		for {
@@ -78,7 +75,7 @@ func (s *storageImpl) startGC() {
 				return
 
 			case <-ticker.C:
-				err := s.db.RunValueLogGC(discardRatio)
+				err := s.db.RunValueLogGC(s.conf.GCDiscardRatio)
 				if err != nil {
 					log.Printf("RunValueLogGC(): %s\n", err.Error())
 				}
@@ -93,9 +90,18 @@ func (s *storageImpl) stopGC() {
 	close(s.chQuit)
 }
 
-func (s *storageImpl) Open(path string) error {
+func (s *storageImpl) Open(path string, c *Config) error {
+	if !c.InMemory {
+		if err := util.MakeDirIfNotExists(path); err != nil {
+			return err
+		}
+	}
+
 	db, err := badger.Open(badger.DefaultOptions(path).WithLoggingLevel(badger.ERROR))
+
 	s.db = db
+	s.conf = c
+
 	return err
 }
 
