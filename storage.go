@@ -480,6 +480,35 @@ func (s *storageImpl) iterateDocsFromIndex(indexQuery *indexQuery, collection st
 	})
 }
 
+func withSkipAndLimit(q *Query, consumer docConsumer) docConsumer {
+	skipped := 0
+	consumed := 0
+	return func(doc *Document) error {
+		if !q.satisfy(doc) {
+			return nil
+		}
+
+		if skipped < q.skip {
+			skipped++
+			return nil
+		}
+
+		if q.limit >= 0 && consumed >= q.limit {
+			return errStopIteration
+		}
+
+		if err := consumer(doc); err != nil {
+			return err
+		}
+		consumed++
+
+		if q.limit >= 0 && consumed >= q.limit {
+			return errStopIteration
+		}
+		return nil
+	}
+}
+
 func (s *storageImpl) iterateDocs(txn *badger.Txn, q *Query, consumer docConsumer) error {
 	if txn == nil {
 		txn = s.db.NewTransaction(false)
@@ -495,6 +524,7 @@ func (s *storageImpl) iterateDocs(txn *badger.Txn, q *Query, consumer docConsume
 		return ErrCollectionNotExist
 	}
 
+	consumer = withSkipAndLimit(q, consumer)
 	if q.criteria != nil {
 		indexQueries, err := s.getQueryIndexes(q, txn)
 		if err != nil {
@@ -502,56 +532,21 @@ func (s *storageImpl) iterateDocs(txn *badger.Txn, q *Query, consumer docConsume
 		}
 
 		if len(indexQueries) == 1 { // for now, we don't handle joining results from multiple index queries
-			consumed := 0
-			skipped := 0
-			return s.iterateDocsFromIndex(indexQueries[0], q.collection, txn, func(doc *Document) error {
-				if !q.satisfy(doc) {
-					return nil
-				}
-
-				if skipped < q.skip {
-					skipped++
-					return nil
-				}
-
-				if q.limit >= 0 && consumed >= q.limit {
-					return errStopIteration
-				}
-
-				if err := consumer(doc); err != nil {
-					return err
-				}
-				consumed++
-
-				if q.limit >= 0 && consumed >= q.limit {
-					return errStopIteration
-				}
-				return nil
-			})
+			return s.iterateDocsFromIndex(indexQueries[0], q.collection, txn, consumer)
 		}
 	}
 
 	it := txn.NewIterator(badger.DefaultIteratorOptions)
 	defer it.Close()
+
 	prefix := []byte(getDocumentKeyPrefix(q.collection))
-
-	it.Seek(prefix)
-	for i := 0; i < q.skip && it.ValidForPrefix(prefix); i++ { // skip the first q.skip documents
-		it.Next()
-	}
-
-	for n := 0; (q.limit < 0 || n < q.limit) && it.ValidForPrefix(prefix); it.Next() {
+	for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
 		err := it.Item().Value(func(data []byte) error {
 			doc, err := decodeDoc(data)
 			if err != nil {
 				return err
 			}
-
-			if q.satisfy(doc) {
-				n++
-				return consumer(doc)
-			}
-			return nil
+			return consumer(doc)
 		})
 
 		// do not propagate iteration stop error
