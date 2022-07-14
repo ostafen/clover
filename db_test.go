@@ -1157,6 +1157,20 @@ func testIndexedQuery(t *testing.T, db *c.DB, criteria c.Criteria, collection, f
 	}
 }
 
+func TestCreateIndex(t *testing.T) {
+	runCloverTest(t, "", nil, func(t *testing.T, db *c.DB) {
+		require.Equal(t, c.ErrCollectionNotExist, db.CreateIndex("collection", "field"))
+		require.NoError(t, db.CreateCollection("collection"))
+
+		require.NoError(t, db.CreateIndex("collection", "field"))
+
+		indexes, err := db.ListIndexes("collection")
+		require.NoError(t, err)
+
+		require.Equal(t, []string{"field"}, indexes)
+	})
+}
+
 func TestIndex(t *testing.T) {
 	runCloverTest(t, todosPath, nil, func(t *testing.T, db *c.DB) {
 		criteria := c.Field("userId").Gt(5).And(c.Field("userId").LtEq(10))
