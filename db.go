@@ -10,6 +10,8 @@ import (
 var (
 	ErrCollectionExist    = errors.New("collection already exist")
 	ErrCollectionNotExist = errors.New("no such collection")
+	ErrIndexExist         = errors.New("index already exist")
+	ErrIndexNotExist      = errors.New("no such index")
 )
 
 // DB represents the entry point of each clover database.
@@ -20,14 +22,7 @@ type DB struct {
 
 // Query simply returns the collection with the supplied name. Use it to initialize a new query.
 func (db *DB) Query(name string) *Query {
-	return &Query{
-		collection: name,
-		criteria:   nil,
-		engine:     db.engine,
-		limit:      -1,
-		skip:       0,
-		sortOpts:   nil,
-	}
+	return newQuery(name, db.engine)
 }
 
 // CreateCollection creates a new empty collection with the given name.
@@ -86,17 +81,11 @@ func Open(dir string, opts ...Option) (*DB, error) {
 		return nil, err
 	}
 
-	if !config.InMemory {
-		if err := makeDirIfNotExists(dir); err != nil {
-			return nil, err
-		}
-	}
-
 	db := &DB{
 		dir:    dir,
-		engine: config.Storage,
+		engine: newDefaultStorageImpl(),
 	}
-	return db, db.engine.Open(dir)
+	return db, db.engine.Open(dir, config)
 }
 
 // Close releases all the resources and closes the database. After the call, the instance will no more be usable.
@@ -107,4 +96,20 @@ func (db *DB) Close() error {
 // ListCollections returns a slice of strings containing the name of each collection stored in the db.
 func (db *DB) ListCollections() ([]string, error) {
 	return db.engine.ListCollections()
+}
+
+func (db *DB) CreateIndex(collection, field string) error {
+	return db.engine.CreateIndex(collection, field)
+}
+
+func (db *DB) HasIndex(collection, field string) (bool, error) {
+	return db.engine.HasIndex(collection, field)
+}
+
+func (db *DB) DropIndex(collection, field string) error {
+	return db.engine.DropIndex(collection, field)
+}
+
+func (db *DB) ListIndexes(collection string) ([]string, error) {
+	return db.engine.ListIndexes(collection)
 }

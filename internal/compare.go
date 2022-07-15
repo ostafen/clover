@@ -1,25 +1,26 @@
-package clover
+package internal
 
 import (
 	"math/big"
 	"reflect"
-	"sort"
 	"strings"
 	"time"
+
+	"github.com/ostafen/clover/util"
 )
 
 var typesMap map[string]int = map[string]int{
-	"nil":     0,
-	"number":  1,
-	"string":  2,
-	"map":     3,
-	"slice":   4,
-	"boolean": 5,
-	"time":    6,
+	"nil":    0,
+	"number": 1,
+	"string": 2,
+	"map":    3,
+	"slice":  4,
+	"bool":   5,
+	"time":   6,
 }
 
-func getTypeName(v interface{}) string {
-	if isNumber(v) {
+func TypeName(v interface{}) string {
+	if util.IsNumber(v) {
 		return "number"
 	}
 
@@ -33,15 +34,17 @@ func getTypeName(v interface{}) string {
 	return reflect.TypeOf(v).Kind().String()
 }
 
+func TypeId(v interface{}) int {
+	return typesMap[TypeName(v)]
+}
+
 func compareTypes(v1 interface{}, v2 interface{}) int {
-	t1 := getTypeName(v1)
-	t2 := getTypeName(v2)
-	return typesMap[t1] - typesMap[t2]
+	return TypeId(v1) - TypeId(v2)
 }
 
 func compareSlices(s1 []interface{}, s2 []interface{}) int {
 	for i := 0; i < len(s1) && i < len(s2); i++ {
-		if res := compareValues(s1[i], s2[i]); res != 0 {
+		if res := Compare(s1[i], s2[i]); res != 0 {
 			return res
 		}
 	}
@@ -53,8 +56,8 @@ func compareNumbers(v1 interface{}, v2 interface{}) int {
 	_, isV2Float := v2.(float64)
 
 	if isV1Float || isV2Float {
-		v1Float := toFloat64(v1)
-		v2Float := toFloat64(v2)
+		v1Float := util.ToFloat64(v1)
+		v2Float := util.ToFloat64(v2)
 		return big.NewFloat(v1Float).Cmp(big.NewFloat(v2Float))
 	}
 
@@ -62,8 +65,8 @@ func compareNumbers(v1 interface{}, v2 interface{}) int {
 	_, isV2Int64 := v2.(int64)
 
 	if isV1Int64 || isV2Int64 {
-		v1Int64 := toInt64(v1)
-		v2Int64 := toInt64(v2)
+		v1Int64 := util.ToInt64(v1)
+		v2Int64 := util.ToInt64(v2)
 		return int(v1Int64 - v2Int64)
 	}
 
@@ -72,12 +75,12 @@ func compareNumbers(v1 interface{}, v2 interface{}) int {
 	return int(v1Uint64 - v2Uint64)
 }
 
-func compareValues(v1 interface{}, v2 interface{}) int {
+func Compare(v1 interface{}, v2 interface{}) int {
 	if res := compareTypes(v1, v2); res != 0 {
 		return res
 	}
 
-	if isNumber(v1) && isNumber(v2) {
+	if util.IsNumber(v1) && util.IsNumber(v2) {
 		return compareNumbers(v1, v2)
 	}
 
@@ -90,7 +93,7 @@ func compareValues(v1 interface{}, v2 interface{}) int {
 	v1Bool, isBool := v1.(bool)
 	if isBool {
 		v2Bool := v2.(bool)
-		return boolToInt(v1Bool) - boolToInt(v2Bool)
+		return util.BoolToInt(v1Bool) - util.BoolToInt(v2Bool)
 	}
 
 	v1Time, isTime := v1.(time.Time)
@@ -107,28 +110,14 @@ func compareValues(v1 interface{}, v2 interface{}) int {
 	if v1 == nil {
 		return 0
 	}
-
 	return compareObjects(v1.(map[string]interface{}), v2.(map[string]interface{}))
 }
 
-func getKeys(m map[string]interface{}) []string {
-	keys := make([]string, 0, len(m))
-	for key := range m {
-		keys = append(keys, key)
-	}
-
-	sort.Slice(keys, func(i, j int) bool {
-		return keys[i] < keys[j]
-	})
-
-	return keys
-}
-
 func compareObjects(m1 map[string]interface{}, m2 map[string]interface{}) int {
-	m1Keys := getKeys(m1)
-	m2Keys := getKeys(m2)
+	m1Keys := util.MapKeys(m1, true)
+	m2Keys := util.MapKeys(m2, true)
 
-	for i := 0; i < len(m1Keys); i++ {
+	for i := 0; i < len(m1Keys) && i < len(m2Keys); i++ {
 		k1 := m1Keys[i]
 		k2 := m2Keys[i]
 
@@ -139,7 +128,7 @@ func compareObjects(m1 map[string]interface{}, m2 map[string]interface{}) int {
 		v1 := m1[k1]
 		v2 := m2[k2]
 
-		if res := compareValues(v1, v2); res != 0 {
+		if res := Compare(v1, v2); res != 0 {
 			return res
 		}
 	}

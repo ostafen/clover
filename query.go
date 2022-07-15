@@ -8,10 +8,21 @@ import (
 type Query struct {
 	engine     StorageEngine
 	collection string
-	criteria   *Criteria
+	criteria   Criteria
 	limit      int
 	skip       int
 	sortOpts   []SortOption
+}
+
+func newQuery(collection string, engine StorageEngine) *Query {
+	return &Query{
+		collection: collection,
+		criteria:   nil,
+		engine:     engine,
+		limit:      -1,
+		skip:       0,
+		sortOpts:   nil,
+	}
 }
 
 func (q *Query) copy() *Query {
@@ -29,11 +40,15 @@ func (q *Query) satisfy(doc *Document) bool {
 	if q.criteria == nil {
 		return true
 	}
-	return q.criteria.p(doc)
+	return q.criteria.Satisfy(doc)
 }
 
 // Count returns the number of documents which satisfy the query (i.e. len(q.FindAll()) == q.Count()).
 func (q *Query) Count() (int, error) {
+	if err := q.normalizeCriteria(); err != nil {
+		return -1, err
+	}
+
 	num, err := q.engine.Count(q)
 	return num, err
 }
@@ -46,11 +61,11 @@ func (q *Query) Exists() (bool, error) {
 
 // MatchPredicate selects all the documents which satisfy the supplied predicate function.
 func (q *Query) MatchPredicate(p func(doc *Document) bool) *Query {
-	return q.Where(&Criteria{p})
+	return q.Where(newCriteria(FunctionOp, "", p))
 }
 
 // Where returns a new Query which select all the documents fullfilling both the base query and the provided Criteria.
-func (q *Query) Where(c *Criteria) *Query {
+func (q *Query) Where(c Criteria) *Query {
 	newCriteria := q.criteria
 	if newCriteria == nil {
 		newCriteria = c
@@ -122,6 +137,9 @@ func (q *Query) FindById(id string) (*Document, error) {
 
 // FindAll selects all the documents satisfying q.
 func (q *Query) FindAll() ([]*Document, error) {
+	if err := q.normalizeCriteria(); err != nil {
+		return nil, err
+	}
 	return q.engine.FindAll(q)
 }
 
@@ -147,10 +165,20 @@ func (q *Query) ForEach(consumer func(_ *Document) bool) error {
 	})
 }
 
+func (q *Query) clearSortSkipAndLimit() *Query {
+	q.sortOpts = nil
+	q = q.Skip(0).Limit(-1)
+	return q
+}
+
 // Update updates all the document selected by q using the provided updateMap.
 // Each update is specified by a mapping fieldName -> newValue.
 func (q *Query) Update(updateMap map[string]interface{}) error {
-	return q.engine.Update(q, func(doc *Document) *Document {
+	if err := q.normalizeCriteria(); err != nil {
+		return err
+	}
+
+	return q.engine.Update(q.clearSortSkipAndLimit(), func(doc *Document) *Document {
 		newDoc := doc.Copy()
 		newDoc.SetAll(updateMap)
 		return newDoc
@@ -185,5 +213,22 @@ func (q *Query) DeleteById(id string) error {
 
 // Delete removes all the documents selected by q from the underlying collection.
 func (q *Query) Delete() error {
-	return q.engine.Delete(q)
+	if err := q.normalizeCriteria(); err != nil {
+		return err
+	}
+	return q.engine.Delete(q.clearSortSkipAndLimit())
+}
+
+func (q *Query) normalizeCriteria() error {
+	if q.criteria != nil {
+		v := &CriteriaNormalizeVisitor{}
+		c := q.criteria.Accept(v)
+
+		if v.err != nil {
+			return v.err
+		}
+
+		q.criteria = c.(Criteria)
+	}
+	return nil
 }

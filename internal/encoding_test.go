@@ -1,9 +1,10 @@
-package encoding
+package internal
 
 import (
 	"testing"
 	"time"
 
+	"github.com/brianvoe/gofakeit/v6"
 	"github.com/stretchr/testify/require"
 )
 
@@ -105,15 +106,9 @@ func TestNormalize3(t *testing.T) {
 }
 
 func TestEncodeDecode(t *testing.T) {
-	date := time.Date(2020, 01, 1, 0, 0, 0, 0, time.UTC)
+	s := &TestStruct{}
 
-	s := &TestStruct{
-		TimeField:  date,
-		SliceField: []int{1, 2, 3, 4},
-		MapField: map[string]interface{}{
-			"hello": "clover",
-		},
-	}
+	require.NoError(t, gofakeit.Struct(s))
 
 	data, err := Encode(s)
 	require.NoError(t, err)

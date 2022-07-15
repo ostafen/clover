@@ -3,7 +3,8 @@ package clover
 import (
 	"strings"
 
-	"github.com/ostafen/clover/encoding"
+	"github.com/ostafen/clover/internal"
+	"github.com/ostafen/clover/util"
 )
 
 // Document represents a document as a map.
@@ -30,7 +31,7 @@ func NewDocument() *Document {
 // NewDocumentOf creates a new document and initializes it with the content of the provided object.
 // It returns nil if the object cannot be converted to a valid Document.
 func NewDocumentOf(o interface{}) *Document {
-	normalized, _ := encoding.Normalize(o)
+	normalized, _ := internal.Normalize(o)
 	fields, _ := normalized.(map[string]interface{})
 	if fields == nil {
 		return nil
@@ -44,7 +45,7 @@ func NewDocumentOf(o interface{}) *Document {
 // Copy returns a shallow copy of the underlying document.
 func (doc *Document) Copy() *Document {
 	return &Document{
-		fields: copyMap(doc.fields),
+		fields: util.CopyMap(doc.fields),
 	}
 }
 
@@ -90,7 +91,7 @@ func (doc *Document) Get(name string) interface{} {
 
 // Set maps a field to a value. Nested fields can be accessed using dot.
 func (doc *Document) Set(name string, value interface{}) {
-	normalizedValue, err := encoding.Normalize(value)
+	normalizedValue, err := internal.Normalize(value)
 	if err == nil {
 		m, _, fieldName := lookupField(name, doc.fields, true)
 		m[fieldName] = normalizedValue
@@ -106,7 +107,7 @@ func (doc *Document) SetAll(values map[string]interface{}) {
 
 // Unmarshal stores the document in the value pointed by v.
 func (doc *Document) Unmarshal(v interface{}) error {
-	return encoding.Convert(doc.fields, v)
+	return internal.Convert(doc.fields, v)
 }
 
 func compareDocuments(first *Document, second *Document, sortOpts []SortOption) int {
@@ -126,7 +127,7 @@ func compareDocuments(first *Document, second *Document, sortOpts []SortOption) 
 		}
 
 		if firstHas && secondHas {
-			res := compareValues(first.Get(field), second.Get(field))
+			res := internal.Compare(first.Get(field), second.Get(field))
 			if res != 0 {
 				return res * direction
 			}

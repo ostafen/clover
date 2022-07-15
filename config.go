@@ -1,15 +1,24 @@
 package clover
 
+import "time"
+
+const (
+	GCReclaimIntervalDefault = time.Minute * 5
+	GCDiscardRatioDefault    = 0.5
+)
+
 // Config contains clover configuration parameters
 type Config struct {
-	InMemory bool
-	Storage  StorageEngine
+	InMemory          bool
+	GCReclaimInterval time.Duration
+	GCDiscardRatio    float64
 }
 
 func defaultConfig() *Config {
 	return &Config{
-		InMemory: false,
-		Storage:  newDefaultStorageImpl(),
+		InMemory:          false,
+		GCReclaimInterval: GCReclaimIntervalDefault,
+		GCDiscardRatio:    GCDiscardRatioDefault,
 	}
 }
 
@@ -28,22 +37,15 @@ type Option func(c *Config) error
 // InMemoryMode allows to enable/disable in-memory mode.
 func InMemoryMode(enable bool) Option {
 	return func(c *Config) error {
-		if enable {
-			c.Storage = newMemStorageEngine()
-		} else {
-			c.Storage = newDefaultStorageImpl()
-		}
 		c.InMemory = enable
 		return nil
 	}
 }
 
-// WithStorageEngine allows to specify a custom storage engine.
-func WithStorageEngine(engine StorageEngine) Option {
+// WithGCReclaimInterval allow to configure how often we reclaim disk space
+func WithGCReclaimInterval(interval time.Duration) Option {
 	return func(c *Config) error {
-		if engine != nil {
-			c.Storage = engine
-		}
+		c.GCReclaimInterval = interval
 		return nil
 	}
 }
