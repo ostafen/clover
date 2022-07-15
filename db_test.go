@@ -39,7 +39,7 @@ func runCloverTest(t *testing.T, test func(t *testing.T, db *c.DB)) {
 	dir, err := ioutil.TempDir("", "clover-test")
 	require.NoError(t, err)
 
-	db, err := c.Open(dir)
+	db, err := c.Open(dir, c.WithGCReclaimInterval(time.Millisecond*500))
 	require.NoError(t, err)
 
 	defer func() {

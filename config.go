@@ -41,3 +41,11 @@ func InMemoryMode(enable bool) Option {
 		return nil
 	}
 }
+
+// WithGCReclaimInterval allow to configure how often we reclaim disk space
+func WithGCReclaimInterval(interval time.Duration) Option {
+	return func(c *Config) error {
+		c.GCReclaimInterval = interval
+		return nil
+	}
+}
