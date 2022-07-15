@@ -100,6 +100,10 @@ func (idx *indexImpl) encodeRange(vRange *valueRange) ([]byte, []byte, error) {
 }
 
 func (idx *indexImpl) IterateRange(txn *badger.Txn, vRange *valueRange, onValue func(docId string) error) error {
+	if vRange.isEmpty() {
+		return nil
+	}
+
 	it := txn.NewIterator(badger.DefaultIteratorOptions)
 	defer it.Close()
 
