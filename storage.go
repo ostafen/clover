@@ -104,6 +104,8 @@ func (s *storageImpl) Open(path string, c *Config) error {
 	s.db = db
 	s.conf = c
 
+	s.startGC()
+
 	return err
 }
 
