@@ -9,6 +9,11 @@ type valueRange struct {
 	startIncluded, endIncluded bool
 }
 
+func (r *valueRange) isEmpty() bool {
+	res := internal.Compare(r.start, r.end)
+	return (res > 0) || (res == 0 && !r.startIncluded && !r.endIncluded)
+}
+
 func (r *valueRange) isNil() bool {
 	return r.start == nil && r.end == nil && r.startIncluded && r.endIncluded
 }
