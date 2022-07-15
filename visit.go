@@ -48,9 +48,6 @@ func (v *NotFlattenVisitor) removeNotCriteria(c *NotCriteria) Criteria {
 	innerNode := c.C
 
 	unaryCriteria := innerNode.(*UnaryCriteria)
-	if unaryCriteria == nil {
-		return unaryCriteria
-	}
 
 	switch unaryCriteria.OpType {
 	case EqOp:

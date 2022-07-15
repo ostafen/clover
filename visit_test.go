@@ -12,8 +12,13 @@ func TestFlattenNot1(t *testing.T) {
 	c = c.Accept(&NotFlattenVisitor{}).(Criteria)
 
 	binNode := c.(*BinaryCriteria)
+	require.Equal(t, binNode.OpType, LogicalOr)
+
 	require.IsType(t, binNode.C1, &UnaryCriteria{})
 	require.IsType(t, binNode.C2, &UnaryCriteria{})
+
+	require.Equal(t, binNode.C1.(*UnaryCriteria).OpType, LtEqOp)
+	require.Equal(t, binNode.C2.(*UnaryCriteria).OpType, GtEqOp)
 }
 
 func TestFlattenNot2(t *testing.T) {
@@ -23,6 +28,25 @@ func TestFlattenNot2(t *testing.T) {
 	c = c.Accept(&NotFlattenVisitor{}).(Criteria)
 
 	binNode := c.(*BinaryCriteria)
+	require.Equal(t, binNode.OpType, LogicalOr)
+	require.IsType(t, binNode.C1, &UnaryCriteria{})
+	require.IsType(t, binNode.C2, &UnaryCriteria{})
+
+	c1 := binNode.C1.(*UnaryCriteria)
+	c2 := binNode.C2.(*UnaryCriteria)
+
+	require.Equal(t, c1.OpType, LtOp)
+	require.Equal(t, c2.OpType, GtOp)
+}
+
+func TestFlattenNot3(t *testing.T) {
+	c := Field("myField").GtEq(10).Or(Field("myField").LtEq(100)).Not()
+
+	c = c.Accept(&CriteriaNormalizeVisitor{}).(Criteria)
+	c = c.Accept(&NotFlattenVisitor{}).(Criteria)
+
+	binNode := c.(*BinaryCriteria)
+	require.Equal(t, binNode.OpType, LogicalAnd)
 	require.IsType(t, binNode.C1, &UnaryCriteria{})
 	require.IsType(t, binNode.C2, &UnaryCriteria{})
 
