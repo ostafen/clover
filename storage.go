@@ -275,7 +275,21 @@ func saveDocument(doc *Document, key []byte, txn *badger.Txn) error {
 	if err != nil {
 		return err
 	}
-	return txn.Set(key, data)
+
+	e := badger.NewEntry(key, data)
+
+	expiresAt := doc.ExpiresAt()
+	now := time.Now()
+
+	if expiresAt.Before(now) { // document already expired
+		return nil
+	}
+
+	if expiresAt := doc.ExpiresAt(); expiresAt != nil {
+		e = e.WithTTL(time.Millisecond * time.Duration(expiresAt.Sub(now).Milliseconds()))
+	}
+
+	return txn.SetEntry(e)
 }
 
 func (s *storageImpl) deleteDocFromIndexes(txn *badger.Txn, indexes []*indexImpl, doc *Document) error {
