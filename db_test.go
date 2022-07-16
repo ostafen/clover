@@ -1414,6 +1414,8 @@ func TestExpiration(t *testing.T) {
 	runCloverTest(t, func(t *testing.T, db *c.DB) {
 		require.NoError(t, db.CreateCollection("test"))
 
+		require.NoError(t, db.CreateIndex("test", "HasExpiration"))
+
 		nInserts := 0
 
 		expiredDocuments := 0
@@ -1425,6 +1427,9 @@ func TestExpiration(t *testing.T) {
 			if rand.Intn(2) == 0 {
 				doc.SetExpiresAt(expiresAt)
 				expiredDocuments++
+				doc.Set("HasExpiration", true)
+			} else {
+				doc.Set("HasExpiration", false)
 			}
 
 			docs = append(docs, doc)
@@ -1441,15 +1446,20 @@ func TestExpiration(t *testing.T) {
 
 		time.Sleep(time.Second * 3)
 
-		n, err = db.Query("test").Count()
+		n, err = db.Query("test").Where(c.Field("HasExpiration").Eq(true)).Count()
 		require.NoError(t, err)
 
-		require.Equal(t, nInserts-expiredDocuments, n)
+		require.Equal(t, 0, n)
 
 		// run an insert with already expired documents
 		require.NoError(t, db.Insert("test", docs...))
 
-		n, err = db.Query("test").Count()
+		n, err = db.Query("test").Where(c.Field("HasExpiration").Eq(true)).Count()
+		require.NoError(t, err)
+
+		require.Equal(t, 0, n)
+
+		n, err = db.Query("test").Where(c.Field("HasExpiration").Eq(false)).Count()
 		require.NoError(t, err)
 
 		require.Equal(t, nInserts-expiredDocuments, n)
