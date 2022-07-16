@@ -52,7 +52,7 @@ func isValidObjectId(id string) bool {
 // Insert adds the supplied documents to a collection.
 func (db *DB) Insert(collectionName string, docs ...*Document) error {
 	for _, doc := range docs {
-		if !doc.Has(objectIdField) {
+		if !isValidObjectId(doc.ObjectId()) {
 			objectId := NewObjectId()
 			doc.Set(objectIdField, objectId)
 		}
