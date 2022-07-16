@@ -267,6 +267,10 @@ func (s *storageImpl) Insert(collection string, docs ...*Document) error {
 }
 
 func saveDocument(doc *Document, key []byte, txn *badger.Txn) error {
+	if err := validateDocument(doc); err != nil {
+		return err
+	}
+
 	data, err := encodeDoc(doc)
 	if err != nil {
 		return err
