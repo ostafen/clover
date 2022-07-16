@@ -106,13 +106,33 @@ func (doc *Document) SetAll(values map[string]interface{}) {
 
 // ExpiresAt returns the document expiration instant
 func (doc *Document) ExpiresAt() *time.Time {
-	exp, _ := doc.Get(expiresAtField).(*time.Time)
-	return exp
+	exp, ok := doc.Get(expiresAtField).(time.Time)
+	if !ok {
+		return nil
+	}
+	return &exp
 }
 
 // ExpiresAt sets document expiration
 func (doc *Document) SetExpiresAt(expiration time.Time) {
 	doc.Set(expiresAtField, expiration)
+}
+
+// TTL returns a duration representing the time to live of the document before expiration.
+// A negative duration means that the document has no expiration, while a zero value represents an already expired document.
+func (doc *Document) TTL() time.Duration {
+	expiresAt := doc.ExpiresAt()
+	if expiresAt == nil {
+		return time.Duration(-1)
+	}
+
+	now := time.Now()
+
+	if expiresAt.Before(now) { // document already expired
+		return time.Duration(0)
+	}
+
+	return time.Millisecond * time.Duration(expiresAt.Sub(now).Milliseconds())
 }
 
 // Unmarshal stores the document in the value pointed by v.
