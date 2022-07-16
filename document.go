@@ -1,7 +1,9 @@
 package clover
 
 import (
+	"fmt"
 	"strings"
+	"time"
 
 	"github.com/ostafen/clover/internal"
 	"github.com/ostafen/clover/util"
@@ -14,11 +16,8 @@ type Document struct {
 
 // ObjectId returns the id of the document, provided that the document belongs to some collection. Otherwise, it returns the empty string.
 func (doc *Document) ObjectId() string {
-	id := doc.Get(objectIdField)
-	if id == nil {
-		return ""
-	}
-	return id.(string)
+	id, _ := doc.Get(objectIdField).(string)
+	return id
 }
 
 // NewDocument creates a new empty document.
@@ -105,6 +104,17 @@ func (doc *Document) SetAll(values map[string]interface{}) {
 	}
 }
 
+// ExpiresAt returns the document expiration instant
+func (doc *Document) ExpiresAt() *time.Time {
+	exp, _ := doc.Get(expiresAtField).(*time.Time)
+	return exp
+}
+
+// ExpiresAt sets document expiration
+func (doc *Document) SetExpiresAt(expiration time.Time) {
+	doc.Set(expiresAtField, expiration)
+}
+
 // Unmarshal stores the document in the value pointed by v.
 func (doc *Document) Unmarshal(v interface{}) error {
 	return internal.Convert(doc.fields, v)
@@ -134,4 +144,15 @@ func compareDocuments(first *Document, second *Document, sortOpts []SortOption) 
 		}
 	}
 	return 0
+}
+
+func validateDocument(doc *Document) error {
+	if !isValidObjectId(doc.ObjectId()) {
+		return fmt.Errorf("invalid _id: %s", doc.ObjectId())
+	}
+
+	if doc.Has(expiresAtField) && doc.ExpiresAt() == nil {
+		return fmt.Errorf("invalid _expiresAt: %s", doc.Get(expiresAtField))
+	}
+	return nil
 }

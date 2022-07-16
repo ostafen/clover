@@ -134,3 +134,21 @@ func TestDocumentUnmarshal(t *testing.T) {
 		}
 	})
 }
+
+func TestDocumentValidation(t *testing.T) {
+	runCloverTest(t, func(t *testing.T, db *c.DB) {
+		require.NoError(t, db.CreateCollection("test"))
+
+		doc := c.NewDocument()
+		doc.Set("_expiresAt", -1)
+
+		_, err := db.InsertOne("test", doc)
+		require.Error(t, err)
+
+		doc = c.NewDocument()
+		doc.Set("_id", 0)
+
+		_, err = db.InsertOne("test", doc)
+		require.Error(t, err)
+	})
+}

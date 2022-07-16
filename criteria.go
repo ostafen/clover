@@ -8,7 +8,8 @@ import (
 )
 
 const (
-	objectIdField = "_id"
+	objectIdField  = "_id"
+	expiresAtField = "_expiresAt"
 )
 
 const (
