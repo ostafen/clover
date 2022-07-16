@@ -248,10 +248,6 @@ func (s *storageImpl) Insert(collection string, docs ...*Document) error {
 	indexes, err := s.listIndexes(collection, txn)
 
 	for _, doc := range docs {
-		data, err := encodeDoc(doc)
-		if err != nil {
-			return err
-		}
 
 		if err := s.addDocToIndexes(txn, indexes, doc); err != nil {
 			return err
@@ -263,11 +259,37 @@ func (s *storageImpl) Insert(collection string, docs ...*Document) error {
 			return ErrDuplicateKey
 		}
 
-		if err := txn.Set(key, data); err != nil {
+		if err := saveDocument(doc, key, txn); err != nil {
 			return err
 		}
 	}
 	return txn.Commit()
+}
+
+func saveDocument(doc *Document, key []byte, txn *badger.Txn) error {
+	if err := validateDocument(doc); err != nil {
+		return err
+	}
+
+	data, err := encodeDoc(doc)
+	if err != nil {
+		return err
+	}
+
+	e := badger.NewEntry(key, data)
+
+	expiresAt := doc.ExpiresAt()
+	now := time.Now()
+
+	if expiresAt != nil && expiresAt.Before(now) { // document already expired
+		return nil
+	}
+
+	if expiresAt != nil {
+		e = e.WithTTL(time.Millisecond * time.Duration(expiresAt.Sub(now).Milliseconds()))
+	}
+
+	return txn.SetEntry(e)
 }
 
 func (s *storageImpl) deleteDocFromIndexes(txn *badger.Txn, indexes []*indexImpl, doc *Document) error {
@@ -356,12 +378,7 @@ func (s *storageImpl) replaceDocs(txn *badger.Txn, q *Query, updater docUpdater)
 			return txn.Delete(docKey)
 		}
 
-		data, err := encodeDoc(newDoc)
-		if err != nil {
-			return err
-		}
-
-		return txn.Set(docKey, data)
+		return saveDocument(newDoc, docKey, txn)
 	})
 
 	if err != nil {
