@@ -106,8 +106,11 @@ func (doc *Document) SetAll(values map[string]interface{}) {
 
 // ExpiresAt returns the document expiration instant
 func (doc *Document) ExpiresAt() *time.Time {
-	exp, _ := doc.Get(expiresAtField).(*time.Time)
-	return exp
+	exp, ok := doc.Get(expiresAtField).(time.Time)
+	if !ok {
+		return nil
+	}
+	return &exp
 }
 
 // ExpiresAt sets document expiration

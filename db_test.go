@@ -1416,7 +1416,7 @@ func TestExpiration(t *testing.T) {
 
 		require.NoError(t, db.CreateIndex("test", "HasExpiration"))
 
-		nInserts := 0
+		nInserts := 1000
 
 		expiredDocuments := 0
 
@@ -1452,7 +1452,13 @@ func TestExpiration(t *testing.T) {
 		require.Equal(t, 0, n)
 
 		// run an insert with already expired documents
-		require.NoError(t, db.Insert("test", docs...))
+		expired := make([]*c.Document, 0)
+		for _, doc := range docs {
+			if doc.Get("HasExpiration").(bool) {
+				expired = append(expired, doc)
+			}
+		}
+		require.NoError(t, db.Insert("test", expired...))
 
 		n, err = db.Query("test").Where(c.Field("HasExpiration").Eq(true)).Count()
 		require.NoError(t, err)
