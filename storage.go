@@ -224,7 +224,7 @@ func (s *storageImpl) addDocToIndexes(txn *badger.Txn, indexes []*indexImpl, doc
 	for _, idx := range indexes {
 		fieldVal := doc.Get(idx.fieldName) // missing fields are treated as null
 
-		err := idx.Set(txn, fieldVal, doc.ObjectId())
+		err := idx.Set(txn, fieldVal, doc.ObjectId(), doc.TTL())
 		if err != nil {
 			return err
 		}
@@ -278,15 +278,13 @@ func saveDocument(doc *Document, key []byte, txn *badger.Txn) error {
 
 	e := badger.NewEntry(key, data)
 
-	expiresAt := doc.ExpiresAt()
-	now := time.Now()
-
-	if expiresAt != nil && expiresAt.Before(now) { // document already expired
+	ttl := doc.TTL()
+	if ttl == 0 {
 		return nil
 	}
 
-	if expiresAt != nil {
-		e = e.WithTTL(time.Millisecond * time.Duration(expiresAt.Sub(now).Milliseconds()))
+	if ttl > 0 {
+		e = e.WithTTL(ttl)
 	}
 
 	return txn.SetEntry(e)
@@ -513,7 +511,9 @@ func iteratePrefix(prefix []byte, txn *badger.Txn, itemConsumer func(item *badge
 func (s *storageImpl) iterateDocsFromIndex(indexQuery *indexQuery, collection string, txn *badger.Txn, consumer docConsumer) error {
 	return indexQuery.index.IterateRange(txn, indexQuery.vRange, func(docId string) error {
 		doc, err := s.getDocumentById(collection, docId, txn)
-		if err != nil {
+
+		// err == badger.ErrKeyNotFound when index record expires before document record
+		if err != nil && !errors.Is(err, badger.ErrKeyNotFound) {
 			return err
 		}
 		return consumer(doc)
@@ -757,7 +757,7 @@ func (s *storageImpl) CreateIndex(collection, field string) error {
 
 	err = s.iterateDocs(txn, newQuery(collection, s), func(doc *Document) error {
 		value := doc.Get(field)
-		return idx.Set(txn, value, doc.ObjectId())
+		return idx.Set(txn, value, doc.ObjectId(), doc.TTL())
 	})
 
 	if err != nil {

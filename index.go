@@ -3,6 +3,7 @@ package clover
 import (
 	"bytes"
 	"fmt"
+	"time"
 
 	badger "github.com/dgraph-io/badger/v3"
 	"github.com/ostafen/clover/internal"
@@ -46,12 +47,21 @@ func (idx *indexImpl) encodeValueAndId(value interface{}, docId string) ([]byte,
 	return encodedKey, nil
 }
 
-func (idx *indexImpl) Set(txn *badger.Txn, value interface{}, docId string) error {
+func (idx *indexImpl) Set(txn *badger.Txn, value interface{}, docId string, ttl time.Duration) error {
+	if ttl == 0 {
+		return nil
+	}
+
 	encodedKey, err := idx.encodeValueAndId(value, docId)
 	if err != nil {
 		return err
 	}
-	return txn.Set(encodedKey, nil)
+
+	e := badger.NewEntry(encodedKey, nil)
+	if ttl > 0 {
+		e = e.WithTTL(ttl)
+	}
+	return txn.SetEntry(e)
 }
 
 func (idx *indexImpl) Delete(txn *badger.Txn, value interface{}, docId string) error {
