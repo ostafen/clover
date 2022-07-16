@@ -157,6 +157,10 @@ func (q *Query) FindFirst() (*Document, error) {
 // ForEach runs the consumer function for each document matching the provied query.
 // If false is returned from the consumer function, then the iteration is stopped.
 func (q *Query) ForEach(consumer func(_ *Document) bool) error {
+	if err := q.normalizeCriteria(); err != nil {
+		return err
+	}
+
 	return q.engine.IterateDocs(q, func(doc *Document) error {
 		if !consumer(doc) {
 			return errStopIteration

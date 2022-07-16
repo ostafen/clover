@@ -454,16 +454,11 @@ func (s *storageImpl) UpdateById(collectionName string, docId string, updater fu
 		}
 
 		updatedDoc := updater(doc)
-		encodedDoc, err := encodeDoc(updatedDoc)
-		if err != nil {
-			return err
-		}
-
 		if err := s.updateIndexesOnDocUpdate(txn, collectionName, doc, updatedDoc); err != nil {
 			return err
 		}
 
-		return txn.Set([]byte(docKey), encodedDoc)
+		return saveDocument(updatedDoc, []byte(docKey), txn)
 	})
 }
 

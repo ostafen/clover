@@ -1356,13 +1356,45 @@ func TestIndexDelete(t *testing.T) {
 
 		criteria := c.Field("Statistics.Flights.Cancelled").Gt(100).And(c.Field("Statistics.Flights.Cancelled").Lt(200))
 
-		err := db.CreateIndex("airlines", "Statistics.Flights.Cancelled")
+		n, err := db.Query("airlines").Where(criteria).Count()
+		require.NoError(t, err)
+
+		require.Greater(t, n, 0)
+
+		err = db.CreateIndex("airlines", "Statistics.Flights.Cancelled")
 		require.NoError(t, err)
 
 		err = db.Query("airlines").Where(criteria).Delete()
 		require.NoError(t, err)
 
+		n, err = db.Query("airlines").Where(criteria).Count()
+		require.NoError(t, err)
+
+		require.Equal(t, n, 0)
+	})
+}
+
+func TestDeleteByIdWithIndex(t *testing.T) {
+	runCloverTest(t, func(t *testing.T, db *c.DB) {
+		require.NoError(t, loadFromJson(db, airlinesPath, nil))
+
+		criteria := c.Field("Statistics.Flights.Cancelled").Gt(100).And(c.Field("Statistics.Flights.Cancelled").Lt(200))
 		n, err := db.Query("airlines").Where(criteria).Count()
+		require.NoError(t, err)
+
+		require.Greater(t, n, 0)
+
+		err = db.CreateIndex("airlines", "Statistics.Flights.Cancelled")
+		require.NoError(t, err)
+
+		err = db.Query("airlines").Where(criteria).ForEach(func(doc *c.Document) bool {
+			err := db.Query("airlines").DeleteById(doc.ObjectId())
+			require.NoError(t, err)
+			return true
+		})
+		require.NoError(t, err)
+
+		n, err = db.Query("airlines").Where(criteria).Count()
 		require.NoError(t, err)
 
 		require.Equal(t, n, 0)
