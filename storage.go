@@ -281,11 +281,11 @@ func saveDocument(doc *Document, key []byte, txn *badger.Txn) error {
 	expiresAt := doc.ExpiresAt()
 	now := time.Now()
 
-	if expiresAt.Before(now) { // document already expired
+	if expiresAt != nil && expiresAt.Before(now) { // document already expired
 		return nil
 	}
 
-	if expiresAt := doc.ExpiresAt(); expiresAt != nil {
+	if expiresAt != nil {
 		e = e.WithTTL(time.Millisecond * time.Duration(expiresAt.Sub(now).Milliseconds()))
 	}
 
