@@ -193,9 +193,14 @@ func (s *storageImpl) countCollection(q *Query) (int, error) {
 	size, err := s.getCollectionSize(q.collection)
 	size -= q.skip
 
+	if size < 0 {
+		size = 0
+	}
+
 	if q.limit >= 0 && q.limit < size {
 		return q.limit, err
 	}
+
 	return size, err
 }
 
