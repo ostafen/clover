@@ -13,7 +13,6 @@ import (
 
 	badger "github.com/dgraph-io/badger/v3"
 	"github.com/ostafen/clover/internal"
-	"github.com/ostafen/clover/util"
 )
 
 var ErrDocumentNotExist = errors.New("no such document")
@@ -92,11 +91,7 @@ func (s *storageImpl) stopGC() {
 }
 
 func (s *storageImpl) Open(path string, c *Config) error {
-	if !c.InMemory {
-		if err := util.MakeDirIfNotExists(path); err != nil {
-			return err
-		}
-	} else {
+	if c.InMemory {
 		path = ""
 	}
 
