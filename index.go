@@ -131,7 +131,7 @@ func (idx *indexImpl) IterateRange(txn *badger.Txn, vRange *valueRange, reverse 
 		seekPrefix = idx.getKeyPrefix()
 	}
 
-	it := txn.NewIterator(badger.DefaultIteratorOptions)
+	it := txn.NewIterator(opts)
 	defer it.Close()
 
 	it.Seek(seekPrefix)

@@ -562,26 +562,68 @@ func iteratePrefix(prefix []byte, txn *badger.Txn, itemConsumer func(item *badge
 	return nil
 }
 
-func (s *storageImpl) iterateDocsFromIndex(indexQuery *indexQuery, collection string, txn *badger.Txn, consumer docConsumer) error {
-	return indexQuery.index.IterateRange(txn, indexQuery.vRange, false, func(docId string) error {
-		doc, err := s.getDocumentById(collection, docId, txn)
+var errNoSuitableIndexFound = errors.New("no suitable index found for running provided query")
+
+func (s *storageImpl) tryIterateDocsFromIndex(q *Query, txn *badger.Txn, consumer docConsumer) error {
+	if q.criteria == nil {
+		return errNoSuitableIndexFound
+	}
+
+	indexQueries, err := s.getQueryIndexes(q, txn)
+	if err != nil {
+		return err
+	}
+
+	if len(indexQueries) != 1 {
+		return errNoSuitableIndexFound
+	}
+
+	indexQuery := indexQueries[0]
+	needSort := len(q.sortOpts) > 0
+
+	reversed := false
+	if len(q.sortOpts) == 1 && q.sortOpts[0].Field == indexQuery.index.fieldName {
+		needSort = false
+		reversed = q.sortOpts[0].Direction < 0
+	}
+
+	var docs []*Document
+	if needSort {
+		docs = make([]*Document, 0)
+	} else {
+		consumer = withSkipAndLimitConsumer(q, consumer)
+	}
+
+	err = indexQuery.index.IterateRange(txn, indexQuery.vRange, reversed, func(docId string) error {
+		doc, err := s.getDocumentById(q.collection, docId, txn)
 
 		// err == badger.ErrKeyNotFound when index record expires before document record
 		if err != nil && !errors.Is(err, badger.ErrKeyNotFound) {
 			return err
 		}
-		return consumer(doc)
-	})
-}
 
-func withQuery(q *Query, consumer docConsumer) docConsumer {
-	skipped := 0
-	consumed := 0
-	return func(doc *Document) error {
 		if !q.satisfy(doc) {
 			return nil
 		}
 
+		if !needSort {
+			return consumer(doc)
+		}
+
+		docs = append(docs, doc)
+		return nil
+	})
+
+	if err == nil && needSort {
+		return s.applySortSkipAndLimit(docs, q, consumer)
+	}
+	return err
+}
+
+func withSkipAndLimitConsumer(q *Query, consumer docConsumer) docConsumer {
+	skipped := 0
+	consumed := 0
+	return func(doc *Document) error {
 		if skipped < q.skip {
 			skipped++
 			return nil
@@ -618,52 +660,60 @@ func (s *storageImpl) iterateDocs(txn *badger.Txn, q *Query, consumer docConsume
 		return ErrCollectionNotExist
 	}
 
-	consumer = withQuery(q, consumer)
-	if q.criteria != nil {
-		indexQueries, err := s.getQueryIndexes(q, txn)
-		if err != nil {
-			return err
-		}
-
-		if len(indexQueries) == 1 { // for now, we don't handle joining results from multiple index queries
-			return s.iterateDocsFromIndex(indexQueries[0], q.collection, txn, consumer)
-		}
+	err = s.tryIterateDocsFromIndex(q, txn, consumer)
+	if errors.Is(err, errNoSuitableIndexFound) {
+		return s.iterateCollection(q, txn, consumer)
 	}
-	return s.iterateCollection(q.collection, txn, consumer)
+	return err
 }
 
-func (s *storageImpl) iterateCollection(collection string, txn *badger.Txn, consumer docConsumer) error {
-	prefix := []byte(getDocumentKeyPrefix(collection))
-	return iteratePrefix(prefix, txn, func(item *badger.Item) error {
+func (s *storageImpl) iterateCollection(q *Query, txn *badger.Txn, consumer docConsumer) error {
+	prefix := []byte(getDocumentKeyPrefix(q.collection))
+
+	var docs []*Document
+
+	needSort := len(q.sortOpts) > 0
+	if needSort {
+		docs = make([]*Document, 0)
+	} else {
+		consumer = withSkipAndLimitConsumer(q, consumer)
+	}
+
+	err := iteratePrefix(prefix, txn, func(item *badger.Item) error {
 		return item.Value(func(data []byte) error {
 			doc, err := decodeDoc(data)
 			if err != nil {
 				return err
 			}
-			return consumer(doc)
+
+			if !q.satisfy(doc) {
+				return nil
+			}
+
+			if !needSort {
+				return consumer(doc)
+			}
+
+			docs = append(docs, doc)
+			return nil
 		})
 	})
+
+	if err == nil && needSort {
+		return s.applySortSkipAndLimit(docs, q, consumer)
+	}
+	return err
 }
 
-func (s *storageImpl) iterateDocsSlice(q *Query, consumer docConsumer) error {
-	allDocs := make([]*Document, 0)
-	err := s.iterateDocs(nil, q.Skip(0).Limit(-1), func(doc *Document) error {
-		allDocs = append(allDocs, doc)
-		return nil
+func (s *storageImpl) applySortSkipAndLimit(docs []*Document, q *Query, consumer docConsumer) error {
+	sort.Slice(docs, func(i, j int) bool {
+		return compareDocuments(docs[i], docs[j], q.sortOpts) < 0
 	})
 
-	if err != nil {
-		return err
-	}
+	docs = s.applySkipAndLimit(q, docs)
 
-	sort.Slice(allDocs, func(i, j int) bool {
-		return compareDocuments(allDocs[i], allDocs[j], q.sortOpts) < 0
-	})
-
-	allDocs = s.applySkipAndLimit(q, allDocs)
-
-	for _, doc := range allDocs {
-		err = consumer(doc)
+	for _, doc := range docs {
+		err := consumer(doc)
 		if err == errStopIteration {
 			return nil
 		}
@@ -731,11 +781,7 @@ func (s *storageImpl) getQueryIndexes(q *Query, txn *badger.Txn) ([]*indexQuery,
 }
 
 func (s *storageImpl) IterateDocs(q *Query, consumer docConsumer) error {
-	sortDocs := len(q.sortOpts) > 0
-	if !sortDocs {
-		return s.iterateDocs(nil, q, consumer)
-	}
-	return s.iterateDocsSlice(q, consumer)
+	return s.iterateDocs(nil, q, consumer)
 }
 
 func (s *storageImpl) ListCollections() ([]string, error) {
