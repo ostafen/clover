@@ -2,6 +2,7 @@ package clover
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"log"
 	"sort"
@@ -109,6 +110,10 @@ func (s *storageImpl) Open(path string, c *Config) error {
 	return err
 }
 
+type collectionMetadata struct {
+	Size int
+}
+
 func getCollectionKeyPrefix() string {
 	return "coll:"
 }
@@ -130,7 +135,8 @@ func (s *storageImpl) CreateCollection(name string) error {
 		return ErrCollectionExist
 	}
 
-	if err := txn.Set([]byte(getCollectionKey(name)), []byte{0}); err != nil {
+	meta := &collectionMetadata{Size: 0}
+	if err := s.saveCollectionMetadata(name, meta, txn); err != nil {
 		return err
 	}
 	return txn.Commit()
@@ -151,7 +157,58 @@ func (s *storageImpl) DropCollection(name string) error {
 	return txn.Commit()
 }
 
+func (s *storageImpl) getCollectionMeta(collection string, txn *badger.Txn) (*collectionMetadata, error) {
+	e, err := txn.Get([]byte(getCollectionKey(collection)))
+	if errors.Is(err, badger.ErrKeyNotFound) {
+		return nil, ErrCollectionNotExist
+	}
+
+	m := &collectionMetadata{}
+	err = e.Value(func(rawMeta []byte) error {
+		return json.Unmarshal(rawMeta, m)
+	})
+	return m, err
+}
+
+func (s *storageImpl) saveCollectionMetadata(collection string, meta *collectionMetadata, txn *badger.Txn) error {
+	rawMeta, err := json.Marshal(meta)
+	if err != nil {
+		return err
+	}
+	return txn.Set([]byte(getCollectionKey(collection)), rawMeta)
+}
+
+func (s *storageImpl) getCollectionSize(collection string) (int, error) {
+	txn := s.db.NewTransaction(false)
+	defer txn.Discard()
+
+	meta, err := s.getCollectionMeta(collection, txn)
+	if err != nil {
+		return -1, err
+	}
+	return meta.Size, nil
+}
+
+func (s *storageImpl) countCollection(q *Query) (int, error) {
+	size, err := s.getCollectionSize(q.collection)
+	size -= q.skip
+
+	if size < 0 {
+		size = 0
+	}
+
+	if q.limit >= 0 && q.limit < size {
+		return q.limit, err
+	}
+
+	return size, err
+}
+
 func (s *storageImpl) Count(q *Query) (int, error) {
+	if q.criteria == nil { // simply return the size of the collection in this case
+		return s.countCollection(q)
+	}
+
 	num := 0
 	err := s.IterateDocs(q, func(doc *Document) error {
 		num++
@@ -236,13 +293,9 @@ func (s *storageImpl) Insert(collection string, docs ...*Document) error {
 	txn := s.db.NewTransaction(true)
 	defer txn.Discard()
 
-	ok, err := s.hasCollection(collection, txn)
+	meta, err := s.getCollectionMeta(collection, txn)
 	if err != nil {
 		return err
-	}
-
-	if !ok {
-		return ErrCollectionNotExist
 	}
 
 	indexes, err := s.listIndexes(collection, txn)
@@ -263,6 +316,12 @@ func (s *storageImpl) Insert(collection string, docs ...*Document) error {
 			return err
 		}
 	}
+
+	meta.Size += len(docs)
+	if err := s.saveCollectionMetadata(collection, meta, txn); err != nil {
+		return err
+	}
+
 	return txn.Commit()
 }
 
@@ -355,15 +414,12 @@ func (s *storageImpl) replaceDocs(txn *badger.Txn, q *Query, updater docUpdater)
 		defer txn.Discard()
 	}
 
-	ok, err := s.hasCollection(q.collection, txn)
+	meta, err := s.getCollectionMeta(q.collection, txn)
 	if err != nil {
 		return err
 	}
 
-	if !ok {
-		return ErrCollectionNotExist
-	}
-
+	deletedDocs := 0
 	err = s.iterateDocs(txn, q, func(doc *Document) error {
 		docKey := []byte(getDocumentKey(q.collection, doc.ObjectId()))
 		newDoc := updater(doc)
@@ -373,6 +429,7 @@ func (s *storageImpl) replaceDocs(txn *badger.Txn, q *Query, updater docUpdater)
 		}
 
 		if newDoc == nil {
+			deletedDocs++
 			return txn.Delete(docKey)
 		}
 
@@ -381,6 +438,13 @@ func (s *storageImpl) replaceDocs(txn *badger.Txn, q *Query, updater docUpdater)
 
 	if err != nil {
 		return err
+	}
+
+	if deletedDocs > 0 {
+		meta.Size -= deletedDocs
+		if err := s.saveCollectionMetadata(q.collection, meta, txn); err != nil {
+			return err
+		}
 	}
 	return txn.Commit()
 }
@@ -405,13 +469,9 @@ func (s *storageImpl) DeleteById(collName string, id string) error {
 	txn := s.db.NewTransaction(true)
 	defer txn.Discard()
 
-	ok, err := s.hasCollection(collName, txn)
+	meta, err := s.getCollectionMeta(collName, txn)
 	if err != nil {
 		return err
-	}
-
-	if !ok {
-		return ErrCollectionNotExist
 	}
 
 	if err := s.getDocAndDeleteFromIndexes(txn, collName, id); err != nil {
@@ -422,6 +482,10 @@ func (s *storageImpl) DeleteById(collName string, id string) error {
 		return err
 	}
 
+	meta.Size--
+	if err := s.saveCollectionMetadata(collName, meta, txn); err != nil {
+		return err
+	}
 	return txn.Commit()
 }
 
