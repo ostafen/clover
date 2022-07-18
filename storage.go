@@ -563,7 +563,7 @@ func iteratePrefix(prefix []byte, txn *badger.Txn, itemConsumer func(item *badge
 }
 
 func (s *storageImpl) iterateDocsFromIndex(indexQuery *indexQuery, collection string, txn *badger.Txn, consumer docConsumer) error {
-	return indexQuery.index.IterateRange(txn, indexQuery.vRange, func(docId string) error {
+	return indexQuery.index.IterateRange(txn, indexQuery.vRange, false, func(docId string) error {
 		doc, err := s.getDocumentById(collection, docId, txn)
 
 		// err == badger.ErrKeyNotFound when index record expires before document record

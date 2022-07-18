@@ -1374,6 +1374,28 @@ func TestIndexDelete(t *testing.T) {
 	})
 }
 
+func TestIndexQueryWithSort(t *testing.T) {
+	runCloverTest(t, func(t *testing.T, db *c.DB) {
+		require.NoError(t, loadFromJson(db, airlinesPath, nil))
+
+		criteria := c.Field("Statistics.Flights.Cancelled").Gt(100).And(c.Field("Statistics.Flights.Cancelled").Lt(200))
+		q := db.Query("airlines").Where(criteria).Sort(c.SortOption{Field: "Statistics.Flights.Cancelled", Direction: -1})
+		docs, err := q.FindAll()
+		require.NoError(t, err)
+
+		require.NoError(t, db.CreateIndex("airlines", "Statistics.Flights.Cancelled"))
+
+		indexDocs, err := q.FindAll()
+		require.NoError(t, err)
+
+		require.Equal(t, len(docs), len(indexDocs))
+
+		for i := 0; i < len(docs); i++ {
+			require.Equal(t, docs[i].Get("Statistics.Flights.Cancelled"), indexDocs[i].Get("Statistics.Flights.Cancelled"))
+		}
+	})
+}
+
 func TestDeleteByIdWithIndex(t *testing.T) {
 	runCloverTest(t, func(t *testing.T, db *c.DB) {
 		require.NoError(t, loadFromJson(db, airlinesPath, nil))
