@@ -17,6 +17,7 @@ import (
 	"github.com/brianvoe/gofakeit/v6"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ostafen/clover"
 	c "github.com/ostafen/clover"
 )
 
@@ -39,7 +40,7 @@ func runCloverTest(t *testing.T, test func(t *testing.T, db *c.DB)) {
 	dir, err := ioutil.TempDir("", "clover-test")
 	require.NoError(t, err)
 
-	db, err := c.Open(dir, c.WithGCReclaimInterval(time.Millisecond*100))
+	db, err := c.Open(dir, c.WithGCReclaimInterval(time.Millisecond*500))
 	require.NoError(t, err)
 
 	defer func() {
@@ -1371,6 +1372,67 @@ func TestIndexDelete(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Equal(t, n, 0)
+	})
+}
+
+func TestIndexQueryWithSort(t *testing.T) {
+	runCloverTest(t, func(t *testing.T, db *c.DB) {
+		require.NoError(t, loadFromJson(db, airlinesPath, nil))
+
+		criteria := c.Field("Statistics.Flights.Cancelled").Gt(100).And(c.Field("Statistics.Flights.Cancelled").Lt(200))
+		q := db.Query("airlines").Where(criteria).Sort(c.SortOption{Field: "Statistics.Flights.Cancelled", Direction: -1})
+		docs, err := q.FindAll()
+		require.NoError(t, err)
+
+		require.NoError(t, db.CreateIndex("airlines", "Statistics.Flights.Cancelled"))
+
+		indexDocs, err := q.FindAll()
+		require.NoError(t, err)
+
+		require.Equal(t, len(docs), len(indexDocs))
+
+		for i := 0; i < len(docs); i++ {
+			require.Equal(t, docs[i].Get("Statistics.Flights.Cancelled"), indexDocs[i].Get("Statistics.Flights.Cancelled"))
+		}
+	})
+}
+
+func TestPagedQueryUsingIndex(t *testing.T) {
+	runCloverTest(t, func(t *testing.T, db *c.DB) {
+		err := db.CreateCollection("test")
+		require.NoError(t, err)
+		err = db.CreateIndex("test", "timestamp")
+
+		n := 100003
+		for i := 0; i < n; i++ {
+			doc := clover.NewDocument()
+			doc.Set("timestamp", time.Now().UnixNano())
+			_, err := db.InsertOne("test", doc)
+			require.NoError(t, err)
+		}
+
+		count := 0
+		var lastDoc *clover.Document = nil
+		for {
+			var instant int64
+			if lastDoc == nil {
+				instant = time.Now().UnixNano()
+			} else {
+				instant = lastDoc.Get("timestamp").(int64)
+			}
+
+			sortOpt := clover.SortOption{Field: "timestamp", Direction: -1}
+			all, err := db.Query("test").Where(clover.Field("timestamp").Lt(instant)).Sort(sortOpt).Limit(25).FindAll()
+			require.NoError(t, err)
+
+			if len(all) > 0 {
+				lastDoc = all[len(all)-1]
+			} else {
+				break
+			}
+			count += len(all)
+		}
+		require.Equal(t, n, count)
 	})
 }
 

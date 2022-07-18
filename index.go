@@ -95,8 +95,6 @@ func (idx *indexImpl) encodeRange(vRange *valueRange) ([]byte, []byte, error) {
 		if err != nil {
 			return nil, nil, err
 		}
-	} else {
-		startKey = idx.lowestKeyPrefix()
 	}
 
 	if vRange.isNil() || vRange.end != nil {
@@ -109,23 +107,44 @@ func (idx *indexImpl) encodeRange(vRange *valueRange) ([]byte, []byte, error) {
 	return startKey, endKey, nil
 }
 
-func (idx *indexImpl) IterateRange(txn *badger.Txn, vRange *valueRange, onValue func(docId string) error) error {
+func (idx *indexImpl) IterateRange(txn *badger.Txn, vRange *valueRange, reverse bool, onValue func(docId string) error) error {
 	if vRange.isEmpty() {
 		return nil
 	}
-
-	it := txn.NewIterator(badger.DefaultIteratorOptions)
-	defer it.Close()
 
 	startKey, endKey, err := idx.encodeRange(vRange)
 	if err != nil {
 		return err
 	}
 
-	it.Seek(startKey)
+	seekPrefix := startKey
 
-	if vRange.start != nil && !vRange.startIncluded { // skip all values equals to first range.start
-		for ; it.ValidForPrefix(startKey); it.Next() {
+	opts := badger.DefaultIteratorOptions
+	opts.PrefetchValues = false
+
+	if reverse {
+		seekPrefix = endKey
+		opts.Reverse = true
+	}
+
+	if seekPrefix == nil {
+		seekPrefix = idx.getKeyPrefix()
+	}
+
+	it := txn.NewIterator(opts)
+	defer it.Close()
+
+	it.Seek(seekPrefix)
+
+	if !reverse {
+		if vRange.start != nil && !vRange.startIncluded { // skip all values equals to range.start
+			for ; it.ValidForPrefix(startKey); it.Next() {
+			}
+		}
+	} else {
+		if vRange.end != nil && !vRange.endIncluded { // skip all values equals to range.end
+			for ; it.ValidForPrefix(endKey); it.Next() {
+			}
 		}
 	}
 
@@ -135,9 +154,16 @@ func (idx *indexImpl) IterateRange(txn *badger.Txn, vRange *valueRange, onValue 
 
 		p, docId := extractDocId(key)
 
-		endCmp := bytes.Compare(p, endKey)
-		if (vRange.end != nil || vRange.isNil()) && (endCmp > 0 || (endCmp == 0 && !vRange.endIncluded)) {
-			break
+		if !reverse {
+			endCmp := bytes.Compare(p, endKey)
+			if (vRange.end != nil || vRange.isNil()) && (endCmp > 0 || (endCmp == 0 && !vRange.endIncluded)) {
+				break
+			}
+		} else {
+			startCmp := bytes.Compare(p, startKey)
+			if (vRange.start != nil || vRange.isNil()) && (startCmp < 0 || (startCmp == 0 && !vRange.startIncluded)) {
+				break
+			}
 		}
 
 		if err := onValue(string(docId)); err != nil {
