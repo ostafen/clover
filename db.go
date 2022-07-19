@@ -2,6 +2,7 @@ package clover
 
 import (
 	"errors"
+	"fmt"
 
 	uuid "github.com/satori/go.uuid"
 )
@@ -18,11 +19,6 @@ var (
 type DB struct {
 	dir    string
 	engine StorageEngine
-}
-
-// Query simply returns the collection with the supplied name. Use it to initialize a new query.
-func (db *DB) Query(name string) *Query {
-	return newQuery(name, db.engine)
 }
 
 // CreateCollection creates a new empty collection with the given name.
@@ -65,7 +61,7 @@ func (db *DB) Save(collectionName string, doc *Document) error {
 	if !doc.Has(objectIdField) {
 		return db.Insert(collectionName, doc)
 	}
-	return db.Query(collectionName).ReplaceById(doc.ObjectId(), doc)
+	return db.ReplaceById(collectionName, doc.ObjectId(), doc)
 }
 
 // InsertOne inserts a single document to an existing collection. It returns the id of the inserted document.
@@ -91,6 +87,109 @@ func Open(dir string, opts ...Option) (*DB, error) {
 // Close releases all the resources and closes the database. After the call, the instance will no more be usable.
 func (db *DB) Close() error {
 	return db.engine.Close()
+}
+
+// FindAll selects all the documents satisfying q.
+func (db *DB) FindAll(q *Query) ([]*Document, error) {
+	if err := q.normalizeCriteria(); err != nil {
+		return nil, err
+	}
+	return db.engine.FindAll(q)
+}
+
+// FindFirst returns the first document (if any) satisfying the query.
+func (db *DB) FindFirst(q *Query) (*Document, error) {
+	docs, err := db.FindAll(q.Limit(1))
+
+	var doc *Document
+	if len(docs) > 0 {
+		doc = docs[0]
+	}
+	return doc, err
+}
+
+// ForEach runs the consumer function for each document matching the provied query.
+// If false is returned from the consumer function, then the iteration is stopped.
+func (db *DB) ForEach(q *Query, consumer func(_ *Document) bool) error {
+	if err := q.normalizeCriteria(); err != nil {
+		return err
+	}
+
+	return db.engine.IterateDocs(q, func(doc *Document) error {
+		if !consumer(doc) {
+			return errStopIteration
+		}
+		return nil
+	})
+}
+
+// Count returns the number of documents which satisfy the query (i.e. len(q.FindAll()) == q.Count()).
+func (db *DB) Count(q *Query) (int, error) {
+	if err := q.normalizeCriteria(); err != nil {
+		return -1, err
+	}
+
+	num, err := db.engine.Count(q)
+	return num, err
+}
+
+// Exists returns true if and only if the query result set is not empty.
+func (db *DB) Exists(q *Query) (bool, error) {
+	doc, err := db.FindFirst(q)
+	return doc != nil, err
+}
+
+// FindById returns the document with the given id, if such a document exists and satisfies the underlying query, or null.
+func (db *DB) FindById(collection string, id string) (*Document, error) {
+	return db.engine.FindById(collection, id)
+}
+
+// DeleteById removes the document with the given id from the underlying collection, provided that such a document exists and satisfies the underlying query.
+func (db *DB) DeleteById(collection string, id string) error {
+	return db.engine.DeleteById(collection, id)
+}
+
+// UpdateById updates the document with the specified id using the supplied update map.
+// If no document with the specified id exists, an ErrDocumentNotExist is returned.
+func (db *DB) UpdateById(collection, docId string, updateMap map[string]interface{}) error {
+	return db.engine.UpdateById(collection, docId, func(doc *Document) *Document {
+		newDoc := doc.Copy()
+		newDoc.SetAll(updateMap)
+		return newDoc
+	})
+}
+
+// ReplaceById replaces the document with the specified id with the one provided.
+// If no document exists, an ErrDocumentNotExist is returned.
+func (db *DB) ReplaceById(collection, docId string, doc *Document) error {
+	if doc.ObjectId() != docId {
+		return fmt.Errorf("the id of the document must match the one supplied")
+	}
+	return db.engine.UpdateById(collection, docId, func(_ *Document) *Document {
+		return doc
+	})
+}
+
+// Update updates all the document selected by q using the provided updateMap.
+// Each update is specified by a mapping fieldName -> newValue.
+func (db *DB) Update(q *Query, updateMap map[string]interface{}) error {
+	if err := q.normalizeCriteria(); err != nil {
+		return err
+	}
+
+	return db.engine.Update(q.clearSortSkipAndLimit(), func(doc *Document) *Document {
+		newDoc := doc.Copy()
+		newDoc.SetAll(updateMap)
+		return newDoc
+	})
+}
+
+// Delete removes all the documents selected by q from the underlying collection.
+func (db *DB) Delete(q *Query) error {
+	if err := q.normalizeCriteria(); err != nil {
+		return err
+	}
+	return db.engine.Delete(q.clearSortSkipAndLimit())
 }
 
 // ListCollections returns a slice of strings containing the name of each collection stored in the db.

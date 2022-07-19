@@ -855,7 +855,7 @@ func (s *storageImpl) CreateIndex(collection, field string) error {
 		fieldName:      field,
 	}
 
-	err = s.iterateDocs(txn, newQuery(collection, s), func(doc *Document) error {
+	err = s.iterateDocs(txn, NewQuery(collection), func(doc *Document) error {
 		value := doc.Get(field)
 		return idx.Set(txn, value, doc.ObjectId(), doc.TTL())
 	})

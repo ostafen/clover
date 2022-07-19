@@ -122,7 +122,7 @@ func TestDocumentSetInvalidType(t *testing.T) {
 func TestDocumentUnmarshal(t *testing.T) {
 	runCloverTest(t, func(t *testing.T, db *c.DB) {
 		require.NoError(t, loadFromJson(db, todosPath, &TodoModel{}))
-		docs, err := db.Query("todos").FindAll()
+		docs, err := db.FindAll(c.NewQuery("todos"))
 		require.NoError(t, err)
 
 		todo := &TodoModel{}
