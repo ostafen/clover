@@ -36,7 +36,7 @@ func main() {
 	// restore collection from json file
 	db.ImportCollection("todos", "dump.json")
 
-	todos, _ := db.Query("todos").FindAll()
+	todos, _ := db.FindAll(c.NewQuery("todos"))
 
 	for _, todo := range todos {
 		fmt.Printf("title: %s\n", todo.Get("title"))

@@ -29,21 +29,21 @@ func main() {
 	db.InsertOne("todos", todo2)
 
 	// Sort todos by id (default)
-	docs, _ := db.Query("todos").Sort().FindAll()
+	docs, _ := db.FindAll(c.NewQuery("todos").Sort())
 
 	for _, doc := range docs {
 		fmt.Printf("title: %s\n", doc.Get("title"))
 	}
 
 	// Sort 'date' field in ascending order (-1 for descending)
-	docs, _ = db.Query("todos").Sort(c.SortOption{"date", 1}).FindAll()
+	docs, _ = db.FindAll(c.NewQuery("todos").Sort(c.SortOption{"date", 1}))
 
 	for _, doc := range docs {
 		fmt.Printf("date: %v\n", doc.Get("date"))
 	}
 
 	// Sort by number of tasks
-	docs, _ = db.Query("todos").Sort(c.SortOption{"tasks", -1}).FindAll()
+	docs, _ = db.FindAll(c.NewQuery("airlines").Sort(c.SortOption{"tasks", -1}))
 
 	for _, doc := range docs {
 		fmt.Printf("tasks: %v\n", doc.Get("tasks"))

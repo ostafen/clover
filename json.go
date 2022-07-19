@@ -17,7 +17,7 @@ func (db *DB) ExportCollection(collectionName string, exportPath string) error {
 		return ErrCollectionNotExist
 	}
 
-	result, err := db.Query(collectionName).FindAll()
+	result, err := db.FindAll(NewQuery(collectionName))
 	if err != nil {
 		return err
 	}

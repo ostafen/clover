@@ -31,19 +31,19 @@ func main() {
 	updates["completed"] = true
 
 	// mark all incomplete todos as completed
-	query := db.Query("todos").Where(c.Field("completed").Eq(false))
-	query.Update(updates)
+	query := c.NewQuery("todos").Where(c.Field("completed").Eq(false))
+	db.Update(query, updates)
 
 	// Query all todos
-	todos, _ := db.Query("todos").FindAll()
+	todos, _ := db.FindAll(c.NewQuery("todos"))
 	for _, todo := range todos {
 		fmt.Printf("title: %v, completed: %v\n", todo.Get("title"), todo.Get("completed"))
 	}
 
 	// Delete todos with userId of 2
-	db.Query("todos").Where(c.Field("userId").Eq(2)).Delete()
+	db.Delete(c.NewQuery("todos").Where(c.Field("userId").Eq(2)))
 
-	todos, _ = db.Query("todos").FindAll()
+	todos, _ = db.FindAll(c.NewQuery("todos"))
 	for _, todo := range todos {
 		fmt.Printf("title: %v, userId: %v\n", todo.Get("title"), todo.Get("userId"))
 	}

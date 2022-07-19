@@ -1,12 +1,7 @@
 package clover
 
-import (
-	"fmt"
-)
-
 // Query represents a generic query which is submitted to a specific collection.
 type Query struct {
-	engine     StorageEngine
 	collection string
 	criteria   Criteria
 	limit      int
@@ -14,11 +9,11 @@ type Query struct {
 	sortOpts   []SortOption
 }
 
-func newQuery(collection string, engine StorageEngine) *Query {
+// Query simply returns the collection with the supplied name. Use it to initialize a new query.
+func NewQuery(collection string) *Query {
 	return &Query{
 		collection: collection,
 		criteria:   nil,
-		engine:     engine,
 		limit:      -1,
 		skip:       0,
 		sortOpts:   nil,
@@ -27,7 +22,6 @@ func newQuery(collection string, engine StorageEngine) *Query {
 
 func (q *Query) copy() *Query {
 	return &Query{
-		engine:     q.engine,
 		collection: q.collection,
 		criteria:   q.criteria,
 		limit:      q.limit,
@@ -43,24 +37,8 @@ func (q *Query) satisfy(doc *Document) bool {
 	return q.criteria.Satisfy(doc)
 }
 
-// Count returns the number of documents which satisfy the query (i.e. len(q.FindAll()) == q.Count()).
-func (q *Query) Count() (int, error) {
-	if err := q.normalizeCriteria(); err != nil {
-		return -1, err
-	}
-
-	num, err := q.engine.Count(q)
-	return num, err
-}
-
-// Exists returns true if and only if the query result set is not empty.
-func (q *Query) Exists() (bool, error) {
-	doc, err := q.FindFirst()
-	return doc != nil, err
-}
-
-// MatchPredicate selects all the documents which satisfy the supplied predicate function.
-func (q *Query) MatchPredicate(p func(doc *Document) bool) *Query {
+// MatchFunc selects all the documents which satisfy the supplied predicate function.
+func (q *Query) MatchFunc(p func(doc *Document) bool) *Query {
 	return q.Where(newCriteria(FunctionOp, "", p))
 }
 
@@ -78,6 +56,7 @@ func (q *Query) Where(c Criteria) *Query {
 	return newQuery
 }
 
+// Skips sets the query so that the first n documents of the result set are discarded.
 func (q *Query) Skip(n int) *Query {
 	if n >= 0 {
 		newQuery := q.copy()
@@ -130,97 +109,10 @@ func (q *Query) Sort(opts ...SortOption) *Query {
 	return newQuery
 }
 
-// FindById returns the document with the given id, if such a document exists and satisfies the underlying query, or null.
-func (q *Query) FindById(id string) (*Document, error) {
-	return q.engine.FindById(q.collection, id)
-}
-
-// FindAll selects all the documents satisfying q.
-func (q *Query) FindAll() ([]*Document, error) {
-	if err := q.normalizeCriteria(); err != nil {
-		return nil, err
-	}
-	return q.engine.FindAll(q)
-}
-
-// FindFirst returns the first document (if any) satisfying the query.
-func (q *Query) FindFirst() (*Document, error) {
-	docs, err := q.Limit(1).FindAll()
-
-	var doc *Document
-	if len(docs) > 0 {
-		doc = docs[0]
-	}
-	return doc, err
-}
-
-// ForEach runs the consumer function for each document matching the provied query.
-// If false is returned from the consumer function, then the iteration is stopped.
-func (q *Query) ForEach(consumer func(_ *Document) bool) error {
-	if err := q.normalizeCriteria(); err != nil {
-		return err
-	}
-
-	return q.engine.IterateDocs(q, func(doc *Document) error {
-		if !consumer(doc) {
-			return errStopIteration
-		}
-		return nil
-	})
-}
-
 func (q *Query) clearSortSkipAndLimit() *Query {
 	q.sortOpts = nil
 	q = q.Skip(0).Limit(-1)
 	return q
-}
-
-// Update updates all the document selected by q using the provided updateMap.
-// Each update is specified by a mapping fieldName -> newValue.
-func (q *Query) Update(updateMap map[string]interface{}) error {
-	if err := q.normalizeCriteria(); err != nil {
-		return err
-	}
-
-	return q.engine.Update(q.clearSortSkipAndLimit(), func(doc *Document) *Document {
-		newDoc := doc.Copy()
-		newDoc.SetAll(updateMap)
-		return newDoc
-	})
-}
-
-// UpdateById updates the document with the specified id using the supplied update map.
-// If no document with the specified id exists, an ErrDocumentNotExist is returned.
-func (q *Query) UpdateById(docId string, updateMap map[string]interface{}) error {
-	return q.engine.UpdateById(q.collection, docId, func(doc *Document) *Document {
-		newDoc := doc.Copy()
-		newDoc.SetAll(updateMap)
-		return newDoc
-	})
-}
-
-// ReplaceById replaces the document with the specified id with the one provided.
-// If no document exists, an ErrDocumentNotExist is returned.
-func (q *Query) ReplaceById(docId string, doc *Document) error {
-	if doc.ObjectId() != docId {
-		return fmt.Errorf("the id of the document must match the one supplied")
-	}
-	return q.engine.UpdateById(q.collection, docId, func(_ *Document) *Document {
-		return doc
-	})
-}
-
-// DeleteById removes the document with the given id from the underlying collection, provided that such a document exists and satisfies the underlying query.
-func (q *Query) DeleteById(id string) error {
-	return q.engine.DeleteById(q.collection, id)
-}
-
-// Delete removes all the documents selected by q from the underlying collection.
-func (q *Query) Delete() error {
-	if err := q.normalizeCriteria(); err != nil {
-		return err
-	}
-	return q.engine.Delete(q.clearSortSkipAndLimit())
 }
 
 func (q *Query) normalizeCriteria() error {
