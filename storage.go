@@ -205,7 +205,7 @@ func (s *storageImpl) Count(q *Query) (int, error) {
 	}
 
 	num := 0
-	err := s.IterateDocs(q, func(doc *Document) error {
+	err := s.IterateDocs(q, func(_ *Document) error {
 		num++
 		return nil
 	})

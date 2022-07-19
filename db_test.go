@@ -993,7 +993,7 @@ func TestForEach(t *testing.T) {
 		require.NoError(t, err)
 
 		m := 0
-		err = db.ForEach(c.NewQuery("todos").Where(c.Field("completed").IsTrue()), func(doc *c.Document) bool {
+		err = db.ForEach(c.NewQuery("todos").Where(c.Field("completed").IsTrue()), func(_ *c.Document) bool {
 			m++
 			return true
 		})
@@ -1038,7 +1038,7 @@ func TestForEachStop(t *testing.T) {
 		require.NoError(t, loadFromJson(db, todosPath, &TodoModel{}))
 
 		n := 0
-		err := db.ForEach(c.NewQuery("todos"), func(doc *c.Document) bool {
+		err := db.ForEach(c.NewQuery("todos"), func(_ *c.Document) bool {
 			if n < 100 {
 				n++
 				return true
