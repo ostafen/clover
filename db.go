@@ -177,11 +177,19 @@ func (db *DB) Update(q *Query, updateMap map[string]interface{}) error {
 		return err
 	}
 
-	return db.engine.Update(q.clearSortSkipAndLimit(), func(doc *Document) *Document {
+	return db.UpdateFunc(q, func(doc *Document) *Document {
 		newDoc := doc.Copy()
 		newDoc.SetAll(updateMap)
 		return newDoc
 	})
+}
+
+// Update updates all the document selected by q using the provided function.
+func (db *DB) UpdateFunc(q *Query, updateFunc func(doc *Document) *Document) error {
+	if err := q.normalizeCriteria(); err != nil {
+		return err
+	}
+	return db.engine.Update(q.clearSortSkipAndLimit(), updateFunc)
 }
 
 // Delete removes all the documents selected by q from the underlying collection.
