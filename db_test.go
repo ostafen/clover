@@ -923,6 +923,22 @@ func TestSkip(t *testing.T) {
 	runCloverTest(t, func(t *testing.T, db *c.DB) {
 		require.NoError(t, loadFromJson(db, todosPath, &TodoModel{}))
 
+		allDocs, err := db.FindAll(c.NewQuery("todos"))
+		require.NoError(t, err)
+		require.Len(t, allDocs, 200)
+
+		skipDocs, err := db.FindAll(c.NewQuery("todos").Skip(100))
+		require.NoError(t, err)
+
+		require.Len(t, skipDocs, 100)
+		require.Equal(t, allDocs[100:], skipDocs)
+	})
+}
+
+func TestSkipWithSort(t *testing.T) {
+	runCloverTest(t, func(t *testing.T, db *c.DB) {
+		require.NoError(t, loadFromJson(db, todosPath, &TodoModel{}))
+
 		sortOption := c.SortOption{
 			Field:     "id",
 			Direction: 1,
@@ -1222,10 +1238,6 @@ func testIndexedQuery(t *testing.T, db *c.DB, criteria c.Criteria, collection, f
 	err = db.CreateIndex(collection, field)
 	require.NoError(t, err)
 
-	has, err := db.HasIndex(collection, field)
-	require.NoError(t, err)
-	require.True(t, has)
-
 	indexAllDocs, err := db.FindAll(c.NewQuery(collection).Where(criteria).Sort())
 	require.NoError(t, err)
 	require.Len(t, indexAllDocs, len(allDocs))
@@ -1240,7 +1252,17 @@ func TestCreateIndex(t *testing.T) {
 		require.Equal(t, c.ErrCollectionNotExist, db.CreateIndex("collection", "field"))
 		require.NoError(t, db.CreateCollection("collection"))
 
+		require.Equal(t, c.ErrCollectionNotExist, db.CreateIndex("coll", "field"))
+
+		has, err := db.HasIndex("collection", "field")
+		require.NoError(t, err)
+		require.False(t, has)
+
 		require.NoError(t, db.CreateIndex("collection", "field"))
+
+		has, err = db.HasIndex("collection", "field")
+		require.NoError(t, err)
+		require.True(t, has)
 
 		indexes, err := db.ListIndexes("collection")
 		require.NoError(t, err)
