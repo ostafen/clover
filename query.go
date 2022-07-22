@@ -109,12 +109,6 @@ func (q *Query) Sort(opts ...SortOption) *Query {
 	return newQuery
 }
 
-func (q *Query) clearSortSkipAndLimit() *Query {
-	q.sortOpts = nil
-	q = q.Skip(0).Limit(-1)
-	return q
-}
-
 func (q *Query) normalizeCriteria() error {
 	if q.criteria != nil {
 		v := &CriteriaNormalizeVisitor{}

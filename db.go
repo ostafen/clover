@@ -189,7 +189,7 @@ func (db *DB) UpdateFunc(q *Query, updateFunc func(doc *Document) *Document) err
 	if err := q.normalizeCriteria(); err != nil {
 		return err
 	}
-	return db.engine.Update(q.clearSortSkipAndLimit(), updateFunc)
+	return db.engine.Update(q, updateFunc)
 }
 
 // Delete removes all the documents selected by q from the underlying collection.
@@ -197,7 +197,7 @@ func (db *DB) Delete(q *Query) error {
 	if err := q.normalizeCriteria(); err != nil {
 		return err
 	}
-	return db.engine.Delete(q.clearSortSkipAndLimit())
+	return db.engine.Delete(q)
 }
 
 // ListCollections returns a slice of strings containing the name of each collection stored in the db.
