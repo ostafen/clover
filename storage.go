@@ -382,18 +382,13 @@ func (s *storageImpl) getDocAndDeleteFromIndexes(txn *badger.Txn, collection str
 	return nil
 }
 
-func (s *storageImpl) updateIndexesOnDocUpdate(txn *badger.Txn, collection string, oldDoc, newDoc *Document) error {
-	indexes, err := s.listIndexes(collection, txn)
-	if err != nil {
-		return err
-	}
-
+func (s *storageImpl) updateIndexesOnDocUpdate(txn *badger.Txn, indexes []*indexImpl, oldDoc, newDoc *Document) error {
 	if err := s.deleteDocFromIndexes(txn, indexes, oldDoc); err != nil {
 		return err
 	}
 
 	if newDoc != nil {
-		if s.addDocToIndexes(txn, indexes, newDoc); err != nil {
+		if err := s.addDocToIndexes(txn, indexes, newDoc); err != nil {
 			return err
 		}
 	}
@@ -404,12 +399,12 @@ func (s *storageImpl) updateIndexesOnDocUpdate(txn *badger.Txn, collection strin
 type docUpdater func(doc *Document) *Document
 
 func (s *storageImpl) replaceDocs(txn *badger.Txn, q *Query, updater docUpdater) error {
-	if txn == nil {
-		txn = s.db.NewTransaction(true)
-		defer txn.Discard()
+	meta, err := s.getCollectionMeta(q.collection, txn)
+	if err != nil {
+		return err
 	}
 
-	meta, err := s.getCollectionMeta(q.collection, txn)
+	indexes, err := s.listIndexes(q.collection, txn)
 	if err != nil {
 		return err
 	}
@@ -419,7 +414,7 @@ func (s *storageImpl) replaceDocs(txn *badger.Txn, q *Query, updater docUpdater)
 		docKey := []byte(getDocumentKey(q.collection, doc.ObjectId()))
 		newDoc := updater(doc)
 
-		if err := s.updateIndexesOnDocUpdate(txn, q.collection, doc, newDoc); err != nil {
+		if err := s.updateIndexesOnDocUpdate(txn, indexes, doc, newDoc); err != nil {
 			return err
 		}
 
@@ -441,23 +436,33 @@ func (s *storageImpl) replaceDocs(txn *badger.Txn, q *Query, updater docUpdater)
 			return err
 		}
 	}
-	return txn.Commit()
+	return nil
 }
 
 func (s *storageImpl) Update(q *Query, updater func(doc *Document) *Document) error {
-	return s.replaceDocs(nil, q, updater)
+	txn := s.db.NewTransaction(true)
+	defer txn.Discard()
+
+	if err := s.replaceDocs(txn, q, updater); err != nil {
+		return err
+	}
+	return txn.Commit()
 }
 
 func (s *storageImpl) deleteAll(txn *badger.Txn, collName string) error {
-	return s.replaceDocs(txn, &Query{collection: collName}, func(_ *Document) *Document {
+	return s.replaceDocs(txn, NewQuery(collName), func(_ *Document) *Document {
 		return nil
 	})
 }
 
 func (s *storageImpl) Delete(q *Query) error {
-	return s.replaceDocs(nil, q, func(_ *Document) *Document {
-		return nil
-	})
+	txn := s.db.NewTransaction(true)
+	defer txn.Discard()
+
+	if err := s.replaceDocs(txn, q, func(_ *Document) *Document { return nil }); err != nil {
+		return err
+	}
+	return txn.Commit()
 }
 
 func (s *storageImpl) DeleteById(collName string, id string) error {
@@ -495,6 +500,11 @@ func (s *storageImpl) UpdateById(collectionName string, docId string, updater fu
 			return ErrCollectionNotExist
 		}
 
+		indexes, err := s.listIndexes(collectionName, txn)
+		if err != nil {
+			return err
+		}
+
 		docKey := getDocumentKey(collectionName, docId)
 		item, err := txn.Get([]byte(docKey))
 		if errors.Is(err, badger.ErrKeyNotFound) {
@@ -513,7 +523,7 @@ func (s *storageImpl) UpdateById(collectionName string, docId string, updater fu
 		}
 
 		updatedDoc := updater(doc)
-		if err := s.updateIndexesOnDocUpdate(txn, collectionName, doc, updatedDoc); err != nil {
+		if err := s.updateIndexesOnDocUpdate(txn, indexes, doc, updatedDoc); err != nil {
 			return err
 		}
 
