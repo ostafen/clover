@@ -7,7 +7,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type BaseModel struct {
+	ID string `clover:""`
+}
+
 type TestStruct struct {
+	BaseModel
 	IntField    int                    `clover:"int,omitempty"`
 	UintField   uint                   `clover:"uint,omitempty"`
 	StringField string                 `clover:",omitempty"`
@@ -21,11 +26,14 @@ type TestStruct struct {
 }
 
 func TestNormalize(t *testing.T) {
-	date := time.Date(2020, 01, 1, 0, 0, 0, 0, time.UTC)
+	date := time.Date(2020, 0o1, 1, 0, 0, 0, 0, time.UTC)
 
 	var x int = 100
 
 	s := &TestStruct{
+		BaseModel: BaseModel{
+			ID: "UID",
+		},
 		TimeField:   date,
 		IntField:    10,
 		FloatField:  0.1,
@@ -50,9 +58,13 @@ func TestNormalize(t *testing.T) {
 	require.Nil(t, m["uint"]) // testing omitempty
 	require.Equal(t, m["IntPtr"], int64(100))
 
+	require.Equal(t, m["ID"], "UID")
+
 	s1 := &TestStruct{}
 	err = Convert(m, s1)
 	require.NoError(t, err)
+
+	require.Equal(t, s1.ID, "UID")
 
 	require.Equal(t, s, s1)
 
