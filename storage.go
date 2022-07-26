@@ -232,7 +232,7 @@ func encodeDoc(doc *Document) ([]byte, error) {
 	return internal.Encode(doc.fields)
 }
 
-func (s *storageImpl) getDocumentById(collectionName string, id string, txn *badger.Txn) (*Document, error) {
+func getDocumentById(collectionName string, id string, txn *badger.Txn) (*Document, error) {
 	item, err := txn.Get([]byte(getDocumentKey(collectionName, id)))
 	if errors.Is(err, badger.ErrKeyNotFound) {
 		return nil, nil
@@ -260,7 +260,7 @@ func (s *storageImpl) FindById(collectionName string, id string) (*Document, err
 		return nil, ErrCollectionNotExist
 	}
 
-	return s.getDocumentById(collectionName, id, txn)
+	return getDocumentById(collectionName, id, txn)
 }
 
 func getDocumentKeyPrefix(collection string) string {
@@ -364,7 +364,7 @@ func (s *storageImpl) getDocAndDeleteFromIndexes(txn *badger.Txn, collection str
 		return nil
 	}
 
-	doc, err := s.getDocumentById(collection, docId, txn)
+	doc, err := getDocumentById(collection, docId, txn)
 	if err != nil {
 		return err
 	}
@@ -605,7 +605,7 @@ func (s *storageImpl) tryIterateDocsFromIndex(q *Query, txn *badger.Txn, consume
 	}
 
 	err = indexQuery.index.IterateRange(txn, indexQuery.vRange, reversed, func(docId string) error {
-		doc, err := s.getDocumentById(q.collection, docId, txn)
+		doc, err := getDocumentById(q.collection, docId, txn)
 
 		// err == badger.ErrKeyNotFound when index record expires before document record
 		if err != nil && !errors.Is(err, badger.ErrKeyNotFound) {
