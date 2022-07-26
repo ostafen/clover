@@ -176,6 +176,29 @@ func (idx *indexImpl) IterateRange(txn *badger.Txn, vRange *valueRange, reverse 
 	return nil
 }
 
+func (idx *indexImpl) Iterate(txn *badger.Txn, reverse bool, onValue func(docId string) error) error {
+	opts := badger.DefaultIteratorOptions
+	opts.PrefetchValues = false
+	opts.Reverse = reverse
+
+	it := txn.NewIterator(opts)
+	defer it.Close()
+
+	prefix := idx.getKeyPrefix()
+	for it.Seek(prefix); it.Valid(); it.Next() {
+		key := it.Item().Key()
+
+		_, docId := extractDocId(key)
+		if err := onValue(string(docId)); err != nil {
+			if err == errStopIteration {
+				return nil
+			}
+			return err
+		}
+	}
+	return nil
+}
+
 type indexQuery struct {
 	vRange *valueRange
 	index  *indexImpl
