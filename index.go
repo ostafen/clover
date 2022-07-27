@@ -15,7 +15,7 @@ type indexImpl struct {
 }
 
 func (idx *indexImpl) getKeyPrefix() []byte {
-	return []byte(fmt.Sprintf("c:%s;i:%s;", idx.collectionName, idx.fieldName))
+	return []byte(fmt.Sprintf("c:%s;i:%s", idx.collectionName, idx.fieldName))
 }
 
 func (idx *indexImpl) getKeyPrefixForType(typeId int) []byte {
@@ -187,11 +187,13 @@ func (idx *indexImpl) Iterate(txn *badger.Txn, reverse bool, onValue func(docId 
 	defer it.Close()
 
 	prefix := idx.getKeyPrefix()
+
+	seekPrefix := prefix
 	if reverse {
-		it.Seek(append(prefix, 255))
-	} else {
-		it.Seek(prefix)
+		seekPrefix = append(seekPrefix, 255)
 	}
+
+	it.Seek(seekPrefix)
 
 	for ; it.ValidForPrefix(prefix); it.Next() {
 		key := it.Item().Key()
