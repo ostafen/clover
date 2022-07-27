@@ -77,11 +77,17 @@ func (nd *iterNode) iterateIndex(txn *badger.Txn) error {
 	iterFunc := func(docId string) error {
 		doc, err := getDocumentById(nd.collection, docId, txn)
 
-		// err == badger.ErrKeyNotFound when index record expires before document record
-		if err != nil && !errors.Is(err, badger.ErrKeyNotFound) {
-			return err
+		if err != nil {
+			// err == badger.ErrKeyNotFound when index record expires before document record
+			if !errors.Is(err, badger.ErrKeyNotFound) {
+				return err
+			}
 		}
-		return nd.CallNext(doc)
+
+		if nd.filter == nil || nd.filter.Satisfy(doc) {
+			return nd.CallNext(doc)
+		}
+		return nil
 	}
 
 	if nd.vRange != nil {
