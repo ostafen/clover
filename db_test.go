@@ -1049,6 +1049,27 @@ func TestSort(t *testing.T) {
 	})
 }
 
+func TestSortWithIndex(t *testing.T) {
+	runCloverTest(t, func(t *testing.T, db *c.DB) {
+		require.NoError(t, loadFromJson(db, airlinesPath, nil))
+
+		err := db.CreateIndex("airlines", "Statistics.Flights.Total")
+		require.NoError(t, err)
+
+		n, err := db.Count(c.NewQuery("airlines"))
+		require.NoError(t, err)
+
+		docs, err := db.FindAll(c.NewQuery("airlines").Sort(c.SortOption{Field: "Statistics.Flights.Total", Direction: -1}))
+		require.NoError(t, err)
+		require.Equal(t, n, len(docs))
+
+		sorted := sort.SliceIsSorted(docs, func(i, j int) bool {
+			return docs[j].Get("Statistics.Flights.Total").(float64) < docs[i].Get("Statistics.Flights.Total").(float64)
+		})
+		require.True(t, sorted)
+	})
+}
+
 func TestForEachStop(t *testing.T) {
 	runCloverTest(t, func(t *testing.T, db *c.DB) {
 		require.NoError(t, loadFromJson(db, todosPath, &TodoModel{}))
