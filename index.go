@@ -129,6 +129,9 @@ func (idx *indexImpl) IterateRange(txn *badger.Txn, vRange *valueRange, reverse 
 
 	if seekPrefix == nil {
 		seekPrefix = idx.getKeyPrefix()
+		if reverse {
+			seekPrefix = append(seekPrefix, 255)
+		}
 	}
 
 	it := txn.NewIterator(opts)
@@ -178,14 +181,19 @@ func (idx *indexImpl) IterateRange(txn *badger.Txn, vRange *valueRange, reverse 
 
 func (idx *indexImpl) Iterate(txn *badger.Txn, reverse bool, onValue func(docId string) error) error {
 	opts := badger.DefaultIteratorOptions
-	opts.PrefetchValues = false
 	opts.Reverse = reverse
 
 	it := txn.NewIterator(opts)
 	defer it.Close()
 
 	prefix := idx.getKeyPrefix()
-	for it.Seek(prefix); it.Valid(); it.Next() {
+	if reverse {
+		it.Seek(append(prefix, 255))
+	} else {
+		it.Seek(prefix)
+	}
+
+	for ; it.ValidForPrefix(prefix); it.Next() {
 		key := it.Item().Key()
 
 		_, docId := extractDocId(key)
