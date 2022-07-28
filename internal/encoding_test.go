@@ -110,11 +110,15 @@ func TestEncodeDecode(t *testing.T) {
 
 	require.NoError(t, gofakeit.Struct(s))
 
-	data, err := Encode(s)
+	norm, err := Normalize(s)
 	require.NoError(t, err)
 
-	s1 := &TestStruct{}
-	require.NoError(t, Decode(data, s1))
+	data, err := Encode(norm.(map[string]interface{}))
+	require.NoError(t, err)
 
-	require.Equal(t, s, s1)
+	var m map[string]interface{}
+
+	require.NoError(t, Decode(data, &m))
+
+	require.Equal(t, m, norm)
 }
