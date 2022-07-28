@@ -1,20 +1,14 @@
 package internal
 
 import (
-	"bytes"
-	"encoding/gob"
 	"encoding/json"
 	"fmt"
 	"reflect"
 	"strings"
 	"time"
-)
 
-func init() {
-	gob.Register(map[string]interface{}{})
-	gob.Register([]interface{}{})
-	gob.Register(time.Time{})
-}
+	"github.com/vmihailenco/msgpack/v5"
+)
 
 func processStructTag(tagStr string) (string, bool) {
 	tags := strings.Split(tagStr, ",")
@@ -211,15 +205,16 @@ func renameMapKeys(m map[string]interface{}, v interface{}) map[string]interface
 	return renamed
 }
 
-func Encode(v interface{}) ([]byte, error) {
-	var buf bytes.Buffer
-	err := gob.NewEncoder(&buf).Encode(v)
-	return buf.Bytes(), err
+func Encode(v map[string]interface{}) ([]byte, error) {
+	return msgpack.Marshal(replaceTimes(v))
 }
 
-func Decode(data []byte, v interface{}) error {
-	buf := bytes.NewBuffer(data)
-	return gob.NewDecoder(buf).Decode(v)
+func Decode(data []byte, m *map[string]interface{}) error {
+	err := msgpack.Unmarshal(data, m)
+	if err == nil {
+		removeLocalizedTimes(*m)
+	}
+	return err
 }
 
 func Convert(m map[string]interface{}, v interface{}) error {
