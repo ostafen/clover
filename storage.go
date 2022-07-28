@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"log"
-	"sort"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -106,7 +104,8 @@ func (s *storageImpl) Open(path string, c *Config) error {
 }
 
 type collectionMetadata struct {
-	Size int
+	Size    int
+	Indexes []string
 }
 
 func getCollectionKeyPrefix() string {
@@ -232,7 +231,7 @@ func encodeDoc(doc *Document) ([]byte, error) {
 	return internal.Encode(doc.fields)
 }
 
-func (s *storageImpl) getDocumentById(collectionName string, id string, txn *badger.Txn) (*Document, error) {
+func getDocumentById(collectionName string, id string, txn *badger.Txn) (*Document, error) {
 	item, err := txn.Get([]byte(getDocumentKey(collectionName, id)))
 	if errors.Is(err, badger.ErrKeyNotFound) {
 		return nil, nil
@@ -260,7 +259,7 @@ func (s *storageImpl) FindById(collectionName string, id string) (*Document, err
 		return nil, ErrCollectionNotExist
 	}
 
-	return s.getDocumentById(collectionName, id, txn)
+	return getDocumentById(collectionName, id, txn)
 }
 
 func getDocumentKeyPrefix(collection string) string {
@@ -293,10 +292,9 @@ func (s *storageImpl) Insert(collection string, docs ...*Document) error {
 		return err
 	}
 
-	indexes, err := s.listIndexes(collection, txn)
+	indexes := s.getIndexes(collection, meta)
 
 	for _, doc := range docs {
-
 		if err := s.addDocToIndexes(txn, indexes, doc); err != nil {
 			return err
 		}
@@ -354,17 +352,12 @@ func (s *storageImpl) deleteDocFromIndexes(txn *badger.Txn, indexes []*indexImpl
 	return nil
 }
 
-func (s *storageImpl) getDocAndDeleteFromIndexes(txn *badger.Txn, collection string, docId string) error {
-	indexes, err := s.listIndexes(collection, txn)
-	if err != nil {
-		return err
-	}
-
+func (s *storageImpl) getDocAndDeleteFromIndexes(txn *badger.Txn, indexes []*indexImpl, collection string, docId string) error {
 	if len(indexes) == 0 {
 		return nil
 	}
 
-	doc, err := s.getDocumentById(collection, docId, txn)
+	doc, err := getDocumentById(collection, docId, txn)
 	if err != nil {
 		return err
 	}
@@ -404,10 +397,7 @@ func (s *storageImpl) replaceDocs(txn *badger.Txn, q *Query, updater docUpdater)
 		return err
 	}
 
-	indexes, err := s.listIndexes(q.collection, txn)
-	if err != nil {
-		return err
-	}
+	indexes := s.getIndexes(q.collection, meta)
 
 	deletedDocs := 0
 	err = s.iterateDocs(txn, q, func(doc *Document) error {
@@ -474,7 +464,9 @@ func (s *storageImpl) DeleteById(collName string, id string) error {
 		return err
 	}
 
-	if err := s.getDocAndDeleteFromIndexes(txn, collName, id); err != nil {
+	indexes := s.getIndexes(collName, meta)
+
+	if err := s.getDocAndDeleteFromIndexes(txn, indexes, collName, id); err != nil {
 		return err
 	}
 
@@ -491,19 +483,12 @@ func (s *storageImpl) DeleteById(collName string, id string) error {
 
 func (s *storageImpl) UpdateById(collectionName string, docId string, updater func(doc *Document) *Document) error {
 	return s.db.Update(func(txn *badger.Txn) error {
-		has, err := s.hasCollection(collectionName, txn)
+		meta, err := s.getCollectionMeta(collectionName, txn)
 		if err != nil {
 			return err
 		}
 
-		if !has {
-			return ErrCollectionNotExist
-		}
-
-		indexes, err := s.listIndexes(collectionName, txn)
-		if err != nil {
-			return err
-		}
+		indexes := s.getIndexes(collectionName, meta)
 
 		docKey := getDocumentKey(collectionName, docId)
 		item, err := txn.Get([]byte(docKey))
@@ -574,224 +559,19 @@ func iteratePrefix(prefix []byte, txn *badger.Txn, itemConsumer func(item *badge
 
 var errNoSuitableIndexFound = errors.New("no suitable index found for running provided query")
 
-func (s *storageImpl) tryIterateDocsFromIndex(q *Query, txn *badger.Txn, consumer docConsumer) error {
-	if q.criteria == nil {
-		return errNoSuitableIndexFound
-	}
-
-	indexQueries, err := s.getQueryIndexes(q, txn)
-	if err != nil {
-		return err
-	}
-
-	if len(indexQueries) != 1 {
-		return errNoSuitableIndexFound
-	}
-
-	indexQuery := indexQueries[0]
-	needSort := len(q.sortOpts) > 0
-
-	reversed := false
-	if len(q.sortOpts) == 1 && q.sortOpts[0].Field == indexQuery.index.fieldName {
-		needSort = false
-		reversed = q.sortOpts[0].Direction < 0
-	}
-
-	var docs []*Document
-	if needSort {
-		docs = make([]*Document, 0)
-	} else {
-		consumer = withSkipAndLimitConsumer(q, consumer)
-	}
-
-	err = indexQuery.index.IterateRange(txn, indexQuery.vRange, reversed, func(docId string) error {
-		doc, err := s.getDocumentById(q.collection, docId, txn)
-
-		// err == badger.ErrKeyNotFound when index record expires before document record
-		if err != nil && !errors.Is(err, badger.ErrKeyNotFound) {
-			return err
-		}
-
-		if !q.satisfy(doc) {
-			return nil
-		}
-
-		if !needSort {
-			return consumer(doc)
-		}
-
-		docs = append(docs, doc)
-		return nil
-	})
-
-	if err == nil && needSort {
-		return s.applySortSkipAndLimit(docs, q, consumer)
-	}
-	return err
-}
-
-func withSkipAndLimitConsumer(q *Query, consumer docConsumer) docConsumer {
-	skipped := 0
-	consumed := 0
-	return func(doc *Document) error {
-		if skipped < q.skip {
-			skipped++
-			return nil
-		}
-
-		if q.limit >= 0 && consumed >= q.limit {
-			return errStopIteration
-		}
-
-		if err := consumer(doc); err != nil {
-			return err
-		}
-		consumed++
-
-		if q.limit >= 0 && consumed >= q.limit {
-			return errStopIteration
-		}
-		return nil
-	}
-}
-
 func (s *storageImpl) iterateDocs(txn *badger.Txn, q *Query, consumer docConsumer) error {
-	if txn == nil {
-		txn = s.db.NewTransaction(false)
-		defer txn.Discard()
-	}
-
-	ok, err := s.hasCollection(q.collection, txn)
+	meta, err := s.getCollectionMeta(q.collection, txn)
 	if err != nil {
 		return err
 	}
-
-	if !ok {
-		return ErrCollectionNotExist
-	}
-
-	err = s.tryIterateDocsFromIndex(q, txn, consumer)
-	if errors.Is(err, errNoSuitableIndexFound) {
-		return s.iterateCollection(q, txn, consumer)
-	}
-	return err
-}
-
-func (s *storageImpl) iterateCollection(q *Query, txn *badger.Txn, consumer docConsumer) error {
-	prefix := []byte(getDocumentKeyPrefix(q.collection))
-
-	var docs []*Document
-
-	needSort := len(q.sortOpts) > 0
-	if needSort {
-		docs = make([]*Document, 0)
-	} else {
-		consumer = withSkipAndLimitConsumer(q, consumer)
-	}
-
-	err := iteratePrefix(prefix, txn, func(item *badger.Item) error {
-		return item.Value(func(data []byte) error {
-			doc, err := decodeDoc(data)
-			if err != nil {
-				return err
-			}
-
-			if !q.satisfy(doc) {
-				return nil
-			}
-
-			if !needSort {
-				return consumer(doc)
-			}
-
-			docs = append(docs, doc)
-			return nil
-		})
-	})
-
-	if err == nil && needSort {
-		return s.applySortSkipAndLimit(docs, q, consumer)
-	}
-	return err
-}
-
-func (s *storageImpl) applySortSkipAndLimit(docs []*Document, q *Query, consumer docConsumer) error {
-	sort.Slice(docs, func(i, j int) bool {
-		return compareDocuments(docs[i], docs[j], q.sortOpts) < 0
-	})
-
-	docs = s.applySkipAndLimit(q, docs)
-
-	for _, doc := range docs {
-		err := consumer(doc)
-		if err == errStopIteration {
-			return nil
-		}
-
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (*storageImpl) applySkipAndLimit(q *Query, allDocs []*Document) []*Document {
-	docsToSkip := q.skip
-	if len(allDocs) < q.skip {
-		docsToSkip = len(allDocs)
-	}
-	allDocs = allDocs[docsToSkip:]
-
-	if q.limit >= 0 && len(allDocs) > q.limit {
-		allDocs = allDocs[:q.limit]
-	}
-	return allDocs
-}
-
-func (s *storageImpl) getQueryIndexes(q *Query, txn *badger.Txn) ([]*indexQuery, error) {
-	indexes, err := s.listIndexes(q.collection, txn)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(indexes) == 0 {
-		return nil, nil
-	}
-
-	indexedFields := make(map[string]bool)
-	for _, idx := range indexes {
-		indexedFields[idx.fieldName] = true
-	}
-
-	c := q.criteria.Accept(&NotFlattenVisitor{}).(Criteria)
-	selectedFields := c.Accept(&IndexSelectVisitor{
-		Fields: indexedFields,
-	}).([]string)
-
-	if len(selectedFields) == 0 {
-		return nil, nil
-	}
-
-	fieldRanges := c.Accept(NewFieldRangeVisitor(selectedFields)).(map[string]*valueRange)
-
-	indexesMap := make(map[string]*indexImpl)
-	for _, idx := range indexes {
-		indexesMap[idx.fieldName] = idx
-	}
-
-	queries := make([]*indexQuery, 0)
-	for field, vRange := range fieldRanges {
-		queries = append(queries, &indexQuery{
-			vRange: vRange,
-			index:  indexesMap[field],
-		})
-	}
-
-	return queries, nil
+	nd := buildQueryPlan(q, s.getIndexes(q.collection, meta), &consumerNode{consumer: consumer})
+	return execPlan(nd, txn)
 }
 
 func (s *storageImpl) IterateDocs(q *Query, consumer docConsumer) error {
-	return s.iterateDocs(nil, q, consumer)
+	txn := s.db.NewTransaction(false)
+	defer txn.Discard()
+	return s.iterateDocs(txn, q, consumer)
 }
 
 func (s *storageImpl) ListCollections() ([]string, error) {
@@ -810,55 +590,25 @@ func (s *storageImpl) ListCollections() ([]string, error) {
 	return collections, err
 }
 
-func getIndexKeyPrefix(collection string) []byte {
-	return []byte("idx:" + collection + ":")
-}
-
-func getIndexKey(collection, field string) []byte {
-	return append(getIndexKeyPrefix(collection), []byte(field)...)
-}
-
-func (s *storageImpl) getIndex(collection, field string, txn *badger.Txn) (*indexImpl, error) {
-	_, err := txn.Get(getIndexKey(collection, field))
-	if errors.Is(err, badger.ErrKeyNotFound) {
-		return nil, nil
-	}
-
-	if err != nil {
-		return nil, err
-	}
-
-	return &indexImpl{
-		collectionName: collection,
-		fieldName:      field,
-	}, nil
-}
-
 func (s *storageImpl) CreateIndex(collection, field string) error {
 	txn := s.db.NewTransaction(true)
 	defer txn.Discard()
 
-	ok, err := s.hasCollection(collection, txn)
+	meta, err := s.getCollectionMeta(collection, txn)
 	if err != nil {
 		return err
 	}
 
-	if !ok {
-		return ErrCollectionNotExist
+	for i := 0; i < len(meta.Indexes); i++ {
+		if meta.Indexes[i] == field {
+			return ErrIndexExist
+		}
 	}
 
-	has, err := s.hasIndex(txn, collection, field)
-	if err != nil {
-		return err
+	if meta.Indexes == nil {
+		meta.Indexes = make([]string, 0)
 	}
-
-	if has {
-		return ErrIndexExist
-	}
-
-	if err := txn.Set(getIndexKey(collection, field), []byte{0}); err != nil {
-		return err
-	}
+	meta.Indexes = append(meta.Indexes, field)
 
 	idx := &indexImpl{
 		collectionName: collection,
@@ -874,6 +624,10 @@ func (s *storageImpl) CreateIndex(collection, field string) error {
 		return err
 	}
 
+	if err := s.saveCollectionMetadata(collection, meta, txn); err != nil {
+		return err
+	}
+
 	return txn.Commit()
 }
 
@@ -881,29 +635,26 @@ func (s *storageImpl) DropIndex(collection, field string) error {
 	txn := s.db.NewTransaction(true)
 	defer txn.Discard()
 
-	ok, err := s.hasCollection(collection, txn)
+	meta, err := s.getCollectionMeta(collection, txn)
 	if err != nil {
 		return err
 	}
 
-	if !ok {
-		return ErrCollectionNotExist
+	index := -1
+	for i := 0; i < len(meta.Indexes); i++ {
+		if meta.Indexes[i] == field {
+			index = i
+		}
 	}
 
-	idx, err := s.getIndex(collection, field, txn)
-	if err != nil {
-		return err
-	}
-
-	if idx == nil {
+	if index < 0 {
 		return ErrIndexNotExist
 	}
 
-	if err := txn.Delete(getIndexKey(collection, field)); err != nil {
-		return err
-	}
+	meta.Indexes[index] = meta.Indexes[0]
+	meta.Indexes = meta.Indexes[1:]
 
-	idx = &indexImpl{
+	idx := &indexImpl{
 		collectionName: collection,
 		fieldName:      field,
 	}
@@ -912,12 +663,22 @@ func (s *storageImpl) DropIndex(collection, field string) error {
 		return err
 	}
 
+	if err := s.saveCollectionMetadata(collection, meta, txn); err != nil {
+		return err
+	}
 	return txn.Commit()
 }
 
 func (s *storageImpl) hasIndex(txn *badger.Txn, collection, field string) (bool, error) {
-	idx, err := s.getIndex(collection, field, txn)
-	return idx != nil, err
+	meta, err := s.getCollectionMeta(collection, txn)
+	if err == nil {
+		for _, idx := range meta.Indexes {
+			if idx == field {
+				return true, nil
+			}
+		}
+	}
+	return false, err
 }
 
 func (s *storageImpl) HasIndex(collection, field string) (bool, error) {
@@ -927,31 +688,26 @@ func (s *storageImpl) HasIndex(collection, field string) (bool, error) {
 	return s.hasIndex(txn, collection, field)
 }
 
-func (s *storageImpl) listIndexes(collection string, txn *badger.Txn) ([]*indexImpl, error) {
+func (s *storageImpl) getIndexes(collection string, meta *collectionMetadata) []*indexImpl {
 	indexes := make([]*indexImpl, 0)
 
-	prefix := getIndexKeyPrefix(collection)
-	err := iteratePrefix(prefix, txn, func(item *badger.Item) error {
-		key := string(item.Key())
-		fieldName := strings.TrimPrefix(key, string(prefix))
-		indexes = append(indexes, &indexImpl{collectionName: collection, fieldName: fieldName})
-		return nil
-	})
-	return indexes, err
+	for _, idxField := range meta.Indexes {
+		indexes = append(indexes, &indexImpl{
+			collectionName: collection,
+			fieldName:      idxField,
+		})
+	}
+	return indexes
+}
+
+func (s *storageImpl) listIndexes(collection string, txn *badger.Txn) ([]string, error) {
+	meta, err := s.getCollectionMeta(collection, txn)
+	return meta.Indexes, err
 }
 
 func (s *storageImpl) ListIndexes(collection string) ([]string, error) {
-	txn := s.db.NewTransaction(true)
+	txn := s.db.NewTransaction(false)
 	defer txn.Discard()
 
-	indexes, err := s.listIndexes(collection, txn)
-	if err != nil {
-		return nil, err
-	}
-
-	fields := make([]string, 0)
-	for _, idx := range indexes {
-		fields = append(fields, idx.fieldName)
-	}
-	return fields, nil
+	return s.listIndexes(collection, txn)
 }

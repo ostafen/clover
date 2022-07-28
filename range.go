@@ -10,6 +10,10 @@ type valueRange struct {
 }
 
 func (r *valueRange) isEmpty() bool {
+	if (r.start == nil && !r.startIncluded && r.end != nil) || (r.end == nil && !r.endIncluded && r.start != nil) {
+		return false
+	}
+
 	res := internal.Compare(r.start, r.end)
 	return (res > 0) || (res == 0 && !r.startIncluded && !r.endIncluded)
 }

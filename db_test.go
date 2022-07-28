@@ -1049,6 +1049,27 @@ func TestSort(t *testing.T) {
 	})
 }
 
+func TestSortWithIndex(t *testing.T) {
+	runCloverTest(t, func(t *testing.T, db *c.DB) {
+		require.NoError(t, loadFromJson(db, airlinesPath, nil))
+
+		err := db.CreateIndex("airlines", "Statistics.Flights.Total")
+		require.NoError(t, err)
+
+		n, err := db.Count(c.NewQuery("airlines"))
+		require.NoError(t, err)
+
+		docs, err := db.FindAll(c.NewQuery("airlines").Sort(c.SortOption{Field: "Statistics.Flights.Total", Direction: -1}))
+		require.NoError(t, err)
+		require.Equal(t, n, len(docs))
+
+		sorted := sort.SliceIsSorted(docs, func(i, j int) bool {
+			return docs[j].Get("Statistics.Flights.Total").(float64) < docs[i].Get("Statistics.Flights.Total").(float64)
+		})
+		require.True(t, sorted)
+	})
+}
+
 func TestForEachStop(t *testing.T) {
 	runCloverTest(t, func(t *testing.T, db *c.DB) {
 		require.NoError(t, loadFromJson(db, todosPath, &TodoModel{}))
@@ -1427,13 +1448,20 @@ func TestPagedQueryUsingIndex(t *testing.T) {
 		require.NoError(t, err)
 		err = db.CreateIndex("test", "timestamp")
 
-		n := 100003
+		var is int64
+		n := 10003
 		for i := 0; i < n; i++ {
 			doc := clover.NewDocument()
 			doc.Set("timestamp", time.Now().UnixNano())
 			_, err := db.InsertOne("test", doc)
+
+			if i == 100 {
+				is = doc.Get("timestamp").(int64)
+			}
 			require.NoError(t, err)
 		}
+
+		sortOpt := clover.SortOption{Field: "timestamp", Direction: -1}
 
 		count := 0
 		var lastDoc *clover.Document = nil
@@ -1445,9 +1473,13 @@ func TestPagedQueryUsingIndex(t *testing.T) {
 				instant = lastDoc.Get("timestamp").(int64)
 			}
 
-			sortOpt := clover.SortOption{Field: "timestamp", Direction: -1}
 			all, err := db.FindAll(c.NewQuery("test").Where(clover.Field("timestamp").Lt(instant)).Sort(sortOpt).Limit(25))
 			require.NoError(t, err)
+
+			sorted := sort.SliceIsSorted(all, func(i, j int) bool {
+				return all[j].Get("timestamp").(int64) < all[i].Get("timestamp").(int64)
+			})
+			require.True(t, sorted)
 
 			if len(all) > 0 {
 				lastDoc = all[len(all)-1]
@@ -1456,7 +1488,13 @@ func TestPagedQueryUsingIndex(t *testing.T) {
 			}
 			count += len(all)
 		}
+
 		require.Equal(t, n, count)
+
+		m, err := db.Count(c.NewQuery("test").Where(clover.Field("timestamp").Gt(is)).Sort(sortOpt))
+		require.NoError(t, err)
+
+		require.Equal(t, m, n-101)
 	})
 }
 

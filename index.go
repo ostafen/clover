@@ -15,7 +15,7 @@ type indexImpl struct {
 }
 
 func (idx *indexImpl) getKeyPrefix() []byte {
-	return []byte(fmt.Sprintf("c:%s;i:%s;", idx.collectionName, idx.fieldName))
+	return []byte(fmt.Sprintf("c:%s;i:%s", idx.collectionName, idx.fieldName))
 }
 
 func (idx *indexImpl) getKeyPrefixForType(typeId int) []byte {
@@ -32,10 +32,6 @@ func extractDocId(key []byte) ([]byte, []byte) {
 func (idx *indexImpl) getKey(v interface{}) ([]byte, error) {
 	prefix := idx.getKeyPrefixForType(internal.TypeId(v))
 	return internal.OrderedCode(prefix, v)
-}
-
-func (idx *indexImpl) lowestKeyPrefix() []byte {
-	return idx.getKeyPrefixForType(0)
 }
 
 func (idx *indexImpl) encodeValueAndId(value interface{}, docId string) ([]byte, error) {
@@ -129,6 +125,9 @@ func (idx *indexImpl) IterateRange(txn *badger.Txn, vRange *valueRange, reverse 
 
 	if seekPrefix == nil {
 		seekPrefix = idx.getKeyPrefix()
+		if reverse {
+			seekPrefix = append(seekPrefix, 255)
+		}
 	}
 
 	it := txn.NewIterator(opts)
@@ -166,6 +165,36 @@ func (idx *indexImpl) IterateRange(txn *badger.Txn, vRange *valueRange, reverse 
 			}
 		}
 
+		if err := onValue(string(docId)); err != nil {
+			if err == errStopIteration {
+				return nil
+			}
+			return err
+		}
+	}
+	return nil
+}
+
+func (idx *indexImpl) Iterate(txn *badger.Txn, reverse bool, onValue func(docId string) error) error {
+	opts := badger.DefaultIteratorOptions
+	opts.Reverse = reverse
+
+	it := txn.NewIterator(opts)
+	defer it.Close()
+
+	prefix := idx.getKeyPrefix()
+
+	seekPrefix := prefix
+	if reverse {
+		seekPrefix = append(seekPrefix, 255)
+	}
+
+	it.Seek(seekPrefix)
+
+	for ; it.ValidForPrefix(prefix); it.Next() {
+		key := it.Item().Key()
+
+		_, docId := extractDocId(key)
 		if err := onValue(string(docId)); err != nil {
 			if err == errStopIteration {
 				return nil
