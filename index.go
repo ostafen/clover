@@ -34,10 +34,6 @@ func (idx *indexImpl) getKey(v interface{}) ([]byte, error) {
 	return internal.OrderedCode(prefix, v)
 }
 
-func (idx *indexImpl) lowestKeyPrefix() []byte {
-	return idx.getKeyPrefixForType(0)
-}
-
 func (idx *indexImpl) encodeValueAndId(value interface{}, docId string) ([]byte, error) {
 	encodedKey, err := idx.getKey(value)
 	if err != nil {
