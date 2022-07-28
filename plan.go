@@ -78,7 +78,7 @@ func (nd *iterNode) iterateIndex(txn *badger.Txn) error {
 		doc, err := getDocumentById(nd.collection, docId, txn)
 
 		if err != nil {
-			// err == badger.ErrKeyNotFound when index record expires before document record
+			// err == badger.ErrKeyNotFound when index record expires after document record
 			if !errors.Is(err, badger.ErrKeyNotFound) {
 				return err
 			}
@@ -146,6 +146,7 @@ func tryToSelectIndex(q *Query, indexes []*indexImpl) *iterNode {
 		nd := &iterNode{
 			vRange:     indexQueries[0].vRange,
 			index:      indexQueries[0].index,
+			filter:     q.criteria,
 			collection: q.collection,
 		}
 
