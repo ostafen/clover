@@ -12,6 +12,12 @@ func TestRangeIsEmpty(t *testing.T) {
 
 	r = &valueRange{start: uint64(10), end: uint64(10)}
 	require.True(t, r.isEmpty())
+
+	r = &valueRange{start: uint64(10), end: nil}
+	require.False(t, r.isEmpty())
+
+	r = &valueRange{start: nil, end: uint64(10)}
+	require.False(t, r.isEmpty())
 }
 
 func TestRangeIntersect(t *testing.T) {
