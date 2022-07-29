@@ -55,7 +55,18 @@ func normalizeStruct(structValue reflect.Value) (map[string]interface{}, error) 
 				if err != nil {
 					return nil, err
 				}
-				m[fieldName] = normalized
+
+				if !fieldType.Anonymous {
+					m[fieldName] = normalized
+				} else {
+					if normalizedMap, ok := normalized.(map[string]interface{}); ok {
+						for k, v := range normalizedMap {
+							m[k] = v
+						}
+					} else {
+						m[fieldName] = normalized
+					}
+				}
 			}
 		}
 	}
