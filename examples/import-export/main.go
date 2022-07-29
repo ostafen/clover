@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	c "github.com/ostafen/clover"
+	c "github.com/ostafen/clover/v2"
 )
 
 func main() {
