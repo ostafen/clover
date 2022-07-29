@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ostafen/clover/util"
+	"github.com/ostafen/clover/v2/util"
 )
 
 var typesMap map[string]int = map[string]int{

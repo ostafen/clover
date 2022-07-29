@@ -4,7 +4,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/ostafen/clover/internal"
+	"github.com/ostafen/clover/v2/internal"
 )
 
 const (

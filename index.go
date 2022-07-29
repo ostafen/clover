@@ -6,7 +6,7 @@ import (
 	"time"
 
 	badger "github.com/dgraph-io/badger/v3"
-	"github.com/ostafen/clover/internal"
+	"github.com/ostafen/clover/v2/internal"
 )
 
 type indexImpl struct {
