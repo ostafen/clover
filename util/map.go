@@ -15,10 +15,24 @@ func CopyMap(m map[string]interface{}) map[string]interface{} {
 	return mapCopy
 }
 
-func MapKeys(m map[string]interface{}, sorted bool) []string {
+func MapKeys(m map[string]interface{}, sorted bool, includeSubKeys bool) []string {
 	keys := make([]string, 0, len(m))
-	for key := range m {
-		keys = append(keys, key)
+	for key, value := range m {
+		added := false
+		if includeSubKeys {
+			subMap, isMap := value.(map[string]interface{})
+			if isMap {
+				subFields := MapKeys(subMap, false, includeSubKeys)
+				for _, subKey := range subFields {
+					keys = append(keys, key+"."+subKey)
+				}
+				added = true
+			}
+		}
+
+		if !added {
+			keys = append(keys, key)
+		}
 	}
 
 	if sorted {

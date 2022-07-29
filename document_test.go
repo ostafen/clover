@@ -152,3 +152,52 @@ func TestDocumentValidation(t *testing.T) {
 		require.Error(t, err)
 	})
 }
+
+func TestDocumentToMap(t *testing.T) {
+	doc := c.NewDocumentOf(map[string]interface{}{
+		"f_1": map[string]interface{}{
+			"f_1_1": float64(0),
+			"f_1_2": "aString",
+		},
+		"f_2": map[string]interface{}{
+			"f_2_1": float64(1),
+			"f_2_2": "aString",
+		},
+		"f_3": int64(42),
+	})
+
+	fields := doc.ToMap()
+	require.Equal(t, float64(0), fields["f_1"].(map[string]interface{})["f_1_1"])
+	require.Equal(t, "aString", fields["f_2"].(map[string]interface{})["f_2_2"])
+	require.Equal(t, int64(42), fields["f_3"])
+	require.Equal(t, 3, len(fields))
+}
+
+func TestDocumentFields(t *testing.T) {
+	doc := c.NewDocumentOf(map[string]interface{}{
+		"f_1": map[string]interface{}{
+			"f_1_1": float64(0),
+			"f_1_2": "aString",
+		},
+		"f_2": map[string]interface{}{
+			"f_2_1": float64(1),
+			"f_2_2": "aString",
+		},
+		"f_3": int64(42),
+	})
+
+	keys := doc.Fields(false)
+	require.Contains(t, keys, "f_1")
+	require.Contains(t, keys, "f_2")
+	require.Contains(t, keys, "f_3")
+	require.Equal(t, 3, len(keys))
+
+	keys = doc.Fields(true)
+	require.Contains(t, keys, "f_1.f_1_1")
+	require.Contains(t, keys, "f_1.f_1_2")
+	require.Contains(t, keys, "f_2.f_2_1")
+	require.Contains(t, keys, "f_2.f_2_2")
+	require.Contains(t, keys, "f_3")
+	require.Equal(t, 5, len(keys))
+
+}

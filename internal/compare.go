@@ -114,8 +114,8 @@ func Compare(v1 interface{}, v2 interface{}) int {
 }
 
 func compareObjects(m1 map[string]interface{}, m2 map[string]interface{}) int {
-	m1Keys := util.MapKeys(m1, true)
-	m2Keys := util.MapKeys(m2, true)
+	m1Keys := util.MapKeys(m1, true, false)
+	m2Keys := util.MapKeys(m2, true, false)
 
 	for i := 0; i < len(m1Keys) && i < len(m2Keys); i++ {
 		k1 := m1Keys[i]
