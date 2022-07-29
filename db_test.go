@@ -17,8 +17,7 @@ import (
 	"github.com/brianvoe/gofakeit/v6"
 	"github.com/stretchr/testify/require"
 
-	"github.com/ostafen/clover"
-	c "github.com/ostafen/clover"
+	c "github.com/ostafen/clover/v2"
 )
 
 const (
@@ -1451,7 +1450,7 @@ func TestPagedQueryUsingIndex(t *testing.T) {
 		var is int64
 		n := 10003
 		for i := 0; i < n; i++ {
-			doc := clover.NewDocument()
+			doc := c.NewDocument()
 			doc.Set("timestamp", time.Now().UnixNano())
 			_, err := db.InsertOne("test", doc)
 
@@ -1461,10 +1460,10 @@ func TestPagedQueryUsingIndex(t *testing.T) {
 			require.NoError(t, err)
 		}
 
-		sortOpt := clover.SortOption{Field: "timestamp", Direction: -1}
+		sortOpt := c.SortOption{Field: "timestamp", Direction: -1}
 
 		count := 0
-		var lastDoc *clover.Document = nil
+		var lastDoc *c.Document = nil
 		for {
 			var instant int64
 			if lastDoc == nil {
@@ -1473,7 +1472,7 @@ func TestPagedQueryUsingIndex(t *testing.T) {
 				instant = lastDoc.Get("timestamp").(int64)
 			}
 
-			all, err := db.FindAll(c.NewQuery("test").Where(clover.Field("timestamp").Lt(instant)).Sort(sortOpt).Limit(25))
+			all, err := db.FindAll(c.NewQuery("test").Where(c.Field("timestamp").Lt(instant)).Sort(sortOpt).Limit(25))
 			require.NoError(t, err)
 
 			sorted := sort.SliceIsSorted(all, func(i, j int) bool {
@@ -1491,7 +1490,7 @@ func TestPagedQueryUsingIndex(t *testing.T) {
 
 		require.Equal(t, n, count)
 
-		m, err := db.Count(c.NewQuery("test").Where(clover.Field("timestamp").Gt(is)).Sort(sortOpt))
+		m, err := db.Count(c.NewQuery("test").Where(c.Field("timestamp").Gt(is)).Sort(sortOpt))
 		require.NoError(t, err)
 
 		require.Equal(t, m, n-101)

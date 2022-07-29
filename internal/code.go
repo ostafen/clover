@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/google/orderedcode"
-	"github.com/ostafen/clover/util"
+	"github.com/ostafen/clover/v2/util"
 )
 
 func getEncodeValue(value interface{}) interface{} {

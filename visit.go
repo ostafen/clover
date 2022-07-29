@@ -1,8 +1,8 @@
 package clover
 
 import (
-	"github.com/ostafen/clover/internal"
-	"github.com/ostafen/clover/util"
+	"github.com/ostafen/clover/v2/internal"
+	"github.com/ostafen/clover/v2/util"
 )
 
 type NotFlattenVisitor struct {

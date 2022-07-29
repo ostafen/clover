@@ -3,7 +3,7 @@ package internal
 import (
 	"time"
 
-	"github.com/ostafen/clover/util"
+	"github.com/ostafen/clover/v2/util"
 	"github.com/vmihailenco/msgpack/v5"
 )
 

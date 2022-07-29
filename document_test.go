@@ -3,7 +3,7 @@ package clover_test
 import (
 	"testing"
 
-	c "github.com/ostafen/clover"
+	c "github.com/ostafen/clover/v2"
 	"github.com/stretchr/testify/require"
 )
 

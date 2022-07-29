@@ -5,8 +5,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ostafen/clover/internal"
-	"github.com/ostafen/clover/util"
+	"github.com/ostafen/clover/v2/internal"
+	"github.com/ostafen/clover/v2/util"
 )
 
 // Document represents a document as a map.
