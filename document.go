@@ -104,6 +104,17 @@ func (doc *Document) SetAll(values map[string]interface{}) {
 	}
 }
 
+// GetAll returns a map of all available fields in the document. Nested fields are represented by sub-maps. This is a deep copy, but values are note cloned.
+func (doc *Document) ToMap() map[string]interface{} {
+	return util.CopyMap(doc.fields)
+}
+
+// Fields returns a lexicographically sorted slice of all available field names in the document.
+// Nested fields, if included, are represented using dot notation.
+func (doc *Document) Fields(includeSubFields bool) []string {
+	return util.MapKeys(doc.fields, true, includeSubFields)
+}
+
 // ExpiresAt returns the document expiration instant
 func (doc *Document) ExpiresAt() *time.Time {
 	exp, ok := doc.Get(expiresAtField).(time.Time)

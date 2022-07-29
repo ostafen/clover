@@ -72,7 +72,7 @@ func orderedCodeSlice(buf []byte, s []interface{}) ([]byte, error) {
 
 func orderedCodeObject(buf []byte, o map[string]interface{}) ([]byte, error) {
 	objEncoding := make([]byte, 0)
-	for _, key := range util.MapKeys(o, true) {
+	for _, key := range util.MapKeys(o, true, false) {
 		value := o[key]
 
 		encoded, err := orderedcode.Append(objEncoding, key)
