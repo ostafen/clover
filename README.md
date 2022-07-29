@@ -8,7 +8,7 @@
 [![Go Reference](https://pkg.go.dev/badge/badge/github.com/ostafen/clover.svg)](https://pkg.go.dev/github.com/ostafen/clover)
 [![Go Report Card](https://goreportcard.com/badge/github.com/ostafen/clover)](https://goreportcard.com/report/github.com/ostafen/clover)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![codecov](https://codecov.io/gh/ostafen/clover/branch/main/graph/badge.svg?token=R06H8FR47O)](https://codecov.io/gh/ostafen/clover)
+[![Coverage Status](https://coveralls.io/repos/github/ostafen/clover/badge.svg)](https://coveralls.io/github/ostafen/clover)
 [![Join the chat at https://gitter.im/cloverDB/community](https://badges.gitter.im/cloverDB/community.svg)](https://gitter.im/cloverDB/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 > 🇬🇧 English | [🇨🇳 简体中文](README-CN.md) | [🇪🇸 Spanish](README-ES.md)
@@ -26,16 +26,16 @@
 
 **CloverDB** has been written for being easily maintenable. As such, it trades performance with simplicity, and is not intented to be an alternative to more performant databases such as **MongoDB** or **MySQL**.
 However, there are projects where running a separate database server may result overkilled, and, for simple queries, network delay may be the major performance bottleneck.
-For there scenario, **CloverDB** may be a more suitable alternative.
+For such scenarios, **CloverDB** may be a more suitable alternative.
 
 ## Database Layout
 
-**CloverDB** abstracts the way collections are stored on disk through the **StorageEngine** interface. The default implementation is based on the [Badger](https://github.com/dgraph-io/badger) database key-value store. However, you could easily write your own storage engine implementation.
+**CloverDB** abstracts the way collections are stored on disk through the **StorageEngine** interface. The default implementation is based on the [Badger](https://github.com/dgraph-io/badger) database key-value store.
 
 ## Installation
 Make sure you have a working Go environment (Go 1.13 or higher is required). 
 ```shell
-  GO111MODULE=on go get github.com/ostafen/clover
+  GO111MODULE=on go get github.com/ostafen/clover/v2
 ```
 
 ## Databases and Collections
@@ -93,7 +93,7 @@ db.ExportCollection("todos", "todos.json")
 db.DropCollection("todos")
 db.ImportCollection("todos", "todos.json")
 
-docs, _ := db.Query("todos").FindAll()
+docs, _ := db.FindAll(c.NewQuery("todos"))
 for _, doc := range docs {
   log.Println(doc)
 }
@@ -108,7 +108,7 @@ CloverDB is equipped with a fluent and elegant API to query your data. A query i
 The `FindAll()` method is used to retrieve all documents satisfying a given query.
 
 ```go
-docs, _ := db.Query("myCollection").FindAll()
+docs, _ := db.FindAll(c.NewQuery("myCollection"))
 
 todo := &struct {
     Completed bool   `clover:"completed"`
@@ -130,25 +130,25 @@ In order to filter the documents returned by `FindAll()`, you have to specify a 
 The following example shows how to build a simple Criteria, matching all the documents having the **completed** field equal to true.
 
 ```go
-db.Query("todos").Where(c.Field("completed").Eq(true)).FindAll()
+db.FindAll(c.NewQuery("todos").Where(c.Field("completed").Eq(true)))
 
 // or equivalently
-db.Query("todos").Where(c.Field("completed").IsTrue()).FindAll()
+db.FindAll(c.NewQuery("todos").Where(c.Field("completed").IsTrue()))
 ```
 
 In order to build very complex queries, we chain multiple Criteria objects by using the `And()` and `Or()` methods, each returning a new Criteria obtained by appling the corresponding logical operator.
 
 ```go
 // find all completed todos belonging to users with id 5 and 8
-db.Query("todos").Where(c.Field("completed").Eq(true).And(c.Field("userId").In(5, 8))).FindAll()
+db.FindAll(c.NewQuery("todos").Where(c.Field("completed").Eq(true).And(c.Field("userId").In(5, 8))))
 ```
 
 Naturally, you can also create Criteria involving multiple fields. CloverDB provides you with two equivalent ways to accomplish this:
 
 ```go
-db.Query("myCollection").Where(c.Field("myField1").Gt(c.Field("myField2")))
+db.FindAll(c.NewQuery("myCollection").Where(c.Field("myField1").Gt(c.Field("myField2"))))
 // or, if you prefer
-db.Query("myCollection").Where(c.Field("myField1").Gt("$myField2"))
+db.FindAll(c.NewQuery("myCollection").Where(c.Field("myField1").Gt("$myField2")))
 ```
 
 ### Sorting Documents
@@ -158,7 +158,7 @@ A sorting direction can be one of 1 or -1, respectively corresponding to ascendi
 
 ```go
 // Find any todo belonging to the most recent inserted user
-db.Query("todos").Sort(c.SortOption{"userId", -1}).FindFirst()
+db.FindFirst(c.NewQuery("todos").Sort(c.SortOption{"userId", -1}))
 ```
 
 ### Skip/Limit Documents
@@ -168,7 +168,7 @@ Sometimes, it can be useful to discard some documents from the output, or simply
 ```go
 // discard the first 10 documents from the output,
 // also limiting the maximum number of query results to 100
-db.Query("todos").Skip(10).Limit(100).FindAll()
+db.FindAll(c.NewQuery("todos").Skip(10).Limit(100))
 ```
 
 ### Update/Delete Documents
@@ -180,10 +180,10 @@ The `Update()` method is used to modify specific fields of documents in a collec
 updates := make(map[string]interface{})
 updates["completed"] = true
 
-db.Query("todos").Where(c.Field("userId").Eq(1)).Update(updates)
+db.Update(c.NewQuery("todos").Where(c.Field("userId").Eq(1)), updates)
 
 // delete all todos belonging to users with id 5 and 8
-db.Query("todos").Where(c.Field("userId").In(5,8)).Delete()
+db.Delete(c.NewQuery("todos").Where(c.Field("userId").In(5,8)))
 ```
 
 To update or delete a single document using a specific document id, use `UpdateById()` or `DeleteById()`, respectively:
@@ -191,10 +191,33 @@ To update or delete a single document using a specific document id, use `UpdateB
 ```go
 docId := "1dbce353-d3c6-43b3-b5a8-80d8d876389b"
 // update the document with the specified id
-db.Query("todos").UpdateById(docId, map[string]interface{}{"completed": true})
+db.UpdateById("todos", docId, map[string]interface{}{"completed": true})
 // or delete it
-db.Query("todos").DeleteById(docId)
+db.DeleteById("todos", docId)
 ```
+
+## Indexes
+
+In CloverDB, indexes support the efficient execution of queries. Without indexes, a collection must be fully scanned to select those documents matching a given query. An index is a special data structure storing the values of a specific document field (or set of fields), sorted by the value of the field itself. This means that they can be exploited to supports efficient equality matches and range-based queries. 
+Moreover, when documents are iterated through an index, results can be returned in sorted order without performing any additional sorting step.
+Note however that using indexes is not completely for free. A part from increasing disk space, indexes require additional cpu-time during each insert and update/delete operation. Moreover, when accessing a document through an index, two disk reads must be performed, since indexes only store a reference (the document id) to the actual document. As a consequence, the speed-up is sensitive only when the specified criteria is used to access a restricted set of documents.
+
+### Creating an index
+
+Currently, CloverDB only support single-field indexes. An index can be created simply by calling the `CreateIndex()` method, which takes both the names of the collection and the field to be indexed.
+
+```go
+db.CreateCollection("myCollection", "myField")
+```
+
+Assume you have the following query:
+
+```go
+criteria := c.Field("myField").Gt(a).And(c.Field("myField").Lt(b))
+db.FindAll(c.NewQuery("myCollection").Where(criteria).Sort(c.SortOption{"myField", -1}))
+```
+
+where **a** and **b** are values of your choice. CloverDB will use the created index both to perform the range query and to return results in sorted order.
 
 ## Data Types
 
