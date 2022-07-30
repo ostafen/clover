@@ -160,9 +160,10 @@ func tryToSelectIndex(q *Query, indexes []*indexImpl) *iterNode {
 		for _, idx := range indexes {
 			if idx.fieldName == q.sortOpts[0].Field {
 				return &iterNode{
+					filter:           q.criteria,
+					collection:       q.collection,
 					vRange:           nil,
 					index:            idx,
-					collection:       q.collection,
 					iterIndexReverse: q.sortOpts[0].Direction < 0,
 				}
 			}
