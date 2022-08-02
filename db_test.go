@@ -17,7 +17,9 @@ import (
 	"github.com/brianvoe/gofakeit/v6"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ostafen/clover/v2"
 	c "github.com/ostafen/clover/v2"
+	"github.com/ostafen/clover/v2/util"
 )
 
 const (
@@ -864,6 +866,97 @@ func TestLikeCriteria(t *testing.T) {
 		total, err := db.Count(c.NewQuery("todos"))
 		require.NoError(t, err)
 		require.Equal(t, total, n+m)
+	})
+}
+
+func TestNearCriteria(t *testing.T) {
+	runCloverTest(t, func(t *testing.T, db *c.DB) {
+		require.NoError(t, db.CreateCollection("test"))
+		radius := 5.0
+
+		centerX, err := gofakeit.LongitudeInRange(-180+radius, 180-radius)
+		require.NoError(t, err)
+
+		centerY, err := gofakeit.LatitudeInRange(-90+radius, 90-radius)
+		require.NoError(t, err)
+
+		for i := 0; i < 1001; i++ {
+			x := centerX + rand.Float64()*radius
+			y := centerY + rand.Float64()*radius
+
+			doc := c.NewDocument()
+			doc.Set("loc", []float64{x, y})
+			err := db.Insert("test", doc)
+			require.NoError(t, err)
+		}
+
+		newRadius := 10.0
+		for i := 0; i < 3006; i++ {
+			x := centerX + (rand.Float64()*(newRadius-radius) + radius)
+			y := centerY + (rand.Float64()*(newRadius-radius) + radius)
+
+			doc := c.NewDocument()
+			doc.Set("loc", []float64{x, y})
+			err := db.Insert("test", doc)
+			require.NoError(t, err)
+		}
+
+		n, err := db.Count(clover.NewQuery("test").Where(c.Field("loc").Near(centerX, centerY, radius)))
+		require.NoError(t, err)
+
+		require.Equal(t, 1001, n)
+
+		m, err := db.Count(clover.NewQuery("test").Where(c.Field("loc").Near(centerX, centerY, newRadius)))
+		require.NoError(t, err)
+
+		require.Equal(t, 3006, m-n)
+	})
+}
+
+func TestNearSphereCriteria(t *testing.T) {
+	runCloverTest(t, func(t *testing.T, db *c.DB) {
+		require.NoError(t, db.CreateCollection("test"))
+		angle := 0.01
+
+		centerX, err := gofakeit.LongitudeInRange(-180+angle, 180-angle)
+		require.NoError(t, err)
+
+		centerY, err := gofakeit.LatitudeInRange(-90+angle, 90-angle)
+		require.NoError(t, err)
+
+		for i := 0; i < 1001; i++ {
+			x := centerX + rand.Float64()*angle
+			y := centerY + rand.Float64()*angle
+
+			doc := c.NewDocument()
+			doc.Set("loc", []float64{x, y})
+			err := db.Insert("test", doc)
+			require.NoError(t, err)
+		}
+
+		newAngle := 0.02
+		for i := 0; i < 3006; i++ {
+			x := centerX + (rand.Float64()*(newAngle-angle) + angle)
+			y := centerY + (rand.Float64()*(newAngle-angle) + angle)
+
+			doc := c.NewDocument()
+			doc.Set("loc", []float64{x, y})
+			err := db.Insert("test", doc)
+			require.NoError(t, err)
+		}
+
+		maxDist1 := util.HaversineDistance(centerX, centerY, centerX+angle, centerY+angle)
+		maxDist2 := util.HaversineDistance(centerX, centerY, centerX+angle, centerY+newAngle)
+
+		n, err := db.Count(clover.NewQuery("test").Where(c.Field("loc").NearSphere(centerX, centerY, maxDist1)))
+		require.NoError(t, err)
+
+		require.Equal(t, 1001, n)
+
+		m, err := db.Count(clover.NewQuery("test").Where(c.Field("loc").Near(centerX, centerY, maxDist2)))
+		require.NoError(t, err)
+
+		require.Equal(t, 3006, m-n)
 	})
 }
 

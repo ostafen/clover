@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/ostafen/clover/v2/internal"
+	"github.com/ostafen/clover/v2/util"
 )
 
 const (
@@ -24,6 +25,7 @@ const (
 	InOp
 	ContainsOp
 	FunctionOp
+	NearOp
 )
 
 const (
@@ -123,6 +125,8 @@ func (c *UnaryCriteria) Satisfy(doc *Document) bool {
 		return c.in(doc)
 	case GtOp, GtEqOp, LtOp, LtEqOp:
 		return c.compare(doc)
+	case NearOp:
+		return c.near(doc)
 	case ContainsOp:
 		return c.contains(doc)
 	case FunctionOp:
@@ -232,6 +236,20 @@ func (f *field) Contains(elems ...interface{}) Criteria {
 	return newCriteria(ContainsOp, f.name, elems)
 }
 
+type nearData struct {
+	x, y    float64
+	maxDist float64
+	sphere  bool
+}
+
+func (f *field) Near(x, y float64, maxDist float64) Criteria {
+	return newCriteria(NearOp, f.name, internal.Value{V: nearData{x, y, maxDist, false}})
+}
+
+func (f *field) NearSphere(lat, lon float64, maxDist float64) Criteria {
+	return newCriteria(NearOp, f.name, internal.Value{V: nearData{lat, lon, maxDist, true}})
+}
+
 // getFieldOrValue returns dereferenced value if value denotes another document field,
 // otherwise returns the value itself directly
 func getFieldOrValue(doc *Document, value interface{}) interface{} {
@@ -330,6 +348,30 @@ func (c *UnaryCriteria) like(doc *Document) bool {
 	}
 	matched, err := regexp.MatchString(pattern, s)
 	return matched && err == nil
+}
+
+func (c *UnaryCriteria) near(doc *Document) bool {
+	s, isSlice := doc.Get(c.Field).([]interface{})
+	if !isSlice {
+		return false
+	}
+
+	if !util.IsNumber(s[0]) || !util.IsNumber(s[1]) {
+		return false
+	}
+
+	x := util.ToFloat64(s[0])
+	y := util.ToFloat64(s[1])
+
+	data := c.Value.(internal.Value).V.(nearData)
+
+	var dist float64
+	if data.sphere {
+		dist = util.HaversineDistance(x, y, data.x, data.y)
+	} else {
+		dist = util.EuclideanDistance(x, y, data.x, data.y)
+	}
+	return dist <= data.maxDist
 }
 
 type CriteriaVisitor interface {
