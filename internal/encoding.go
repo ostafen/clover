@@ -10,6 +10,10 @@ import (
 	"github.com/vmihailenco/msgpack/v5"
 )
 
+type Value struct {
+	V interface{}
+}
+
 func processStructTag(tagStr string) (string, bool) {
 	tags := strings.Split(tagStr, ",")
 	name := tags[0] // when tagStr is "", tags[0] will also be ""
@@ -130,6 +134,10 @@ func Normalize(value interface{}) (interface{}, error) {
 	}
 
 	if _, isTime := rValue.Interface().(time.Time); isTime {
+		return rValue.Interface(), nil
+	}
+
+	if _, isValue := rValue.Interface().(Value); isValue {
 		return rValue.Interface(), nil
 	}
 

@@ -4,6 +4,8 @@ import (
 	"fmt"
 
 	c "github.com/ostafen/clover/v2"
+	d "github.com/ostafen/clover/v2/document"
+	"github.com/ostafen/clover/v2/query"
 )
 
 func main() {
@@ -14,8 +16,8 @@ func main() {
 	db.CreateCollection("todos")
 
 	// Create todos
-	todo1 := c.NewDocument()
-	todo2 := c.NewDocument()
+	todo1 := d.NewDocument()
+	todo2 := d.NewDocument()
 
 	todo1.Set("title", "delectus aut autem")
 	todo1.Set("completed", false)
@@ -36,7 +38,7 @@ func main() {
 	// restore collection from json file
 	db.ImportCollection("todos", "dump.json")
 
-	todos, _ := db.FindAll(c.NewQuery("todos"))
+	todos, _ := db.FindAll(query.NewQuery("todos"))
 
 	for _, todo := range todos {
 		fmt.Printf("title: %s\n", todo.Get("title"))

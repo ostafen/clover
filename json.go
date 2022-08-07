@@ -5,6 +5,9 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"os"
+
+	d "github.com/ostafen/clover/v2/document"
+	"github.com/ostafen/clover/v2/query"
 )
 
 // ExportCollection exports an existing collection to a JSON file.
@@ -17,14 +20,14 @@ func (db *DB) ExportCollection(collectionName string, exportPath string) error {
 		return ErrCollectionNotExist
 	}
 
-	result, err := db.FindAll(NewQuery(collectionName))
+	result, err := db.FindAll(query.NewQuery(collectionName))
 	if err != nil {
 		return err
 	}
 
 	docs := make([]map[string]interface{}, 0)
 	for _, doc := range result {
-		docs = append(docs, doc.fields)
+		docs = append(docs, doc.AsMap())
 	}
 
 	jsonString, err := json.Marshal(docs)
@@ -53,9 +56,9 @@ func (db *DB) ImportCollection(collectionName string, importPath string) error {
 		return err
 	}
 
-	docs := make([]*Document, 0)
+	docs := make([]*d.Document, 0)
 	for _, doc := range jsonObjects {
-		docs = append(docs, NewDocumentOf(*doc))
+		docs = append(docs, d.NewDocumentOf(*doc))
 	}
 	return db.Insert(collectionName, docs...)
 }

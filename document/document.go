@@ -1,4 +1,4 @@
-package clover
+package document
 
 import (
 	"fmt"
@@ -7,6 +7,12 @@ import (
 
 	"github.com/ostafen/clover/v2/internal"
 	"github.com/ostafen/clover/v2/util"
+	uuid "github.com/satori/go.uuid"
+)
+
+const (
+	ObjectIdField  = "_id"
+	ExpiresAtField = "_expiresAt"
 )
 
 // Document represents a document as a map.
@@ -16,7 +22,7 @@ type Document struct {
 
 // ObjectId returns the id of the document, provided that the document belongs to some collection. Otherwise, it returns the empty string.
 func (doc *Document) ObjectId() string {
-	id, _ := doc.Get(objectIdField).(string)
+	id, _ := doc.Get(ObjectIdField).(string)
 	return id
 }
 
@@ -46,6 +52,10 @@ func (doc *Document) Copy() *Document {
 	return &Document{
 		fields: util.CopyMap(doc.fields),
 	}
+}
+
+func (doc *Document) AsMap() map[string]interface{} {
+	return util.CopyMap(doc.fields)
 }
 
 func lookupField(name string, fieldMap map[string]interface{}, force bool) (map[string]interface{}, interface{}, string) {
@@ -117,7 +127,7 @@ func (doc *Document) Fields(includeSubFields bool) []string {
 
 // ExpiresAt returns the document expiration instant
 func (doc *Document) ExpiresAt() *time.Time {
-	exp, ok := doc.Get(expiresAtField).(time.Time)
+	exp, ok := doc.Get(ExpiresAtField).(time.Time)
 	if !ok {
 		return nil
 	}
@@ -126,7 +136,7 @@ func (doc *Document) ExpiresAt() *time.Time {
 
 // ExpiresAt sets document expiration
 func (doc *Document) SetExpiresAt(expiration time.Time) {
-	doc.Set(expiresAtField, expiration)
+	doc.Set(ExpiresAtField, expiration)
 }
 
 // TTL returns a duration representing the time to live of the document before expiration.
@@ -151,39 +161,28 @@ func (doc *Document) Unmarshal(v interface{}) error {
 	return internal.Convert(doc.fields, v)
 }
 
-func compareDocuments(first *Document, second *Document, sortOpts []SortOption) int {
-	for _, opt := range sortOpts {
-		field := opt.Field
-		direction := opt.Direction
-
-		firstHas := first.Has(field)
-		secondHas := second.Has(field)
-
-		if !firstHas && secondHas {
-			return -direction
-		}
-
-		if firstHas && !secondHas {
-			return direction
-		}
-
-		if firstHas && secondHas {
-			res := internal.Compare(first.Get(field), second.Get(field))
-			if res != 0 {
-				return res * direction
-			}
-		}
-	}
-	return 0
+func isValidObjectId(id string) bool {
+	_, err := uuid.FromString(id)
+	return err == nil
 }
 
-func validateDocument(doc *Document) error {
+func Validate(doc *Document) error {
 	if !isValidObjectId(doc.ObjectId()) {
 		return fmt.Errorf("invalid _id: %s", doc.ObjectId())
 	}
 
-	if doc.Has(expiresAtField) && doc.ExpiresAt() == nil {
-		return fmt.Errorf("invalid _expiresAt: %s", doc.Get(expiresAtField))
+	if doc.Has(ExpiresAtField) && doc.ExpiresAt() == nil {
+		return fmt.Errorf("invalid _expiresAt: %s", doc.Get(ExpiresAtField))
 	}
 	return nil
+}
+
+func Decode(data []byte) (*Document, error) {
+	doc := NewDocument()
+	err := internal.Decode(data, &doc.fields)
+	return doc, err
+}
+
+func Encode(doc *Document) ([]byte, error) {
+	return internal.Encode(doc.fields)
 }

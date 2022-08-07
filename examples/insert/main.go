@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	c "github.com/ostafen/clover/v2"
+	d "github.com/ostafen/clover/v2/document"
 )
 
 func main() {
@@ -14,7 +15,7 @@ func main() {
 	db.CreateCollection("todos")
 
 	// Create a document
-	doc := c.NewDocument()
+	doc := d.NewDocument()
 	doc.Set("title", "ldelectus aut autem")
 	doc.Set("completed ", false)
 
@@ -28,7 +29,7 @@ func main() {
 	todo["completed"] = false
 
 	// NewDocumentOf creates a document with contents of the provided map
-	doc = c.NewDocumentOf(todo)
+	doc = d.NewDocumentOf(todo)
 	title := doc.Get("title")
 	fmt.Println(title)
 
