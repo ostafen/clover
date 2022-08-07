@@ -4,6 +4,8 @@ import (
 	"fmt"
 
 	c "github.com/ostafen/clover/v2"
+	d "github.com/ostafen/clover/v2/document"
+	"github.com/ostafen/clover/v2/query"
 )
 
 func main() {
@@ -13,8 +15,8 @@ func main() {
 	db.CreateCollection("todos")
 
 	// Create documents
-	todo1 := c.NewDocument()
-	todo2 := c.NewDocument()
+	todo1 := d.NewDocument()
+	todo2 := d.NewDocument()
 
 	todo1.Set("title", "delectus aut autem")
 	todo1.Set("completed", false)
@@ -31,19 +33,19 @@ func main() {
 	updates["completed"] = true
 
 	// mark all incomplete todos as completed
-	query := c.NewQuery("todos").Where(c.Field("completed").Eq(false))
-	db.Update(query, updates)
+	q := query.NewQuery("todos").Where(query.Field("completed").Eq(false))
+	db.Update(q, updates)
 
 	// Query all todos
-	todos, _ := db.FindAll(c.NewQuery("todos"))
+	todos, _ := db.FindAll(query.NewQuery("todos"))
 	for _, todo := range todos {
 		fmt.Printf("title: %v, completed: %v\n", todo.Get("title"), todo.Get("completed"))
 	}
 
 	// Delete todos with userId of 2
-	db.Delete(c.NewQuery("todos").Where(c.Field("userId").Eq(2)))
+	db.Delete(query.NewQuery("todos").Where(query.Field("userId").Eq(2)))
 
-	todos, _ = db.FindAll(c.NewQuery("todos"))
+	todos, _ = db.FindAll(query.NewQuery("todos"))
 	for _, todo := range todos {
 		fmt.Printf("title: %v, userId: %v\n", todo.Get("title"), todo.Get("userId"))
 	}

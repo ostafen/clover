@@ -5,12 +5,16 @@ import (
 	"sort"
 
 	"github.com/dgraph-io/badger/v3"
+	d "github.com/ostafen/clover/v2/document"
+	"github.com/ostafen/clover/v2/index"
+	"github.com/ostafen/clover/v2/internal"
+	"github.com/ostafen/clover/v2/query"
 )
 
 type planNode interface {
 	SetNext(next planNode)
 	NextNode() planNode
-	Callback(doc *Document) error
+	Callback(doc *d.Document) error
 	Finish() error
 }
 
@@ -31,14 +35,14 @@ func (nd *planNodeBase) SetNext(next planNode) {
 	nd.next = next
 }
 
-func (nd *planNodeBase) CallNext(doc *Document) error {
+func (nd *planNodeBase) CallNext(doc *d.Document) error {
 	if nd.next != nil {
 		return nd.next.Callback(doc)
 	}
 	return nil
 }
 
-func (nd *planNodeBase) Callback(doc *Document) error {
+func (nd *planNodeBase) Callback(doc *d.Document) error {
 	return nil
 }
 
@@ -48,18 +52,21 @@ func (nd *planNodeBase) Finish() error {
 
 type iterNode struct {
 	planNodeBase
-	filter           Criteria
-	collection       string
-	vRange           *valueRange
-	index            *indexImpl
-	iterIndexReverse bool
+	filter     query.Criteria
+	collection string
+
+	//vRange     *valueRange
+	//index      RangeIndex
+
+	idxQuery index.IndexQuery
+	//iterIndexReverse bool
 }
 
 func (nd *iterNode) iterateFullCollection(txn *badger.Txn) error {
 	prefix := []byte(getDocumentKeyPrefix(nd.collection))
 	return iteratePrefix(prefix, txn, func(item *badger.Item) error {
 		return item.Value(func(data []byte) error {
-			doc, err := decodeDoc(data)
+			doc, err := d.Decode(data)
 			if err != nil {
 				return err
 			}
@@ -90,86 +97,93 @@ func (nd *iterNode) iterateIndex(txn *badger.Txn) error {
 		return nil
 	}
 
-	if nd.vRange != nil {
-		return nd.index.IterateRange(txn, nd.vRange, nd.iterIndexReverse, iterFunc)
-	}
-	return nd.index.Iterate(txn, nd.iterIndexReverse, iterFunc)
+	err := nd.idxQuery.Run(iterFunc)
+	return err
 }
 
 func (nd *iterNode) Run(txn *badger.Txn) error {
-	if nd.index != nil {
+	if nd.idxQuery != nil {
 		return nd.iterateIndex(txn)
 	}
 	return nd.iterateFullCollection(txn)
 }
 
-func getIndexQueries(q *Query, indexes []*indexImpl) []*indexQuery {
-	if q.criteria == nil || len(indexes) == 0 {
+func getIndexQueries(q *query.Query, indexes []index.Index) []index.IndexQuery {
+	if q.Criteria() == nil || len(indexes) == 0 {
 		return nil
 	}
 
-	indexedFields := make(map[string]bool)
+	info := make(map[string]*index.IndexInfo)
 	for _, idx := range indexes {
-		indexedFields[idx.fieldName] = true
+		info[idx.Field()] = &index.IndexInfo{
+			Field: idx.Field(),
+			Type:  idx.Type(),
+		}
 	}
 
-	c := q.criteria.Accept(&NotFlattenVisitor{}).(Criteria)
+	c := q.Criteria().Accept(&NotFlattenVisitor{}).(query.Criteria)
 	selectedFields := c.Accept(&IndexSelectVisitor{
-		Fields: indexedFields,
-	}).([]string)
+		Fields: info,
+	}).([]*index.IndexInfo)
 
 	if len(selectedFields) == 0 {
 		return nil
 	}
 
-	fieldRanges := c.Accept(NewFieldRangeVisitor(selectedFields)).(map[string]*valueRange)
-
-	indexesMap := make(map[string]*indexImpl)
+	indexesMap := make(map[string]index.Index)
 	for _, idx := range indexes {
-		indexesMap[idx.fieldName] = idx
+		indexesMap[idx.Field()] = idx
 	}
 
-	queries := make([]*indexQuery, 0)
+	fieldRanges := c.Accept(NewFieldRangeVisitor([]string{selectedFields[0].Field})).(map[string]*index.Range)
+
+	queries := make([]index.IndexQuery, 0)
 	for field, vRange := range fieldRanges {
-		queries = append(queries, &indexQuery{
-			vRange: vRange,
-			index:  indexesMap[field],
+		queries = append(queries, &index.RangeIndexQuery{
+			Range: vRange,
+			Idx:   indexesMap[field].(index.RangeIndex),
 		})
 	}
-
 	return queries
 }
 
-func tryToSelectIndex(q *Query, indexes []*indexImpl) *iterNode {
+func tryToSelectIndex(q *query.Query, indexes []index.Index) (*iterNode, bool) {
 	indexQueries := getIndexQueries(q, indexes)
 	if len(indexQueries) == 1 {
-		nd := &iterNode{
-			vRange:     indexQueries[0].vRange,
-			index:      indexQueries[0].index,
-			filter:     q.criteria,
-			collection: q.collection,
+		outputSorted := false
+
+		idxQuery := indexQueries[0]
+
+		if rangeQuery, ok := idxQuery.(*index.RangeIndexQuery); ok {
+			if len(q.SortOptions()) == 1 && q.SortOptions()[0].Field == rangeQuery.Idx.Field() {
+				rangeQuery.Reverse = q.SortOptions()[0].Direction < 0
+				outputSorted = true
+			}
 		}
 
-		if len(q.sortOpts) == 1 && q.sortOpts[0].Field == indexQueries[0].index.fieldName {
-			nd.iterIndexReverse = q.sortOpts[0].Direction < 0
-		}
-		return nd
+		return &iterNode{
+			idxQuery:   idxQuery,
+			filter:     q.Criteria(),
+			collection: q.Collection(),
+		}, outputSorted
 	}
 
-	if len(q.sortOpts) == 1 {
+	if len(q.SortOptions()) == 1 {
 		for _, idx := range indexes {
-			if idx.fieldName == q.sortOpts[0].Field {
+			if idx.Type() == index.IndexSingleField && idx.Field() == q.SortOptions()[0].Field {
 				return &iterNode{
-					filter:           q.criteria,
-					collection:       q.collection,
-					vRange:           nil,
-					index:            idx,
-					iterIndexReverse: q.sortOpts[0].Direction < 0,
-				}
+					filter:     q.Criteria(),
+					collection: q.Collection(),
+					idxQuery: &index.RangeIndexQuery{
+						Range:   nil,
+						Idx:     idx.(index.RangeIndex),
+						Reverse: q.SortOptions()[0].Direction < 0,
+					},
+				}, true
 			}
 		}
 	}
-	return nil
+	return nil, false
 }
 
 type skipLimitNode struct {
@@ -180,7 +194,7 @@ type skipLimitNode struct {
 	limit    int
 }
 
-func (nd *skipLimitNode) Callback(doc *Document) error {
+func (nd *skipLimitNode) Callback(doc *d.Document) error {
 	if nd.skipped < nd.skip {
 		nd.skipped++
 		return nil
@@ -190,18 +204,18 @@ func (nd *skipLimitNode) Callback(doc *Document) error {
 		nd.consumed++
 		return nd.CallNext(doc)
 	}
-	return errStopIteration
+	return internal.ErrStopIteration
 }
 
 type sortNode struct {
 	planNodeBase
-	opts []SortOption
-	docs []*Document
+	opts []query.SortOption
+	docs []*d.Document
 }
 
-func (nd *sortNode) Callback(doc *Document) error {
+func (nd *sortNode) Callback(doc *d.Document) error {
 	if nd.docs == nil {
-		nd.docs = make([]*Document, 0)
+		nd.docs = make([]*d.Document, 0)
 	}
 	nd.docs = append(nd.docs, doc)
 	return nil
@@ -220,29 +234,29 @@ func (nd *sortNode) Finish() error {
 	return nil
 }
 
-func buildQueryPlan(q *Query, indexes []*indexImpl, outputNode planNode) inputNode {
+func buildQueryPlan(q *query.Query, indexes []index.Index, outputNode planNode) inputNode {
 	var inputNode inputNode
 	var prevNode planNode
 
-	itNode := tryToSelectIndex(q, indexes)
+	itNode, isOutputSorted := tryToSelectIndex(q, indexes)
 	if itNode == nil {
 		itNode = &iterNode{
-			filter:     q.criteria,
-			collection: q.collection,
+			filter:     q.Criteria(),
+			collection: q.Collection(),
 		}
 	}
 	inputNode = itNode
 	prevNode = itNode
 
-	isOutputSorted := (len(q.sortOpts) == 1 && itNode.index != nil && itNode.index.fieldName == q.sortOpts[0].Field)
-	if len(q.sortOpts) > 0 && !isOutputSorted {
-		nd := &sortNode{opts: q.sortOpts}
+	//isOutputSorted := (len(q.sortOpts) == 1 && itNode.index != nil && itNode.index.Field() == q.sortOpts[0].Field)
+	if len(q.SortOptions()) > 0 && !isOutputSorted {
+		nd := &sortNode{opts: q.SortOptions()}
 		prevNode.SetNext(nd)
 		prevNode = nd
 	}
 
-	if q.skip > 0 || q.limit >= 0 {
-		nd := &skipLimitNode{skipped: 0, consumed: 0, skip: q.skip, limit: q.limit}
+	if q.GetSkip() > 0 || q.GetLimit() >= 0 {
+		nd := &skipLimitNode{skipped: 0, consumed: 0, skip: q.GetSkip(), limit: q.GetLimit()}
 		prevNode.SetNext(nd)
 		prevNode = nd
 	}
@@ -270,6 +284,32 @@ type consumerNode struct {
 	consumer docConsumer
 }
 
-func (nd *consumerNode) Callback(doc *Document) error {
+func (nd *consumerNode) Callback(doc *d.Document) error {
 	return nd.consumer(doc)
+}
+
+func compareDocuments(first *d.Document, second *d.Document, sortOpts []query.SortOption) int {
+	for _, opt := range sortOpts {
+		field := opt.Field
+		direction := opt.Direction
+
+		firstHas := first.Has(field)
+		secondHas := second.Has(field)
+
+		if !firstHas && secondHas {
+			return -direction
+		}
+
+		if firstHas && !secondHas {
+			return direction
+		}
+
+		if firstHas && secondHas {
+			res := internal.Compare(first.Get(field), second.Get(field))
+			if res != 0 {
+				return res * direction
+			}
+		}
+	}
+	return 0
 }

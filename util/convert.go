@@ -12,6 +12,8 @@ func IsNumber(v interface{}) bool {
 
 func ToFloat64(v interface{}) float64 {
 	switch vType := v.(type) {
+	case uint32:
+		return float64(vType)
 	case uint64:
 		return float64(vType)
 	case int64:

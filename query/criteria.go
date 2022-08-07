@@ -1,16 +1,11 @@
-package clover
+package query
 
 import (
 	"regexp"
 	"strings"
 
+	d "github.com/ostafen/clover/v2/document"
 	"github.com/ostafen/clover/v2/internal"
-	"github.com/ostafen/clover/v2/util"
-)
-
-const (
-	objectIdField  = "_id"
-	expiresAtField = "_expiresAt"
 )
 
 const (
@@ -25,7 +20,6 @@ const (
 	InOp
 	ContainsOp
 	FunctionOp
-	NearOp
 )
 
 const (
@@ -36,7 +30,7 @@ const (
 // Criteria represents a predicate for selecting documents.
 // It follows a fluent API style so that you can easily chain together multiple criteria.
 type Criteria interface {
-	Satisfy(doc *Document) bool
+	Satisfy(doc *d.Document) bool
 	Accept(v CriteriaVisitor) interface{}
 	Not() Criteria
 	And(c Criteria) Criteria
@@ -68,7 +62,7 @@ func (c *NotCriteria) Or(other Criteria) Criteria {
 	return or(c, other)
 }
 
-func (c *NotCriteria) Satisfy(doc *Document) bool {
+func (c *NotCriteria) Satisfy(doc *d.Document) bool {
 	return !c.C.Satisfy(doc)
 }
 
@@ -88,7 +82,7 @@ func (c *BinaryCriteria) Or(other Criteria) Criteria {
 	return or(c, other)
 }
 
-func (c *BinaryCriteria) Satisfy(doc *Document) bool {
+func (c *BinaryCriteria) Satisfy(doc *d.Document) bool {
 	if c.OpType == LogicalAnd {
 		return c.C1.Satisfy(doc) && c.C2.Satisfy(doc)
 	}
@@ -113,7 +107,7 @@ func (c *UnaryCriteria) Or(other Criteria) Criteria {
 	return or(c, other)
 }
 
-func (c *UnaryCriteria) Satisfy(doc *Document) bool {
+func (c *UnaryCriteria) Satisfy(doc *d.Document) bool {
 	switch c.OpType {
 	case ExistsOp:
 		return c.exist(doc)
@@ -125,12 +119,10 @@ func (c *UnaryCriteria) Satisfy(doc *Document) bool {
 		return c.in(doc)
 	case GtOp, GtEqOp, LtOp, LtEqOp:
 		return c.compare(doc)
-	case NearOp:
-		return c.near(doc)
 	case ContainsOp:
 		return c.contains(doc)
 	case FunctionOp:
-		return c.Value.(func(*Document) bool)(doc)
+		return c.Value.(func(*d.Document) bool)(doc)
 	}
 	return false
 }
@@ -169,6 +161,11 @@ func newCriteria(opType int, field string, value interface{}) Criteria {
 
 type field struct {
 	name string
+}
+
+func IsField(v interface{}) bool {
+	_, ok := v.(*field)
+	return ok
 }
 
 // Field represents a document field. It is used to create a new criteria.
@@ -236,23 +233,9 @@ func (f *field) Contains(elems ...interface{}) Criteria {
 	return newCriteria(ContainsOp, f.name, elems)
 }
 
-type nearData struct {
-	x, y    float64
-	maxDist float64
-	sphere  bool
-}
-
-func (f *field) Near(x, y float64, maxDist float64) Criteria {
-	return newCriteria(NearOp, f.name, internal.Value{V: nearData{x, y, maxDist, false}})
-}
-
-func (f *field) NearSphere(lat, lon float64, maxDist float64) Criteria {
-	return newCriteria(NearOp, f.name, internal.Value{V: nearData{lat, lon, maxDist, true}})
-}
-
 // getFieldOrValue returns dereferenced value if value denotes another document field,
 // otherwise returns the value itself directly
-func getFieldOrValue(doc *Document, value interface{}) interface{} {
+func getFieldOrValue(doc *d.Document, value interface{}) interface{} {
 	if cmpField, ok := value.(*field); ok {
 		value = doc.Get(cmpField.name)
 	} else if fStr, ok := value.(string); ok && strings.HasPrefix(fStr, "$") {
@@ -262,7 +245,7 @@ func getFieldOrValue(doc *Document, value interface{}) interface{} {
 	return value
 }
 
-func (c *UnaryCriteria) compare(doc *Document) bool {
+func (c *UnaryCriteria) compare(doc *d.Document) bool {
 	normValue, err := internal.Normalize(getFieldOrValue(doc, c.Value))
 	if err != nil {
 		return false
@@ -283,11 +266,11 @@ func (c *UnaryCriteria) compare(doc *Document) bool {
 	panic("unreachable code")
 }
 
-func (c *UnaryCriteria) exist(doc *Document) bool {
+func (c *UnaryCriteria) exist(doc *d.Document) bool {
 	return doc.Has(c.Field)
 }
 
-func (c *UnaryCriteria) eq(doc *Document) bool {
+func (c *UnaryCriteria) eq(doc *d.Document) bool {
 	value := getFieldOrValue(doc, c.Value)
 
 	if !doc.Has(c.Field) {
@@ -297,7 +280,7 @@ func (c *UnaryCriteria) eq(doc *Document) bool {
 	return internal.Compare(doc.Get(c.Field), value) == 0
 }
 
-func (c *UnaryCriteria) in(doc *Document) bool {
+func (c *UnaryCriteria) in(doc *d.Document) bool {
 	values := c.Value.([]interface{})
 
 	docValue := doc.Get(c.Field)
@@ -310,7 +293,7 @@ func (c *UnaryCriteria) in(doc *Document) bool {
 	return false
 }
 
-func (c *UnaryCriteria) contains(doc *Document) bool {
+func (c *UnaryCriteria) contains(doc *d.Document) bool {
 	elems := c.Value.([]interface{})
 
 	fieldValue := doc.Get(c.Field)
@@ -339,7 +322,7 @@ func (c *UnaryCriteria) contains(doc *Document) bool {
 	return true
 }
 
-func (c *UnaryCriteria) like(doc *Document) bool {
+func (c *UnaryCriteria) like(doc *d.Document) bool {
 	pattern := c.Value.(string)
 
 	s, isString := doc.Get(c.Field).(string)
@@ -348,30 +331,6 @@ func (c *UnaryCriteria) like(doc *Document) bool {
 	}
 	matched, err := regexp.MatchString(pattern, s)
 	return matched && err == nil
-}
-
-func (c *UnaryCriteria) near(doc *Document) bool {
-	s, isSlice := doc.Get(c.Field).([]interface{})
-	if !isSlice {
-		return false
-	}
-
-	if !util.IsNumber(s[0]) || !util.IsNumber(s[1]) {
-		return false
-	}
-
-	x := util.ToFloat64(s[0])
-	y := util.ToFloat64(s[1])
-
-	data := c.Value.(internal.Value).V.(nearData)
-
-	var dist float64
-	if data.sphere {
-		dist = util.HaversineDistance(x, y, data.x, data.y)
-	} else {
-		dist = util.EuclideanDistance(x, y, data.x, data.y)
-	}
-	return dist <= data.maxDist
 }
 
 type CriteriaVisitor interface {

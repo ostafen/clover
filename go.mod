@@ -14,6 +14,7 @@ require (
 	github.com/google/orderedcode v0.0.1
 	github.com/klauspost/compress v1.15.9 // indirect
 	github.com/kr/pretty v0.2.0 // indirect
+	github.com/mmcloughlin/geohash v0.10.0
 	github.com/satori/go.uuid v1.2.0
 	github.com/stretchr/testify v1.7.1
 	github.com/vmihailenco/msgpack/v5 v5.3.5

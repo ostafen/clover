@@ -1,4 +1,6 @@
-package clover
+package query
+
+import d "github.com/ostafen/clover/v2/document"
 
 // Query represents a generic query which is submitted to a specific collection.
 type Query struct {
@@ -30,7 +32,7 @@ func (q *Query) copy() *Query {
 	}
 }
 
-func (q *Query) satisfy(doc *Document) bool {
+func (q *Query) satisfy(doc *d.Document) bool {
 	if q.criteria == nil {
 		return true
 	}
@@ -38,21 +40,14 @@ func (q *Query) satisfy(doc *Document) bool {
 }
 
 // MatchFunc selects all the documents which satisfy the supplied predicate function.
-func (q *Query) MatchFunc(p func(doc *Document) bool) *Query {
+func (q *Query) MatchFunc(p func(doc *d.Document) bool) *Query {
 	return q.Where(newCriteria(FunctionOp, "", p))
 }
 
-// Where returns a new Query which select all the documents fullfilling both the base query and the provided Criteria.
+// Where returns a new Query which select all the documents fullfilling the provided Criteria.
 func (q *Query) Where(c Criteria) *Query {
-	newCriteria := q.criteria
-	if newCriteria == nil {
-		newCriteria = c
-	} else {
-		newCriteria = newCriteria.And(c)
-	}
-
 	newQuery := q.copy()
-	newQuery.criteria = newCriteria
+	newQuery.criteria = c
 	return newQuery
 }
 
@@ -99,7 +94,7 @@ func normalizeSortOptions(opts []SortOption) []SortOption {
 // Sort sets the query so that the returned documents are sorted according list of options.
 func (q *Query) Sort(opts ...SortOption) *Query {
 	if len(opts) == 0 { // by default, documents are sorted documents by "_id" field
-		opts = []SortOption{{Field: objectIdField, Direction: 1}}
+		opts = []SortOption{{Field: d.ObjectIdField, Direction: 1}}
 	} else {
 		opts = normalizeSortOptions(opts)
 	}
@@ -109,16 +104,22 @@ func (q *Query) Sort(opts ...SortOption) *Query {
 	return newQuery
 }
 
-func (q *Query) normalizeCriteria() error {
-	if q.criteria != nil {
-		v := &CriteriaNormalizeVisitor{}
-		c := q.criteria.Accept(v)
+func (q *Query) Collection() string {
+	return q.collection
+}
 
-		if v.err != nil {
-			return v.err
-		}
+func (q *Query) Criteria() Criteria {
+	return q.criteria
+}
 
-		q.criteria = c.(Criteria)
-	}
-	return nil
+func (q *Query) GetLimit() int {
+	return q.limit
+}
+
+func (q *Query) GetSkip() int {
+	return q.skip
+}
+
+func (q *Query) SortOptions() []SortOption {
+	return q.sortOpts
 }

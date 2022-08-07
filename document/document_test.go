@@ -1,14 +1,26 @@
-package clover_test
+package document
 
 import (
+	"math/rand"
 	"testing"
 
-	c "github.com/ostafen/clover/v2"
 	"github.com/stretchr/testify/require"
 )
 
+func genRandomFieldName() string {
+	const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+	size := rand.Intn(100) + 1
+
+	fName := ""
+	for i := 0; i < size; i++ {
+		fName += "." + string(letters[rand.Intn(len(letters))])
+	}
+	return fName
+}
+
 func TestDocument(t *testing.T) {
-	doc := c.NewDocument()
+	doc := NewDocument()
 
 	nTests := 1000
 	for i := 0; i < nTests; i++ {
@@ -20,7 +32,7 @@ func TestDocument(t *testing.T) {
 }
 
 func TestDocumentSetUint(t *testing.T) {
-	doc := c.NewDocument()
+	doc := NewDocument()
 
 	// test uint64 conversion
 	doc.Set("uint", uint(0))
@@ -40,7 +52,7 @@ func TestDocumentSetUint(t *testing.T) {
 }
 
 func TestDocumentSetInt(t *testing.T) {
-	doc := c.NewDocument()
+	doc := NewDocument()
 
 	// test int64 conversion
 	doc.Set("int", int(0))
@@ -60,7 +72,7 @@ func TestDocumentSetInt(t *testing.T) {
 }
 
 func TestDocumentSetFloat(t *testing.T) {
-	doc := c.NewDocument()
+	doc := NewDocument()
 
 	// test float64 conversion
 	doc.Set("float32", float32(0))
@@ -71,7 +83,7 @@ func TestDocumentSetFloat(t *testing.T) {
 }
 
 func TestDocumentSetPointer(t *testing.T) {
-	doc := c.NewDocument()
+	doc := NewDocument()
 
 	var x int = 100
 	ptr := &x
@@ -112,7 +124,7 @@ func TestDocumentSetPointer(t *testing.T) {
 }
 
 func TestDocumentSetInvalidType(t *testing.T) {
-	doc := c.NewDocument()
+	doc := NewDocument()
 
 	// try setting an invalid type
 	doc.Set("chan", make(chan struct{}))
@@ -120,41 +132,32 @@ func TestDocumentSetInvalidType(t *testing.T) {
 }
 
 func TestDocumentUnmarshal(t *testing.T) {
-	runCloverTest(t, func(t *testing.T, db *c.DB) {
-		require.NoError(t, loadFromJson(db, todosPath, &TodoModel{}))
-		docs, err := db.FindAll(c.NewQuery("todos"))
-		require.NoError(t, err)
+	a := &struct {
+		MyStringField string
+	}{"ciao"}
 
-		todo := &TodoModel{}
+	doc := NewDocumentOf(a)
 
-		require.Greater(t, len(docs), 0)
-		for _, doc := range docs {
-			err := doc.Unmarshal(todo)
-			require.NoError(t, err)
-		}
-	})
+	b := &struct {
+		MyStringField string
+	}{}
+
+	require.NoError(t, doc.Unmarshal(b))
+	require.Equal(t, a, b)
 }
 
 func TestDocumentValidation(t *testing.T) {
-	runCloverTest(t, func(t *testing.T, db *c.DB) {
-		require.NoError(t, db.CreateCollection("test"))
+	doc := NewDocument()
+	doc.Set("_expiresAt", -1)
 
-		doc := c.NewDocument()
-		doc.Set("_expiresAt", -1)
+	doc = NewDocument()
+	doc.Set("_id", 0)
 
-		_, err := db.InsertOne("test", doc)
-		require.Error(t, err)
-
-		doc = c.NewDocument()
-		doc.Set("_id", 0)
-
-		_, err = db.InsertOne("test", doc)
-		require.Error(t, err)
-	})
+	require.Error(t, Validate(doc))
 }
 
 func TestDocumentToMap(t *testing.T) {
-	doc := c.NewDocumentOf(map[string]interface{}{
+	doc := NewDocumentOf(map[string]interface{}{
 		"f_1": map[string]interface{}{
 			"f_1_1": float64(0),
 			"f_1_2": "aString",
@@ -174,7 +177,7 @@ func TestDocumentToMap(t *testing.T) {
 }
 
 func TestDocumentFields(t *testing.T) {
-	doc := c.NewDocumentOf(map[string]interface{}{
+	doc := NewDocumentOf(map[string]interface{}{
 		"f_1": map[string]interface{}{
 			"f_1_1": float64(0),
 			"f_1_2": "aString",
