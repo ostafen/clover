@@ -215,11 +215,6 @@ func (db *DB) CreateIndex(collection, field string) error {
 	return db.engine.CreateIndex(collection, field)
 }
 
-// CreateSpatialIndex creates a spatial index for the specified for the specified (index, collection) pair.
-func (db *DB) CreateSpatialIndex(collection, field string) error {
-	return db.engine.CreateSpatialIndex(collection, field)
-}
-
 // HasIndex returns true if an idex exists for the specified (index, collection) pair.
 func (db *DB) HasIndex(collection, field string) (bool, error) {
 	return db.engine.HasIndex(collection, field)

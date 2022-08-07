@@ -42,7 +42,6 @@ type StorageEngine interface {
 	Update(q *query.Query, updater func(doc *d.Document) *d.Document) error
 	Delete(q *query.Query) error
 	CreateIndex(collection, field string) error
-	CreateSpatialIndex(collection, field string) error
 	DropIndex(collection, field string) error
 	HasIndex(collection, field string) (bool, error)
 	ListIndexes(collection string) ([]index.IndexInfo, error)
@@ -635,10 +634,6 @@ func (s *storageImpl) createIndex(collection, field string, indexType index.Inde
 
 func (s *storageImpl) CreateIndex(collection, field string) error {
 	return s.createIndex(collection, field, index.IndexSingleField)
-}
-
-func (s *storageImpl) CreateSpatialIndex(collection, field string) error {
-	return s.createIndex(collection, field, index.IndexGeoSpatial)
 }
 
 func (s *storageImpl) DropIndex(collection, field string) error {

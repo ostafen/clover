@@ -10,17 +10,11 @@ type IndexType int
 
 const (
 	IndexSingleField IndexType = iota
-	IndexGeoSpatial
 )
 
 type IndexInfo struct {
 	Field string
 	Type  IndexType
-}
-
-type GeoSpatialIndexInfo struct {
-	MinRange float64
-	MaxRange float64
 }
 
 type Index interface {
