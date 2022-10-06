@@ -8,6 +8,8 @@ import (
 	"github.com/ostafen/clover/v2/index"
 	"github.com/ostafen/clover/v2/internal"
 	"github.com/ostafen/clover/v2/query"
+	"github.com/ostafen/clover/v2/store"
+	"github.com/ostafen/clover/v2/store/bbolt"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -76,11 +78,29 @@ func Open(dir string, opts ...Option) (*DB, error) {
 		return nil, err
 	}
 
-	db := &DB{
-		dir:    dir,
-		engine: NewDefaultStorage(),
+	store, err := getStoreOrOpenDefault(dir, config)
+	if err != nil {
+		return nil, err
 	}
-	return db, db.engine.Open(dir, config)
+
+	db := &DB{
+		dir: dir,
+		engine: &storageImpl{
+			store: store,
+		},
+	}
+	return db, nil
+}
+
+func getStoreOrOpenDefault(path string, c *Config) (store.Store, error) {
+	if c.store == nil {
+		return openDefaultStore(path)
+	}
+	return c.store, nil
+}
+
+func openDefaultStore(dir string) (store.Store, error) {
+	return bbolt.Open(dir)
 }
 
 // Close releases all the resources and closes the database. After the call, the instance will no more be usable.

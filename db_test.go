@@ -15,12 +15,15 @@ import (
 	"time"
 
 	"github.com/brianvoe/gofakeit/v6"
+	"github.com/dgraph-io/badger/v3"
 	"github.com/stretchr/testify/require"
 
 	c "github.com/ostafen/clover/v2"
 	d "github.com/ostafen/clover/v2/document"
 	"github.com/ostafen/clover/v2/index"
 	q "github.com/ostafen/clover/v2/query"
+	badgerstore "github.com/ostafen/clover/v2/store/badger"
+	"github.com/ostafen/clover/v2/store/bbolt"
 )
 
 const (
@@ -38,18 +41,41 @@ type TodoModel struct {
 	Notes         *string    `json:"notes,omitempty" clover:"notes,omitempty"`
 }
 
+type dbFactory func(string) (*c.DB, error)
+
+func getBadgerDB(dir string) (*c.DB, error) {
+	store, err := badgerstore.Open(badger.DefaultOptions("").WithInMemory(true).WithLoggingLevel(badger.ERROR))
+	if err != nil {
+		return nil, err
+	}
+	return c.Open(dir, c.WithStore(store))
+}
+
+func getBBoltDB(dir string) (*c.DB, error) {
+	store, err := bbolt.Open(dir)
+	if err != nil {
+		return nil, err
+	}
+	return c.Open(dir, c.WithStore(store))
+}
+
+func getDBFactories() []dbFactory {
+	return []dbFactory{getBadgerDB, getBBoltDB}
+}
+
 func runCloverTest(t *testing.T, test func(t *testing.T, db *c.DB)) {
-	dir, err := ioutil.TempDir("", "clover-test")
-	require.NoError(t, err)
+	for _, createDB := range getDBFactories() {
+		dir, err := ioutil.TempDir("", "clover-test")
+		require.NoError(t, err)
 
-	db, err := c.Open(dir, c.WithGCReclaimInterval(time.Millisecond*500))
-	require.NoError(t, err)
+		db, err := createDB(dir)
+		require.NoError(t, err)
 
-	defer func() {
+		test(t, db)
+
 		require.NoError(t, db.Close())
 		require.NoError(t, os.RemoveAll(dir))
-	}()
-	test(t, db)
+	}
 }
 
 func TestErrCollectionNotExist(t *testing.T) {
@@ -284,7 +310,7 @@ func TestUpdateById(t *testing.T) {
 		require.NoError(t, err)
 
 		err = db.UpdateById("todos", "invalid-id", map[string]interface{}{})
-		require.Error(t, c.ErrDocumentNotExist)
+		require.Equal(t, err, c.ErrDocumentNotExist)
 
 		id := doc.ObjectId()
 		completed := doc.Get("completed").(bool)
@@ -307,7 +333,7 @@ func TestReplaceById(t *testing.T) {
 		require.NoError(t, err)
 
 		err = db.ReplaceById("todos", "invalid-id", doc)
-		require.Error(t, c.ErrDocumentNotExist)
+		require.Error(t, err)
 
 		id := doc.ObjectId()
 		newDoc := d.NewDocument()
@@ -413,6 +439,7 @@ func TestInvalidCriteria(t *testing.T) {
 		require.Error(t, err)
 
 		_, err = db.FindAll(q.NewQuery("todos").Where(q.Field("completed").LtEq(func() {})))
+		require.Error(t, err)
 
 		_, err = db.FindAll(q.NewQuery("todos").Where(q.Field("completed").Gt(func() {})))
 		require.Error(t, err)
@@ -429,6 +456,7 @@ func TestExistsCriteria(t *testing.T) {
 		n, err := db.Count(q.NewQuery("todos").Where(q.Field("completed_date").Exists()))
 		require.NoError(t, err)
 		m, err := db.Count(q.NewQuery("todos").Where(q.Field("completed").IsTrue()))
+		require.NoError(t, err)
 		require.Equal(t, n, m)
 	})
 }
@@ -441,6 +469,8 @@ func TestNotExistsCriteria(t *testing.T) {
 		require.NoError(t, err)
 
 		m, err := db.Count(q.NewQuery("todos").Where(q.Field("completed").IsFalse()))
+		require.NoError(t, err)
+
 		require.Equal(t, n, m)
 	})
 }
@@ -490,6 +520,8 @@ func TestIsNilOrNotExist(t *testing.T) {
 		n, err := db.Count(q.NewQuery("todos").Where(q.Field("completed_date").IsNilOrNotExists()))
 		require.NoError(t, err)
 		m, err := db.Count(q.NewQuery("todos").Where(q.Field("completed").IsFalse()))
+		require.NoError(t, err)
+
 		require.Equal(t, n, m)
 	})
 }
@@ -840,6 +872,8 @@ func TestLikeCriteria(t *testing.T) {
 		}
 
 		docs, err = db.FindAll(q.NewQuery("todos").Where(likeCriteria.Not()))
+		require.NoError(t, err)
+
 		m := len(docs)
 		for _, doc := range docs {
 			s, isString := doc.Get("title").(string)
@@ -1087,6 +1121,7 @@ func TestListCollections(t *testing.T) {
 		require.NoError(t, err)
 
 		collections, err = db.ListCollections()
+		require.NoError(t, err)
 		require.Equal(t, 2, len(collections))
 
 		err = db.DropCollection("test1")
@@ -1100,6 +1135,7 @@ func TestListCollections(t *testing.T) {
 		require.NoError(t, err)
 
 		collections, err = db.ListCollections()
+		require.NoError(t, err)
 		require.Equal(t, 4, len(collections))
 
 		err = db.DropCollection("c1")
@@ -1112,6 +1148,7 @@ func TestListCollections(t *testing.T) {
 		require.NoError(t, err)
 
 		collections, err = db.ListCollections()
+		require.NoError(t, err)
 		require.Equal(t, 0, len(collections))
 	})
 }
@@ -1174,6 +1211,7 @@ func TestSliceCompare(t *testing.T) {
 		require.NoError(t, err)
 
 		sort1, err := db.FindAll(q.NewQuery("todos").Sort(q.SortOption{Field: "title"}))
+		require.NoError(t, err)
 
 		sort2, err := db.FindAll(q.NewQuery("todos.copy").Sort(q.SortOption{Field: "title"}))
 		require.NoError(t, err)
@@ -1423,17 +1461,31 @@ func TestPagedQueryUsingIndex(t *testing.T) {
 		err := db.CreateCollection("test")
 		require.NoError(t, err)
 		err = db.CreateIndex("test", "timestamp")
+		require.NoError(t, err)
 
-		var is int64
+		docs := make([]*d.Document, 0, 1024)
+
+		var is time.Time
 		n := 10003
 		for i := 0; i < n; i++ {
 			doc := d.NewDocument()
-			doc.Set("timestamp", time.Now().UnixNano())
-			_, err := db.InsertOne("test", doc)
+			doc.Set("timestamp", time.Now())
+
+			if len(docs) == 1024 {
+				err := db.Insert("test", docs...)
+				require.NoError(t, err)
+
+				docs = make([]*d.Document, 0, 1024)
+			}
+			docs = append(docs, doc)
 
 			if i == 100 {
-				is = doc.Get("timestamp").(int64)
+				is = doc.Get("timestamp").(time.Time)
 			}
+		}
+
+		if len(docs) > 0 {
+			err := db.Insert("test", docs...)
 			require.NoError(t, err)
 		}
 
@@ -1442,18 +1494,18 @@ func TestPagedQueryUsingIndex(t *testing.T) {
 		count := 0
 		var lastDoc *d.Document = nil
 		for {
-			var instant int64
+			var instant time.Time
 			if lastDoc == nil {
-				instant = time.Now().UnixNano()
+				instant = time.Now()
 			} else {
-				instant = lastDoc.Get("timestamp").(int64)
+				instant = lastDoc.Get("timestamp").(time.Time)
 			}
 
 			all, err := db.FindAll(q.NewQuery("test").Where(q.Field("timestamp").Lt(instant)).Sort(sortOpt).Limit(25))
 			require.NoError(t, err)
 
 			sorted := sort.SliceIsSorted(all, func(i, j int) bool {
-				return all[j].Get("timestamp").(int64) < all[i].Get("timestamp").(int64)
+				return all[j].Get("timestamp").(time.Time).Before(all[i].Get("timestamp").(time.Time))
 			})
 			require.True(t, sorted)
 
@@ -1523,6 +1575,7 @@ func TestListIndexes(t *testing.T) {
 	})
 }
 
+/*
 func TestInMemoryMode(t *testing.T) {
 	db, err := c.Open("clover-db", c.InMemoryMode(true))
 	require.NoError(t, err)
@@ -1540,8 +1593,9 @@ func TestInMemoryMode(t *testing.T) {
 	has, err = db.HasCollection("test")
 	require.NoError(t, err)
 	require.False(t, has)
-}
+}*/
 
+/*
 func TestExpiration(t *testing.T) {
 	runCloverTest(t, func(t *testing.T, db *c.DB) {
 		require.NoError(t, db.CreateCollection("test"))
@@ -1603,9 +1657,4 @@ func TestExpiration(t *testing.T) {
 		require.Equal(t, nInserts-expiredDocuments, n)
 	})
 }
-
-func TestClamp(t *testing.T) {
-
-	//v := util.ClampOnSphere(-95, c.LatitudeMin, c.LatitudeMax)
-
-}
+*/

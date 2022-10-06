@@ -3,78 +3,18 @@ package clover
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
-	"log"
-	"sync"
 	"sync/atomic"
-	"time"
 
-	badger "github.com/dgraph-io/badger/v3"
-	"github.com/mmcloughlin/geohash"
 	d "github.com/ostafen/clover/v2/document"
 	"github.com/ostafen/clover/v2/index"
 	"github.com/ostafen/clover/v2/internal"
 	"github.com/ostafen/clover/v2/query"
-	"github.com/ostafen/clover/v2/util"
+	"github.com/ostafen/clover/v2/store"
 )
 
 type storageImpl struct {
-	db     *badger.DB
-	conf   *Config
-	chQuit chan struct{}
-	chWg   sync.WaitGroup
+	store  store.Store
 	closed uint32
-}
-
-func NewDefaultStorage() *storageImpl {
-	return &storageImpl{
-		chQuit: make(chan struct{}, 1),
-	}
-}
-
-func (s *storageImpl) startGC() {
-	s.chWg.Add(1)
-
-	go func() {
-		defer s.chWg.Done()
-
-		ticker := time.NewTicker(s.conf.GCReclaimInterval)
-		defer ticker.Stop()
-
-		for {
-			select {
-			case <-s.chQuit:
-				return
-
-			case <-ticker.C:
-				err := s.db.RunValueLogGC(s.conf.GCDiscardRatio)
-				if err != nil {
-					log.Printf("RunValueLogGC(): %s\n", err.Error())
-				}
-			}
-		}
-	}()
-}
-
-func (s *storageImpl) stopGC() {
-	s.chQuit <- struct{}{}
-	s.chWg.Wait()
-	close(s.chQuit)
-}
-
-func (s *storageImpl) Open(path string, c *Config) error {
-	if c.InMemory {
-		path = ""
-	}
-
-	db, err := badger.Open(badger.DefaultOptions(path).WithLoggingLevel(badger.ERROR).WithInMemory(c.InMemory))
-
-	s.db = db
-	s.conf = c
-
-	s.startGC()
-
-	return err
 }
 
 type collectionMetadata struct {
@@ -91,10 +31,13 @@ func getCollectionKey(name string) string {
 }
 
 func (s *storageImpl) CreateCollection(name string) error {
-	txn := s.db.NewTransaction(true)
-	defer txn.Discard()
+	tx, err := s.store.Begin(true)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
 
-	ok, err := s.hasCollection(name, txn)
+	ok, err := s.hasCollection(name, tx)
 	if err != nil {
 		return err
 	}
@@ -104,53 +47,61 @@ func (s *storageImpl) CreateCollection(name string) error {
 	}
 
 	meta := &collectionMetadata{Size: 0}
-	if err := s.saveCollectionMetadata(name, meta, txn); err != nil {
+	if err := s.saveCollectionMetadata(name, meta, tx); err != nil {
 		return err
 	}
-	return txn.Commit()
+	return tx.Commit()
 }
 
 func (s *storageImpl) DropCollection(name string) error {
-	txn := s.db.NewTransaction(true)
-	defer txn.Discard()
+	tx, err := s.store.Begin(true)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
 
-	if err := s.deleteAll(txn, name); err != nil {
+	if err := s.deleteAll(tx, name); err != nil {
 		return err
 	}
 
-	if err := txn.Delete([]byte(getCollectionKey(name))); err != nil {
+	if err := tx.Delete([]byte(getCollectionKey(name))); err != nil {
 		return err
 	}
 
-	return txn.Commit()
+	return tx.Commit()
 }
 
-func (s *storageImpl) getCollectionMeta(collection string, txn *badger.Txn) (*collectionMetadata, error) {
-	e, err := txn.Get([]byte(getCollectionKey(collection)))
-	if errors.Is(err, badger.ErrKeyNotFound) {
+func (s *storageImpl) getCollectionMeta(collection string, tx store.Tx) (*collectionMetadata, error) {
+	value, err := tx.Get([]byte(getCollectionKey(collection)))
+	if err != nil {
+		return nil, err
+	}
+
+	if value == nil {
 		return nil, ErrCollectionNotExist
 	}
 
 	m := &collectionMetadata{}
-	err = e.Value(func(rawMeta []byte) error {
-		return json.Unmarshal(rawMeta, m)
-	})
+	err = json.Unmarshal(value, m)
 	return m, err
 }
 
-func (s *storageImpl) saveCollectionMetadata(collection string, meta *collectionMetadata, txn *badger.Txn) error {
+func (s *storageImpl) saveCollectionMetadata(collection string, meta *collectionMetadata, tx store.Tx) error {
 	rawMeta, err := json.Marshal(meta)
 	if err != nil {
 		return err
 	}
-	return txn.Set([]byte(getCollectionKey(collection)), rawMeta)
+	return tx.Set([]byte(getCollectionKey(collection)), rawMeta)
 }
 
 func (s *storageImpl) getCollectionSize(collection string) (int, error) {
-	txn := s.db.NewTransaction(false)
-	defer txn.Discard()
+	tx, err := s.store.Begin(false)
+	if err != nil {
+		return -1, err
+	}
+	defer tx.Rollback()
 
-	meta, err := s.getCollectionMeta(collection, txn)
+	meta, err := s.getCollectionMeta(collection, tx)
 	if err != nil {
 		return -1, err
 	}
@@ -195,26 +146,22 @@ func (s *storageImpl) FindAll(q *query.Query) ([]*d.Document, error) {
 	return docs, err
 }
 
-func getDocumentById(collectionName string, id string, txn *badger.Txn) (*d.Document, error) {
-	item, err := txn.Get([]byte(getDocumentKey(collectionName, id)))
-	if errors.Is(err, badger.ErrKeyNotFound) {
-		return nil, nil
+func getDocumentById(collectionName string, id string, tx store.Tx) (*d.Document, error) {
+	value, err := tx.Get([]byte(getDocumentKey(collectionName, id)))
+	if value == nil || err != nil {
+		return nil, err
 	}
-
-	var doc *d.Document
-	err = item.Value(func(data []byte) error {
-		d, err := d.Decode(data)
-		doc = d
-		return err
-	})
-	return doc, err
+	return d.Decode(value)
 }
 
 func (s *storageImpl) FindById(collectionName string, id string) (*d.Document, error) {
-	txn := s.db.NewTransaction(false)
-	defer txn.Discard()
+	tx, err := s.store.Begin(false)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
 
-	ok, err := s.hasCollection(collectionName, txn)
+	ok, err := s.hasCollection(collectionName, tx)
 	if err != nil {
 		return nil, err
 	}
@@ -223,7 +170,7 @@ func (s *storageImpl) FindById(collectionName string, id string) (*d.Document, e
 		return nil, ErrCollectionNotExist
 	}
 
-	return getDocumentById(collectionName, id, txn)
+	return getDocumentById(collectionName, id, tx)
 }
 
 func getDocumentKeyPrefix(collection string) string {
@@ -234,18 +181,7 @@ func getDocumentKey(collection string, id string) string {
 	return getDocumentKeyPrefix(collection) + id
 }
 
-func getGeoHash(v interface{}) int64 {
-	s := v.([]interface{})
-	if !util.IsNumber(s[0]) && !util.IsNumber(s[1]) {
-		return -1
-	}
-
-	x := util.ToFloat64(s[0])
-	y := util.ToFloat64(s[1])
-	return int64(geohash.EncodeIntWithPrecision(x, y, 26))
-}
-
-func (s *storageImpl) addDocToIndexes(txn *badger.Txn, indexes []index.Index, doc *d.Document) error {
+func (s *storageImpl) addDocToIndexes(tx store.Tx, indexes []index.Index, doc *d.Document) error {
 	// update indexes
 	for _, idx := range indexes {
 		fieldVal := doc.Get(idx.Field()) // missing fields are treated as null
@@ -259,41 +195,48 @@ func (s *storageImpl) addDocToIndexes(txn *badger.Txn, indexes []index.Index, do
 }
 
 func (s *storageImpl) Insert(collection string, docs ...*d.Document) error {
-	txn := s.db.NewTransaction(true)
-	defer txn.Discard()
+	tx, err := s.store.Begin(true)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
 
-	meta, err := s.getCollectionMeta(collection, txn)
+	meta, err := s.getCollectionMeta(collection, tx)
 	if err != nil {
 		return err
 	}
 
-	indexes := s.getIndexes(txn, collection, meta)
+	indexes := s.getIndexes(tx, collection, meta)
 
 	for _, doc := range docs {
-		if err := s.addDocToIndexes(txn, indexes, doc); err != nil {
+		if err := s.addDocToIndexes(tx, indexes, doc); err != nil {
 			return err
 		}
 
 		key := []byte(getDocumentKey(collection, doc.ObjectId()))
-		_, err = txn.Get(key)
-		if !errors.Is(err, badger.ErrKeyNotFound) {
+		value, err := tx.Get(key)
+		if err != nil {
+			return err
+		}
+
+		if value != nil {
 			return ErrDuplicateKey
 		}
 
-		if err := saveDocument(doc, key, txn); err != nil {
+		if err := saveDocument(doc, key, tx); err != nil {
 			return err
 		}
 	}
 
 	meta.Size += len(docs)
-	if err := s.saveCollectionMetadata(collection, meta, txn); err != nil {
+	if err := s.saveCollectionMetadata(collection, meta, tx); err != nil {
 		return err
 	}
 
-	return txn.Commit()
+	return tx.Commit()
 }
 
-func saveDocument(doc *d.Document, key []byte, txn *badger.Txn) error {
+func saveDocument(doc *d.Document, key []byte, tx store.Tx) error {
 	if err := d.Validate(doc); err != nil {
 		return err
 	}
@@ -302,22 +245,10 @@ func saveDocument(doc *d.Document, key []byte, txn *badger.Txn) error {
 	if err != nil {
 		return err
 	}
-
-	e := badger.NewEntry(key, data)
-
-	ttl := doc.TTL()
-	if ttl == 0 {
-		return nil
-	}
-
-	if ttl > 0 {
-		e = e.WithTTL(ttl)
-	}
-
-	return txn.SetEntry(e)
+	return tx.Set(key, data)
 }
 
-func (s *storageImpl) deleteDocFromIndexes(txn *badger.Txn, indexes []index.Index, doc *d.Document) error {
+func (s *storageImpl) deleteDocFromIndexes(indexes []index.Index, doc *d.Document) error {
 	for _, idx := range indexes {
 		value := doc.Get(idx.Field())
 		if err := idx.Remove(doc.ObjectId(), value); err != nil {
@@ -327,12 +258,12 @@ func (s *storageImpl) deleteDocFromIndexes(txn *badger.Txn, indexes []index.Inde
 	return nil
 }
 
-func (s *storageImpl) getDocAndDeleteFromIndexes(txn *badger.Txn, indexes []index.Index, collection string, docId string) error {
+func (s *storageImpl) getDocAndDeleteFromIndexes(tx store.Tx, indexes []index.Index, collection string, docId string) error {
 	if len(indexes) == 0 {
 		return nil
 	}
 
-	doc, err := getDocumentById(collection, docId, txn)
+	doc, err := getDocumentById(collection, docId, tx)
 	if err != nil {
 		return err
 	}
@@ -350,13 +281,13 @@ func (s *storageImpl) getDocAndDeleteFromIndexes(txn *badger.Txn, indexes []inde
 	return nil
 }
 
-func (s *storageImpl) updateIndexesOnDocUpdate(txn *badger.Txn, indexes []index.Index, oldDoc, newDoc *d.Document) error {
-	if err := s.deleteDocFromIndexes(txn, indexes, oldDoc); err != nil {
+func (s *storageImpl) updateIndexesOnDocUpdate(tx store.Tx, indexes []index.Index, oldDoc, newDoc *d.Document) error {
+	if err := s.deleteDocFromIndexes(indexes, oldDoc); err != nil {
 		return err
 	}
 
 	if newDoc != nil {
-		if err := s.addDocToIndexes(txn, indexes, newDoc); err != nil {
+		if err := s.addDocToIndexes(tx, indexes, newDoc); err != nil {
 			return err
 		}
 	}
@@ -366,29 +297,29 @@ func (s *storageImpl) updateIndexesOnDocUpdate(txn *badger.Txn, indexes []index.
 
 type docUpdater func(doc *d.Document) *d.Document
 
-func (s *storageImpl) replaceDocs(txn *badger.Txn, q *query.Query, updater docUpdater) error {
-	meta, err := s.getCollectionMeta(q.Collection(), txn)
+func (s *storageImpl) replaceDocs(tx store.Tx, q *query.Query, updater docUpdater) error {
+	meta, err := s.getCollectionMeta(q.Collection(), tx)
 	if err != nil {
 		return err
 	}
 
-	indexes := s.getIndexes(txn, q.Collection(), meta)
+	indexes := s.getIndexes(tx, q.Collection(), meta)
 
 	deletedDocs := 0
-	err = s.iterateDocs(txn, q, func(doc *d.Document) error {
+	err = s.iterateDocs(tx, q, func(doc *d.Document) error {
 		docKey := []byte(getDocumentKey(q.Collection(), doc.ObjectId()))
 		newDoc := updater(doc)
 
-		if err := s.updateIndexesOnDocUpdate(txn, indexes, doc, newDoc); err != nil {
+		if err := s.updateIndexesOnDocUpdate(tx, indexes, doc, newDoc); err != nil {
 			return err
 		}
 
 		if newDoc == nil {
 			deletedDocs++
-			return txn.Delete(docKey)
+			return tx.Delete(docKey)
 		}
 
-		return saveDocument(newDoc, docKey, txn)
+		return saveDocument(newDoc, docKey, tx)
 	})
 
 	if err != nil {
@@ -397,7 +328,7 @@ func (s *storageImpl) replaceDocs(txn *badger.Txn, q *query.Query, updater docUp
 
 	if deletedDocs > 0 {
 		meta.Size -= deletedDocs
-		if err := s.saveCollectionMetadata(q.Collection(), meta, txn); err != nil {
+		if err := s.saveCollectionMetadata(q.Collection(), meta, tx); err != nil {
 			return err
 		}
 	}
@@ -405,8 +336,11 @@ func (s *storageImpl) replaceDocs(txn *badger.Txn, q *query.Query, updater docUp
 }
 
 func (s *storageImpl) Update(q *query.Query, updater func(doc *d.Document) *d.Document) error {
-	txn := s.db.NewTransaction(true)
-	defer txn.Discard()
+	txn, err := s.store.Begin(true)
+	if err != nil {
+		return err
+	}
+	defer txn.Rollback()
 
 	if err := s.replaceDocs(txn, q, updater); err != nil {
 		return err
@@ -414,111 +348,140 @@ func (s *storageImpl) Update(q *query.Query, updater func(doc *d.Document) *d.Do
 	return txn.Commit()
 }
 
-func (s *storageImpl) deleteAll(txn *badger.Txn, collName string) error {
-	return s.replaceDocs(txn, query.NewQuery(collName), func(_ *d.Document) *d.Document {
+func (s *storageImpl) deleteAll(tx store.Tx, collName string) error {
+	return s.replaceDocs(tx, query.NewQuery(collName), func(_ *d.Document) *d.Document {
 		return nil
 	})
 }
 
 func (s *storageImpl) Delete(q *query.Query) error {
-	txn := s.db.NewTransaction(true)
-	defer txn.Discard()
-
-	if err := s.replaceDocs(txn, q, func(_ *d.Document) *d.Document { return nil }); err != nil {
+	tx, err := s.store.Begin(true)
+	if err != nil {
 		return err
 	}
-	return txn.Commit()
+	defer tx.Rollback()
+
+	if err := s.replaceDocs(tx, q, func(_ *d.Document) *d.Document { return nil }); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 func (s *storageImpl) DeleteById(collName string, id string) error {
-	txn := s.db.NewTransaction(true)
-	defer txn.Discard()
+	tx, err := s.store.Begin(true)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
 
-	meta, err := s.getCollectionMeta(collName, txn)
+	meta, err := s.getCollectionMeta(collName, tx)
 	if err != nil {
 		return err
 	}
 
-	indexes := s.getIndexes(txn, collName, meta)
+	indexes := s.getIndexes(tx, collName, meta)
 
-	if err := s.getDocAndDeleteFromIndexes(txn, indexes, collName, id); err != nil {
+	if err := s.getDocAndDeleteFromIndexes(tx, indexes, collName, id); err != nil {
 		return err
 	}
 
-	if err := txn.Delete([]byte(getDocumentKey(collName, id))); err != nil {
+	if err := tx.Delete([]byte(getDocumentKey(collName, id))); err != nil {
 		return err
 	}
 
 	meta.Size--
-	if err := s.saveCollectionMetadata(collName, meta, txn); err != nil {
+	if err := s.saveCollectionMetadata(collName, meta, tx); err != nil {
 		return err
 	}
-	return txn.Commit()
+	return tx.Commit()
 }
 
 func (s *storageImpl) UpdateById(collectionName string, docId string, updater func(doc *d.Document) *d.Document) error {
-	return s.db.Update(func(txn *badger.Txn) error {
-		meta, err := s.getCollectionMeta(collectionName, txn)
-		if err != nil {
-			return err
-		}
+	tx, err := s.store.Begin(true)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
 
-		indexes := s.getIndexes(txn, collectionName, meta)
+	meta, err := s.getCollectionMeta(collectionName, tx)
+	if err != nil {
+		return err
+	}
 
-		docKey := getDocumentKey(collectionName, docId)
-		item, err := txn.Get([]byte(docKey))
-		if errors.Is(err, badger.ErrKeyNotFound) {
-			return ErrDocumentNotExist
-		}
+	indexes := s.getIndexes(tx, collectionName, meta)
 
-		var doc *d.Document
-		err = item.Value(func(value []byte) error {
-			d, err := d.Decode(value)
-			doc = d
-			return err
-		})
+	docKey := getDocumentKey(collectionName, docId)
+	value, err := tx.Get([]byte(docKey))
+	if err != nil {
+		return err
+	}
 
-		if err != nil {
-			return err
-		}
+	if value == nil {
+		return ErrDocumentNotExist
+	}
 
-		updatedDoc := updater(doc)
-		if err := s.updateIndexesOnDocUpdate(txn, indexes, doc, updatedDoc); err != nil {
-			return err
-		}
+	doc, err := d.Decode(value)
+	if err != nil {
+		return err
+	}
 
-		return saveDocument(updatedDoc, []byte(docKey), txn)
-	})
+	updatedDoc := updater(doc)
+	if err := s.updateIndexesOnDocUpdate(tx, indexes, doc, updatedDoc); err != nil {
+		return err
+	}
+
+	if err := saveDocument(updatedDoc, []byte(docKey), tx); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 func (s *storageImpl) Close() error {
 	if atomic.CompareAndSwapUint32(&s.closed, 0, 1) {
-		s.stopGC()
-		return s.db.Close()
+		return s.store.Close()
 	}
 	return nil
 }
 
-func (s *storageImpl) hasCollection(name string, txn *badger.Txn) (bool, error) {
-	_, err := txn.Get([]byte(getCollectionKey(name)))
-	if errors.Is(err, badger.ErrKeyNotFound) {
-		return false, nil
-	}
-	return err == nil, err
+func (s *storageImpl) hasCollection(name string, tx store.Tx) (bool, error) {
+	value, err := tx.Get([]byte(getCollectionKey(name)))
+	return value != nil, err
 }
 
 func (s *storageImpl) HasCollection(name string) (bool, error) {
-	txn := s.db.NewTransaction(false)
-	defer txn.Discard()
+	txn, err := s.store.Begin(false)
+	if err != nil {
+		return false, err
+	}
+	defer txn.Rollback()
 	return s.hasCollection(name, txn)
 }
 
-func iteratePrefix(prefix []byte, txn *badger.Txn, itemConsumer func(item *badger.Item) error) error {
-	it := txn.NewIterator(badger.DefaultIteratorOptions)
-	defer it.Close()
+func iteratePrefix(prefix []byte, tx store.Tx, itemConsumer func(item store.Item) error) error {
+	cursor, err := tx.Cursor(true)
+	if err != nil {
+		return err
+	}
+	defer cursor.Close()
 
-	for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
-		err := itemConsumer(it.Item())
+	if err := cursor.Seek(prefix); err != nil {
+		return err
+	}
+
+	if err := cursor.Seek(prefix); err != nil {
+		return err
+	}
+
+	for ; cursor.Valid(); cursor.Next() {
+		item, err := cursor.Item()
+		if err != nil {
+			return err
+		}
+
+		if !bytes.HasPrefix(item.Key, prefix) {
+			return nil
+		}
+		err = itemConsumer(item)
 
 		// do not propagate iteration stop error
 		if err == internal.ErrStopIteration {
@@ -532,33 +495,36 @@ func iteratePrefix(prefix []byte, txn *badger.Txn, itemConsumer func(item *badge
 	return nil
 }
 
-var errNoSuitableIndexFound = errors.New("no suitable index found for running provided query")
-
-func (s *storageImpl) iterateDocs(txn *badger.Txn, q *query.Query, consumer docConsumer) error {
-	meta, err := s.getCollectionMeta(q.Collection(), txn)
+func (s *storageImpl) iterateDocs(tx store.Tx, q *query.Query, consumer docConsumer) error {
+	meta, err := s.getCollectionMeta(q.Collection(), tx)
 	if err != nil {
 		return err
 	}
-	nd := buildQueryPlan(q, s.getIndexes(txn, q.Collection(), meta), &consumerNode{consumer: consumer})
-	return execPlan(nd, txn)
+	nd := buildQueryPlan(q, s.getIndexes(tx, q.Collection(), meta), &consumerNode{consumer: consumer})
+	return execPlan(nd, tx)
 }
 
 func (s *storageImpl) IterateDocs(q *query.Query, consumer docConsumer) error {
-	txn := s.db.NewTransaction(false)
-	defer txn.Discard()
-	return s.iterateDocs(txn, q, consumer)
+	tx, err := s.store.Begin(false)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	return s.iterateDocs(tx, q, consumer)
 }
 
 func (s *storageImpl) ListCollections() ([]string, error) {
-	txn := s.db.NewTransaction(true)
-	defer txn.Discard()
+	tx, err := s.store.Begin(true)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
 
 	collections := make([]string, 0)
 
 	prefix := []byte(getCollectionKeyPrefix())
-	err := iteratePrefix(prefix, txn, func(item *badger.Item) error {
-		key := item.Key()
-		collectionName := string(bytes.TrimPrefix(key, prefix))
+	err = iteratePrefix(prefix, tx, func(item store.Item) error {
+		collectionName := string(bytes.TrimPrefix(item.Key, prefix))
 		collections = append(collections, collectionName)
 		return nil
 	})
@@ -566,10 +532,13 @@ func (s *storageImpl) ListCollections() ([]string, error) {
 }
 
 func (s *storageImpl) createIndex(collection, field string, indexType index.IndexType) error {
-	txn := s.db.NewTransaction(true)
-	defer txn.Discard()
+	tx, err := s.store.Begin(true)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
 
-	meta, err := s.getCollectionMeta(collection, txn)
+	meta, err := s.getCollectionMeta(collection, tx)
 	if err != nil {
 		return err
 	}
@@ -585,9 +554,9 @@ func (s *storageImpl) createIndex(collection, field string, indexType index.Inde
 	}
 	meta.Indexes = append(meta.Indexes, index.IndexInfo{Field: field, Type: indexType})
 
-	idx := index.CreateBadgerIndex(collection, field, indexType, txn)
+	idx := index.CreateBadgerIndex(collection, field, indexType, tx)
 
-	err = s.iterateDocs(txn, query.NewQuery(collection), func(doc *d.Document) error {
+	err = s.iterateDocs(tx, query.NewQuery(collection), func(doc *d.Document) error {
 		value := doc.Get(field)
 		return idx.Add(doc.ObjectId(), value, doc.TTL())
 	})
@@ -596,11 +565,11 @@ func (s *storageImpl) createIndex(collection, field string, indexType index.Inde
 		return err
 	}
 
-	if err := s.saveCollectionMetadata(collection, meta, txn); err != nil {
+	if err := s.saveCollectionMetadata(collection, meta, tx); err != nil {
 		return err
 	}
 
-	return txn.Commit()
+	return tx.Commit()
 }
 
 func (s *storageImpl) CreateIndex(collection, field string) error {
@@ -608,8 +577,11 @@ func (s *storageImpl) CreateIndex(collection, field string) error {
 }
 
 func (s *storageImpl) DropIndex(collection, field string) error {
-	txn := s.db.NewTransaction(true)
-	defer txn.Discard()
+	txn, err := s.store.Begin(true)
+	if err != nil {
+		return err
+	}
+	defer txn.Rollback()
 
 	meta, err := s.getCollectionMeta(collection, txn)
 	if err != nil {
@@ -644,8 +616,8 @@ func (s *storageImpl) DropIndex(collection, field string) error {
 	return txn.Commit()
 }
 
-func (s *storageImpl) hasIndex(txn *badger.Txn, collection, field string) (bool, error) {
-	meta, err := s.getCollectionMeta(collection, txn)
+func (s *storageImpl) hasIndex(tx store.Tx, collection, field string) (bool, error) {
+	meta, err := s.getCollectionMeta(collection, tx)
 	if err == nil {
 		for _, idx := range meta.Indexes {
 			if idx.Field == field {
@@ -657,29 +629,35 @@ func (s *storageImpl) hasIndex(txn *badger.Txn, collection, field string) (bool,
 }
 
 func (s *storageImpl) HasIndex(collection, field string) (bool, error) {
-	txn := s.db.NewTransaction(false)
-	defer txn.Discard()
+	tx, err := s.store.Begin(false)
+	if err != nil {
+		return false, err
+	}
+	defer tx.Rollback()
 
-	return s.hasIndex(txn, collection, field)
+	return s.hasIndex(tx, collection, field)
 }
 
-func (s *storageImpl) getIndexes(txn *badger.Txn, collection string, meta *collectionMetadata) []index.Index {
+func (s *storageImpl) getIndexes(tx store.Tx, collection string, meta *collectionMetadata) []index.Index {
 	indexes := make([]index.Index, 0)
 
 	for _, info := range meta.Indexes {
-		indexes = append(indexes, index.CreateBadgerIndex(collection, info.Field, info.Type, txn))
+		indexes = append(indexes, index.CreateBadgerIndex(collection, info.Field, info.Type, tx))
 	}
 	return indexes
 }
 
-func (s *storageImpl) listIndexes(collection string, txn *badger.Txn) ([]index.IndexInfo, error) {
-	meta, err := s.getCollectionMeta(collection, txn)
+func (s *storageImpl) listIndexes(collection string, tx store.Tx) ([]index.IndexInfo, error) {
+	meta, err := s.getCollectionMeta(collection, tx)
 	return meta.Indexes, err
 }
 
 func (s *storageImpl) ListIndexes(collection string) ([]index.IndexInfo, error) {
-	txn := s.db.NewTransaction(false)
-	defer txn.Discard()
+	txn, err := s.store.Begin(false)
+	if err != nil {
+		return nil, err
+	}
+	defer txn.Rollback()
 
 	return s.listIndexes(collection, txn)
 }

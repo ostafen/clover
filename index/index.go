@@ -3,7 +3,7 @@ package index
 import (
 	"time"
 
-	"github.com/dgraph-io/badger/v3"
+	"github.com/ostafen/clover/v2/store"
 )
 
 type IndexType int
@@ -43,13 +43,13 @@ type IndexQuery interface {
 	Run(onValue func(docId string) error) error
 }
 
-func CreateBadgerIndex(collection, field string, idxType IndexType, txn *badger.Txn) Index {
+func CreateBadgerIndex(collection, field string, idxType IndexType, tx store.Tx) Index {
 	indexBase := indexBase{collection: collection, field: field}
 	switch idxType {
 	case IndexSingleField:
 		return &badgerRangeIndex{
 			indexBase: indexBase,
-			txn:       txn,
+			tx:        tx,
 		}
 	}
 	return nil

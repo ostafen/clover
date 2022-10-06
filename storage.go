@@ -15,9 +15,6 @@ type docConsumer func(doc *d.Document) error
 
 // StorageEngine represents the persistance layer and abstracts how collections are stored.
 type StorageEngine interface {
-	Open(path string, c *Config) error
-	Close() error
-
 	CreateCollection(name string) error
 	ListCollections() ([]string, error)
 	DropCollection(name string) error
@@ -35,4 +32,5 @@ type StorageEngine interface {
 	DropIndex(collection, field string) error
 	HasIndex(collection, field string) (bool, error)
 	ListIndexes(collection string) ([]index.IndexInfo, error)
+	Close() error
 }
