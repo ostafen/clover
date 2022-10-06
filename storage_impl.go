@@ -554,7 +554,7 @@ func (s *storageImpl) createIndex(collection, field string, indexType index.Inde
 	}
 	meta.Indexes = append(meta.Indexes, index.IndexInfo{Field: field, Type: indexType})
 
-	idx := index.CreateBadgerIndex(collection, field, indexType, tx)
+	idx := index.CreateIndex(collection, field, indexType, tx)
 
 	err = s.iterateDocs(tx, query.NewQuery(collection), func(doc *d.Document) error {
 		value := doc.Get(field)
@@ -604,7 +604,7 @@ func (s *storageImpl) DropIndex(collection, field string) error {
 	meta.Indexes[j] = meta.Indexes[0]
 	meta.Indexes = meta.Indexes[1:]
 
-	idx := index.CreateBadgerIndex(collection, field, idxType, txn)
+	idx := index.CreateIndex(collection, field, idxType, txn)
 
 	if err := idx.Drop(); err != nil {
 		return err
@@ -642,7 +642,7 @@ func (s *storageImpl) getIndexes(tx store.Tx, collection string, meta *collectio
 	indexes := make([]index.Index, 0)
 
 	for _, info := range meta.Indexes {
-		indexes = append(indexes, index.CreateBadgerIndex(collection, info.Field, info.Type, tx))
+		indexes = append(indexes, index.CreateIndex(collection, info.Field, info.Type, tx))
 	}
 	return indexes
 }

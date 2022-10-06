@@ -43,11 +43,11 @@ type IndexQuery interface {
 	Run(onValue func(docId string) error) error
 }
 
-func CreateBadgerIndex(collection, field string, idxType IndexType, tx store.Tx) Index {
+func CreateIndex(collection, field string, idxType IndexType, tx store.Tx) Index {
 	indexBase := indexBase{collection: collection, field: field}
 	switch idxType {
 	case IndexSingleField:
-		return &badgerRangeIndex{
+		return &rangeIndex{
 			indexBase: indexBase,
 			tx:        tx,
 		}
