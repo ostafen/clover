@@ -207,7 +207,7 @@ Note however that using indexes is not completely for free. A part from increasi
 Currently, CloverDB only support single-field indexes. An index can be created simply by calling the `CreateIndex()` method, which takes both the names of the collection and the field to be indexed.
 
 ```go
-db.CreateCollection("myCollection", "myField")
+db.CreateIndex("myCollection", "myField")
 ```
 
 Assume you have the following query:
