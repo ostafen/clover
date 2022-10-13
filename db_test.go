@@ -309,13 +309,18 @@ func TestUpdateById(t *testing.T) {
 
 		require.NoError(t, err)
 
-		err = db.UpdateById("todos", "invalid-id", map[string]interface{}{})
+		err = db.UpdateById("todos", "invalid-id", func(_ *d.Document) *d.Document {
+			return d.NewDocument()
+		})
 		require.Equal(t, err, c.ErrDocumentNotExist)
 
 		id := doc.ObjectId()
 		completed := doc.Get("completed").(bool)
 
-		err = db.UpdateById("todos", id, map[string]interface{}{"completed": !completed})
+		err = db.UpdateById("todos", id, func(doc *d.Document) *d.Document {
+			doc.Set("completed", !doc.Get("completed").(bool))
+			return doc
+		})
 		require.NoError(t, err)
 
 		doc, err = db.FindById("todos", id)
