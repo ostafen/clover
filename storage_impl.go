@@ -68,13 +68,16 @@ func (s *storageImpl) Open(path string, c *Config) error {
 	}
 
 	db, err := badger.Open(badger.DefaultOptions(path).WithLoggingLevel(badger.ERROR).WithInMemory(c.InMemory))
+	if err != nil {
+		return err
+	}
 
 	s.db = db
 	s.conf = c
 
 	s.startGC()
 
-	return err
+	return nil
 }
 
 type collectionMetadata struct {
