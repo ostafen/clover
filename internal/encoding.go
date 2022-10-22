@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"encoding"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -128,6 +129,11 @@ func Normalize(value interface{}) (interface{}, error) {
 		return nil, nil
 	}
 
+	switch value := value.(type) {
+	case encoding.BinaryMarshaler:
+		return value, nil
+	}
+
 	rValue, rType := getElemValueAndType(value)
 	if rType.Kind() == reflect.Ptr {
 		return nil, nil
@@ -156,7 +162,7 @@ func Normalize(value interface{}) (interface{}, error) {
 		return rValue.String(), nil
 	case reflect.Bool:
 		return rValue.Bool(), nil
-	case reflect.Slice:
+	case reflect.Slice, reflect.Array:
 		return normalizeSlice(rValue)
 	}
 	return nil, fmt.Errorf("invalid dtype %s", rType.Name())
