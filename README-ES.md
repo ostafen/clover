@@ -24,11 +24,11 @@
 
 ## ¿Por qué CloverDB?
 
-**CloverDB** ha sido programada para tener un mantenimiento sencillo. Por lo tanto, intercambia rendimiento con simplicidad y no está intencionada para ser una alternativa a bases de datos más eficientes como **MongoDB** o **MySQL**. Sin embargo, existen proyectos donde ejecutar una base de datos en un servidor por separado puede ser excesivo, y, para consultas simples, los retrasos de la red pueden ser el principal cuello de botella en el rendimiento. Para ese escenario, **CloverDB** puede ser una alternativa más adecuada.
+**CloverDB** ha sido programada para tener un mantenimiento sencillo. Por lo tanto, intercambia rendimiento con simplicidad y no está intencionada para ser una alternativa a bases de datos más eficientes como **MongoDB** o **MySQL**. Sin embargo, existen proyectos donde ejecutar una base de datos en un servidor por separado puede ser excesivo, y, para consultas simples, los retrasos de la red pueden ser el principal cuello de botella en el rendimiento. Para este tipo de escenarios, **CloverDB** puede ser una alternativa más adecuada.
 
 ## Diseño de la base de datos
 
-**CloverDB** abstrae la forma en que las colecciones se almacenan en el disco mediante la interfaz **StorageEngine**. La implementación por defecto está basada en almacenamiento de tipo clave-valor de la base de datos [Badger](https://github.com/dgraph-io/badger). Además, puedes escribir fácilmente tu propia implementación para el motor de almacenamiento.
+**CloverDB** abstrae la forma en que las colecciones se almacenan en el disco mediante la interfaz **StorageEngine**. La implementación por defecto está basada en almacenamiento de tipo clave-valor de la base de datos [Badger](https://github.com/dgraph-io/badger).
 
 ## Instalación
 Asegúrate de que tienes un entorno Go funcional (Se requiere Go 1.13 o superior). 
@@ -53,6 +53,10 @@ import (
 ...
 
 db, _ := c.Open("clover-db")
+
+// o bien, si no necesitas persistencia en los datos
+db, _ := c.Open("", c.InMemoryMode(true))
+
 defer db.Close() // recuerda cerrar la base de datos cuando hayas acabado
 ```
 
@@ -71,6 +75,26 @@ doc.Set("hello", "clover!")
 // InsertOne devuelve el campo id del documento insertado
 docId, _ := db.InsertOne("myCollection", doc)
 fmt.Println(docId)
+```
+
+### Importar y Exportar Colecciones
+
+CloverDB es capaz de importar y exportar colecciones sencillamente a formato JSON independientemente del motor de almacenamiento usado.
+
+```go
+// vuelca el contenido de la colección "todos" en un fichero JSON "todos.json"
+db.ExportCollection("todos", "todos.json")
+
+...
+
+// recupera la colección "todos" del fichero JSON exportado
+db.DropCollection("todos")
+db.ImportCollection("todos", "todos.json")
+
+docs, _ := db.FindAll(c.NewQuery("todos"))
+for _, doc := range docs {
+  log.Println(doc)
+}
 ```
 
 ## Consultas
@@ -97,24 +121,33 @@ for _, doc := range docs {
 ```
 
 
-### Filter Documents with Criteria
+### Filtrar Documentos
 
 Para filtrar los documentos devueltos por `FindAll()`, deberás de especificar ciertos parámetros determinados por el objeto **Criteria** utilizando el método `Where()`. Un objeto **Criteria** simplemente representa una afirmación en un documento, evaluándose como verdadero (true) solo si coinciden todas las condiciones expuestas en la consulta.
 
 El siguiente ejemplo muestra como construir un objeto **Criteria**, que coincida con todos los documentos cuyo campo **completed** sea verdadero (true).
 
 ```go
-db.Query("todos").Where(c.Field("completed").Eq(true)).FindAll()
+db.FindAll(c.NewQuery("todos").Where(c.Field("completed").Eq(true)))
 
-// o su equivalente
-db.Query("todos").Where(c.Field("completed").IsTrue()).FindAll()
+// o bien, su equivalente
+db.FindAll(c.NewQuery("todos").Where(c.Field("completed").IsTrue()))
 ```
 
-Con el objetivo de construir consultas más complejas, encadenaremos diferentes objetos Criteria utilizando los métodos `And()` y `Or()`, each returning a new Criteria obtained by appling the corresponding logical operator.
+Con el objetivo de construir consultas más complejas, encadenaremos diferentes objetos Criteria utilizando los métodos `And()` y `Or()`, cada uno de ellos devolverá un nuevo objeto Criteria obtenido mediante la aplicación de los correspondientes operadores lógicos.
 
 ```go
 // encontrar todos los documentos por hacer (todos) que pertenezcan a los usuarios con id 5 y 8
-db.Query("todos").Where(c.Field("completed").Eq(true).And(c.Field("userId").In(5, 8))).FindAll()
+db.FindAll(c.NewQuery("todos").Where(c.Field("completed").Eq(true).And(c.Field("userId").In(5, 8))))
+```
+
+Naturalmente,  también podrás crear un objeto **Criteria** que implique múltiples campos. CloverDB te proporciona dos formas equivalentes de lograr esto:
+
+```go
+db.FindAll(c.NewQuery("myCollection").Where(c.Field("myField1").Gt(c.Field("myField2"))))
+
+// o bien, si lo prefieres
+db.FindAll(c.NewQuery("myCollection").Where(c.Field("myField1").Gt("$myField2")))
 ```
 
 ### Ordenar Documentos
@@ -124,7 +157,7 @@ La dirección de ordenamiento puede ser 1 o -1, respectivamente corresponden a o
 
 ```go
 // Encontrar cualquier "por hacer" (todo) perteneciente al usuario insertado más reciente
-db.Query("todos").Sort(c.SortOption{"userId", -1}).FindFirst()
+db.FindFirst(c.NewQuery("todos").Sort(c.SortOption{"userId", -1}))
 ```
 
 ### Saltar/Limitar Documentos
@@ -134,7 +167,7 @@ En ocasiones, puede ser útil eliminar ciertos documentos del resultado o simple
 ```go
 // descartar los primeros 10 documentos del resultado,
 // y además limitar el número máximo de resultados de la consulta a 100
-db.Query("todos").Skip(10).Limit(100).FindAll()
+db.FindAll(c.NewQuery("todos").Skip(10).Limit(100))
 ```
 ### Actualizar/Eliminar Documentos
 
@@ -145,18 +178,85 @@ El método `Update()` es utilizado para modificar campos específicos de documen
 updates := make(map[string]interface{})
 updates["completed"] = true
 
-db.Query("todos").Where(c.Field("userId").Eq(1)).Update(updates)
+db.Update(c.NewQuery("todos").Where(c.Field("userId").Eq(1)), updates)
 
 // eliminar todos los "por hacer" (todos) que pertenezcan a los usuarios con id 5 y 8
-db.Query("todos").Where(c.Field("userId").In(5,8)).Delete()
+db.Delete(c.NewQuery("todos").Where(c.Field("userId").In(5,8)))
 ```
 
-Actualizar o eliminar un único documento utilizando la id se puede lograr de la misma forma, using an equality condition on the **_id** field, like shown in the following snippet:
+Actualizar o eliminar un único documento utilizando la id se puede lograr de la misma forma, usando `UpdateById()` o `DeleteById()`, respectivamente:
 
 ```go
 docId := "1dbce353-d3c6-43b3-b5a8-80d8d876389b"
-db.Query("todos").Where(c.Field("_id").Eq(docId)).Delete()
+// actualiza el documento con la id especificada
+db.UpdateById("todos", docId, map[string]interface{}{"completed": true})
+// o elimínalo
+db.DeleteById("todos", docId)
 ```
+
+## Índices
+En CloverDB, los índices apoyan la ejecución eficiente de consultas. Sin índices, una colección debe ser escaneada por completo para seleccionar aquellos documentos que coincidan con una determinada consulta. Un índice es una estructura especial de datos que guarda los valores (o grupo de valores) de un campo específico de un documento, ordenado por el valor del propio campo. Esto significa que los índices pueden ser utilizados para ayudar a realizar consultas eficientes de coincidencias de igualdad y consultas basadas en rangos. Además, cuando los documentos son iterados a través de un índice, los resultados se devolverán ya ordenados sin necesidad de ejecutar ningún paso de ordenación adicional.
+Sin embargo deberás de tener en cuenta que el uso de índices no sale gratis por completo. Además de incrementar el uso del disco, los índices requieren tiempo de CPU adicional durante las operaciones de inserción y actualización/borrado. Además, cuando se accede a un documento a través de un índice, se ejecutarán dos lecturas de disco ya que el índice únicamente guarda la referencia de la id del documento real. Como consecuencia, el aumento de velocidad solo se notará cuando los criterios especificados son usados para acceder a un grupo restringido de documentos.
+
+### Crear un índice
+
+Actualmente, CloverDB únicamente soporta índices de un único campo. Un índice puede ser creado simplemente llamando al método `CreateIndex()`, que obtendrá tanto el nombre de la colección como el campo a indexar.
+
+```go
+db.CreateIndex("myCollection", "myField")
+```
+
+Suponiendo que tienes la siguiente consulta:
+
+```go
+criteria := c.Field("myField").Gt(a).And(c.Field("myField").Lt(b))
+db.FindAll(c.NewQuery("myCollection").Where(criteria).Sort(c.SortOption{"myField", -1}))
+```
+
+donde **a** y **b** son valores de tu elección. CloverDB utilizará el índice creado para realizar tanto la consulta del rango como para devolver los resultados ordenados.
+
+## Tipos de datos
+
+Internamente, CloverDB soporta los siguientes tipos de datos primitivos: **int64**, **uint64**, **float64**, **string**, **bool** y **time.Time**. Cuando es posible, valores con diferentes tipos son convertidos de forma automática a alguno de los siguientes tipos de datos: valores enteros se convertirán a int64, mientras que aquellos que no tienen signo lo harán a uint64. Los valores de float32 se extenderán a float64.
+
+Por ejemplo, considera el siguiente fragmento de código, que establece un valor de uint8 en el campo del documento:
+
+```go
+doc := c.NewDocument()
+doc.Set("myField", uint8(10)) // "myField" se intercambia automáticamente a uint64
+
+fmt.Println(doc.Get("myField").(uint64))
+```
+
+En los valores de los punteros se eliminarán las referencias hasta que se encuentre un **nil** o un valor **non-pointer**:
+
+``` go
+var x int = 10
+var ptr *int = &x
+var ptr1 **int = &ptr
+
+doc.Set("ptr", ptr)
+doc.Set("ptr1", ptr1)
+
+fmt.Println(doc.Get("ptr").(int64) == 10)
+fmt.Println(doc.Get("ptr1").(int64) == 10)
+
+ptr = nil
+
+doc.Set("ptr1", ptr1)
+// ptr1 no es nil, pero apunta al puntero nil "ptr", por lo tanto el campo se establecerá en nil
+fmt.Println(doc.Get("ptr1") == nil)
+```
+
+Los tipos de datos inválidos dejarán el documento tal cual está:
+
+```go
+doc := c.NewDocument()
+doc.Set("myField", make(chan struct{}))
+
+log.Println(doc.Has("myField")) // devolverá 'false'
+```
+
 ## Contribuir
 
 **CloverDB** se desarrolla de forma activa. Cualquier contribución, en forma de sugerencia, reporte de errores o pull request es bienvenido :blush:
