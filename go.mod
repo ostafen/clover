@@ -18,6 +18,7 @@ require (
 	github.com/satori/go.uuid v1.2.0
 	github.com/stretchr/testify v1.7.1
 	github.com/vmihailenco/msgpack/v5 v5.3.5
+	go.etcd.io/bbolt v1.3.6 // indirect
 	go.opencensus.io v0.23.0 // indirect
 	golang.org/x/net v0.0.0-20220728211354-c7608f3a8462 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect

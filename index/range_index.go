@@ -7,6 +7,7 @@ import (
 
 	"github.com/dgraph-io/badger/v3"
 	"github.com/ostafen/clover/v2/internal"
+	"github.com/ostafen/clover/v2/store"
 )
 
 type RangeIndex interface {
@@ -27,9 +28,9 @@ func (q *RangeIndexQuery) Run(onValue func(docId string) error) error {
 	return q.Idx.IterateRange(q.Range, q.Reverse, onValue)
 }
 
-type badgerRangeIndex struct {
+type rangeIndex struct {
 	indexBase
-	txn *badger.Txn
+	tx store.Tx
 }
 
 func extractDocId(key []byte) ([]byte, []byte) {
@@ -39,20 +40,20 @@ func extractDocId(key []byte) ([]byte, []byte) {
 	return key[:len(key)-36], key[len(key)-36:]
 }
 
-func (idx *badgerRangeIndex) getKeyPrefix() []byte {
+func (idx *rangeIndex) getKeyPrefix() []byte {
 	return []byte(fmt.Sprintf("c:%s;i:%s", idx.collection, idx.field))
 }
 
-func (idx *badgerRangeIndex) getKeyPrefixForType(typeId int) []byte {
+func (idx *rangeIndex) getKeyPrefixForType(typeId int) []byte {
 	return []byte(fmt.Sprintf("%s;t:%d;v:", idx.getKeyPrefix(), typeId))
 }
 
-func (idx *badgerRangeIndex) getKey(v interface{}) ([]byte, error) {
+func (idx *rangeIndex) getKey(v interface{}) ([]byte, error) {
 	prefix := idx.getKeyPrefixForType(internal.TypeId(v))
 	return internal.OrderedCode(prefix, v)
 }
 
-func (idx *badgerRangeIndex) encodeValueAndId(value interface{}, docId string) ([]byte, error) {
+func (idx *rangeIndex) encodeValueAndId(value interface{}, docId string) ([]byte, error) {
 	encodedKey, err := idx.getKey(value)
 	if err != nil {
 		return nil, err
@@ -61,46 +62,49 @@ func (idx *badgerRangeIndex) encodeValueAndId(value interface{}, docId string) (
 	return encodedKey, nil
 }
 
-func (idx *badgerRangeIndex) Add(docId string, v interface{}, ttl time.Duration) error {
-	if ttl == 0 {
-		return nil
-	}
-
+func (idx *rangeIndex) Add(docId string, v interface{}, ttl time.Duration) error {
 	encodedKey, err := idx.encodeValueAndId(v, docId)
 	if err != nil {
 		return err
 	}
-
-	e := badger.NewEntry(encodedKey, nil)
-	if ttl > 0 {
-		e = e.WithTTL(ttl)
-	}
-	return idx.txn.SetEntry(e)
+	return idx.tx.Set(encodedKey, nil)
 }
 
-func (idx *badgerRangeIndex) Remove(docId string, value interface{}) error {
+func (idx *rangeIndex) Remove(docId string, value interface{}) error {
 	encodedKey, err := idx.encodeValueAndId(value, docId)
 	if err != nil {
 		return err
 	}
-	return idx.txn.Delete(encodedKey)
+	return idx.tx.Delete(encodedKey)
 }
 
-func (idx *badgerRangeIndex) Drop() error {
-	it := idx.txn.NewIterator(badger.DefaultIteratorOptions)
-	defer it.Close()
+func (idx *rangeIndex) Drop() error {
+	cursor, err := idx.tx.Cursor(true)
+	if err != nil {
+		return err
+	}
+	defer cursor.Close()
 
 	prefix := idx.getKeyPrefix()
-	for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
-		key := it.Item().Key()
-		if err := idx.txn.Delete(key); err != nil {
+	cursor.Seek(prefix)
+	for ; cursor.Valid(); cursor.Next() {
+		item, err := cursor.Item()
+		if err != nil {
+			return err
+		}
+
+		if !bytes.HasPrefix(item.Key, prefix) {
+			return nil
+		}
+
+		if err := idx.tx.Delete(item.Key); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (idx *badgerRangeIndex) encodeRange(vRange *Range) ([]byte, []byte, error) {
+func (idx *rangeIndex) encodeRange(vRange *Range) ([]byte, []byte, error) {
 	var err error
 	var startKey, endKey []byte
 
@@ -121,7 +125,7 @@ func (idx *badgerRangeIndex) encodeRange(vRange *Range) ([]byte, []byte, error) 
 	return startKey, endKey, nil
 }
 
-func (idx *badgerRangeIndex) IterateRange(vRange *Range, reverse bool, onValue func(docId string) error) error {
+func (idx *rangeIndex) IterateRange(vRange *Range, reverse bool, onValue func(docId string) error) error {
 	if vRange.IsEmpty() {
 		return nil
 	}
@@ -132,13 +136,8 @@ func (idx *badgerRangeIndex) IterateRange(vRange *Range, reverse bool, onValue f
 	}
 
 	seekPrefix := startKey
-
-	opts := badger.DefaultIteratorOptions
-	opts.PrefetchValues = false
-
 	if reverse {
 		seekPrefix = endKey
-		opts.Reverse = true
 	}
 
 	if seekPrefix == nil {
@@ -148,26 +147,53 @@ func (idx *badgerRangeIndex) IterateRange(vRange *Range, reverse bool, onValue f
 		}
 	}
 
-	it := idx.txn.NewIterator(opts)
-	defer it.Close()
+	cursor, err := idx.tx.Cursor(!reverse)
+	if err != nil {
+		return err
+	}
+	defer cursor.Close()
 
-	it.Seek(seekPrefix)
+	cursor.Seek(seekPrefix)
 
 	if !reverse {
 		if vRange.Start != nil && !vRange.StartIncluded { // skip all values equals to range.start
-			for ; it.ValidForPrefix(startKey); it.Next() {
+			for ; cursor.Valid(); cursor.Next() {
+				item, err := cursor.Item()
+				if err != nil {
+					return err
+				}
+
+				if !bytes.HasPrefix(item.Key, startKey) {
+					break
+				}
 			}
 		}
 	} else {
 		if vRange.End != nil && !vRange.EndIncluded { // skip all values equals to range.end
-			for ; it.ValidForPrefix(endKey); it.Next() {
+			for ; cursor.Valid(); cursor.Next() {
+				item, err := cursor.Item()
+				if err != nil {
+					return err
+				}
+
+				if !bytes.HasPrefix(item.Key, endKey) {
+					break
+				}
 			}
 		}
 	}
 
 	prefix := idx.getKeyPrefix()
-	for ; it.ValidForPrefix(prefix); it.Next() {
-		key := it.Item().Key()
+	for ; cursor.Valid(); cursor.Next() {
+		item, err := cursor.Item()
+		if err != nil {
+			return err
+		}
+
+		key := item.Key
+		if !bytes.HasPrefix(key, prefix) {
+			return nil
+		}
 
 		p, docId := extractDocId(key)
 
@@ -193,11 +219,14 @@ func (idx *badgerRangeIndex) IterateRange(vRange *Range, reverse bool, onValue f
 	return nil
 }
 
-func (idx *badgerRangeIndex) Iterate(reverse bool, onValue func(docId string) error) error {
+func (idx *rangeIndex) Iterate(reverse bool, onValue func(docId string) error) error {
 	opts := badger.DefaultIteratorOptions
 	opts.Reverse = reverse
 
-	it := idx.txn.NewIterator(opts)
+	it, err := idx.tx.Cursor(!reverse)
+	if err != nil {
+		return err
+	}
 	defer it.Close()
 
 	prefix := idx.getKeyPrefix()
@@ -209,8 +238,16 @@ func (idx *badgerRangeIndex) Iterate(reverse bool, onValue func(docId string) er
 
 	it.Seek(seekPrefix)
 
-	for ; it.ValidForPrefix(prefix); it.Next() {
-		key := it.Item().Key()
+	for ; it.Valid(); it.Next() {
+		item, err := it.Item()
+		if err != nil {
+			return err
+		}
+
+		key := item.Key
+		if !bytes.HasPrefix(key, prefix) {
+			return nil
+		}
 
 		_, docId := extractDocId(key)
 		if err := onValue(string(docId)); err != nil {
@@ -223,6 +260,6 @@ func (idx *badgerRangeIndex) Iterate(reverse bool, onValue func(docId string) er
 	return nil
 }
 
-func (idx *badgerRangeIndex) Type() IndexType {
+func (idx *rangeIndex) Type() IndexType {
 	return IndexSingleField
 }

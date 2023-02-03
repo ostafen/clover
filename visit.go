@@ -123,13 +123,8 @@ func (v *IndexSelectVisitor) VisitBinaryCriteria(c *query.BinaryCriteria) interf
 	}
 
 	res := make([]*index.IndexInfo, 0, len(leftIndexes)+len(rightIndexes))
-	for _, field := range leftIndexes {
-		res = append(res, field)
-	}
-
-	for _, field := range rightIndexes {
-		res = append(res, field)
-	}
+	res = append(res, leftIndexes...)
+	res = append(res, rightIndexes...)
 	return res
 }
 

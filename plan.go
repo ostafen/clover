@@ -1,14 +1,13 @@
 package clover
 
 import (
-	"errors"
 	"sort"
 
-	"github.com/dgraph-io/badger/v3"
 	d "github.com/ostafen/clover/v2/document"
 	"github.com/ostafen/clover/v2/index"
 	"github.com/ostafen/clover/v2/internal"
 	"github.com/ostafen/clover/v2/query"
+	"github.com/ostafen/clover/v2/store"
 )
 
 type planNode interface {
@@ -20,7 +19,7 @@ type planNode interface {
 
 type inputNode interface {
 	planNode
-	Run(txn *badger.Txn) error
+	Run(tx store.Tx) error
 }
 
 type planNodeBase struct {
@@ -62,33 +61,29 @@ type iterNode struct {
 	//iterIndexReverse bool
 }
 
-func (nd *iterNode) iterateFullCollection(txn *badger.Txn) error {
+func (nd *iterNode) iterateFullCollection(tx store.Tx) error {
 	prefix := []byte(getDocumentKeyPrefix(nd.collection))
-	return iteratePrefix(prefix, txn, func(item *badger.Item) error {
-		return item.Value(func(data []byte) error {
-			doc, err := d.Decode(data)
-			if err != nil {
-				return err
-			}
+	return iteratePrefix(prefix, tx, func(item store.Item) error {
+		doc, err := d.Decode(item.Value)
+		if err != nil {
+			return err
+		}
 
-			if nd.filter == nil || nd.filter.Satisfy(doc) {
-				return nd.CallNext(doc)
-			}
+		if nd.filter == nil || nd.filter.Satisfy(doc) {
+			return nd.CallNext(doc)
+		}
 
-			return nil
-		})
+		return nil
 	})
 }
 
-func (nd *iterNode) iterateIndex(txn *badger.Txn) error {
+func (nd *iterNode) iterateIndex(tx store.Tx) error {
 	iterFunc := func(docId string) error {
-		doc, err := getDocumentById(nd.collection, docId, txn)
+		doc, err := getDocumentById(nd.collection, docId, tx)
 
-		if err != nil {
-			// err == badger.ErrKeyNotFound when index record expires after document record
-			if !errors.Is(err, badger.ErrKeyNotFound) {
-				return err
-			}
+		if err != nil || doc == nil {
+			// doc == nil when index record expires after document record
+			return err
 		}
 
 		if nd.filter == nil || nd.filter.Satisfy(doc) {
@@ -101,11 +96,11 @@ func (nd *iterNode) iterateIndex(txn *badger.Txn) error {
 	return err
 }
 
-func (nd *iterNode) Run(txn *badger.Txn) error {
+func (nd *iterNode) Run(tx store.Tx) error {
 	if nd.idxQuery != nil {
-		return nd.iterateIndex(txn)
+		return nd.iterateIndex(tx)
 	}
-	return nd.iterateFullCollection(txn)
+	return nd.iterateFullCollection(tx)
 }
 
 func getIndexQueries(q *query.Query, indexes []index.Index) []index.IndexQuery {
@@ -255,6 +250,8 @@ func buildQueryPlan(q *query.Query, indexes []index.Index, outputNode planNode) 
 		prevNode = nd
 	}
 
+	//log.Println("output sorted: ", len(q.SortOptions()) > 0 && !isOutputSorted)
+
 	if q.GetSkip() > 0 || q.GetLimit() >= 0 {
 		nd := &skipLimitNode{skipped: 0, consumed: 0, skip: q.GetSkip(), limit: q.GetLimit()}
 		prevNode.SetNext(nd)
@@ -266,8 +263,8 @@ func buildQueryPlan(q *query.Query, indexes []index.Index, outputNode planNode) 
 	return inputNode
 }
 
-func execPlan(nd inputNode, txn *badger.Txn) error {
-	if err := nd.Run(txn); err != nil {
+func execPlan(nd inputNode, tx store.Tx) error {
+	if err := nd.Run(tx); err != nil {
 		return err
 	}
 
