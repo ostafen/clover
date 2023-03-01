@@ -49,9 +49,9 @@ To store documents inside collections, you have to open a Clover database using 
 
 ```go
 import (
-	"log"
-	c "github.com/ostafen/clover"
-  badger 
+  "log"
+  "github.com/dgraph-io/badger/v3"
+  c "github.com/ostafen/clover"
   badgerstore "github.com/ostafen/store/badger"
 )
 
