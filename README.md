@@ -30,7 +30,8 @@ For such scenarios, **CloverDB** may be a more suitable alternative.
 
 ## Database Layout
 
-**CloverDB** abstracts the way collections are stored on disk through the **StorageEngine** interface. The default implementation is based on the [Badger](https://github.com/dgraph-io/badger) database key-value store.
+Previously, **CloverDB** relied on the [Badger](https://github.com/dgraph-io/badger) key-value store as a storage layer. However, **Badger** is not suitable for every scenario (for example, when the database size is a constraint). This is why, the storage layer of **CloverDB** has been abstracted through a set of interface types to work with any key-value store. At the moment, **CloverDB** can work with both **Badger** and [Bolt](https://github.com/etcd-io/bbolt) (by default **Bolt** is used).
+
 
 ## Installation
 Make sure you have a working Go environment (Go 1.13 or higher is required). 
@@ -50,11 +51,18 @@ To store documents inside collections, you have to open a Clover database using 
 import (
 	"log"
 	c "github.com/ostafen/clover"
+  badger 
+  badgerstore "github.com/ostafen/store/badger"
 )
 
 ...
 
+// by default, Bolt will be used internally
 db, _ := c.Open("clover-db")
+
+// use OpenWithStore() if you want to select a different storage backend
+store, _ := badgerstore.Open(badger.DefaultOptions("").WithInMemory(true)) // opens a badger in memory database
+db, _ := c.OpenWithStore(store)
 
 // or, if you don't need persistency
 db, _ := c.Open("", c.InMemoryMode(true))

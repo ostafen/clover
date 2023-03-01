@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	db, _ := c.Open("clover-db")
+	db, _ := c.OpenWithStore("clover-db")
 	defer db.Close()
 
 	// Check if collection already exists

@@ -32,7 +32,6 @@ type docConsumer func(doc *d.Document) error
 
 // DB represents the entry point of each clover database.
 type DB struct {
-	dir    string
 	store  store.Store
 	closed uint32
 }
@@ -248,33 +247,17 @@ func (db *DB) InsertOne(collectionName string, doc *d.Document) (string, error) 
 }
 
 // Open opens a new clover database on the supplied path. If such a folder doesn't exist, it is automatically created.
-func Open(dir string, opts ...Option) (*DB, error) {
-	config, err := defaultConfig().applyOptions(opts)
+func Open(dir string) (*DB, error) {
+	store, err := bbolt.Open(dir)
 	if err != nil {
 		return nil, err
 	}
-
-	store, err := getStoreOrOpenDefault(dir, config)
-	if err != nil {
-		return nil, err
-	}
-
-	db := &DB{
-		dir:   dir,
-		store: store,
-	}
-	return db, nil
+	return OpenWithStore(store)
 }
 
-func getStoreOrOpenDefault(path string, c *Config) (store.Store, error) {
-	if c.store == nil {
-		return openDefaultStore(path)
-	}
-	return c.store, nil
-}
-
-func openDefaultStore(dir string) (store.Store, error) {
-	return bbolt.Open(dir)
+// OpenWithStore opens a new clover database using the provided store.
+func OpenWithStore(store store.Store) (*DB, error) {
+	return &DB{store: store}, nil
 }
 
 // Close releases all the resources and closes the database. After the call, the instance will no more be usable.

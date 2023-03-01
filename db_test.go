@@ -48,7 +48,7 @@ func getBadgerDB(dir string) (*c.DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	return c.Open(dir, c.WithStore(store))
+	return c.OpenWithStore(store)
 }
 
 func getBBoltDB(dir string) (*c.DB, error) {
@@ -56,7 +56,7 @@ func getBBoltDB(dir string) (*c.DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	return c.Open(dir, c.WithStore(store))
+	return c.OpenWithStore(store)
 }
 
 func getDBFactories() []dbFactory {
