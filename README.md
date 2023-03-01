@@ -34,7 +34,7 @@ Previously, **CloverDB** relied on the [Badger](https://github.com/dgraph-io/bad
 
 
 ## Installation
-Make sure you have a working Go environment (Go 1.13 or higher is required). 
+Make sure you have a working Go environment (Go 1.18 or higher is required). 
 ```shell
   GO111MODULE=on go get github.com/ostafen/clover/v2
 ```
