@@ -1580,6 +1580,29 @@ func TestListIndexes(t *testing.T) {
 	})
 }
 
+func TestCreateCollectionByQuery(t *testing.T) {
+	runCloverTest(t, func(t *testing.T, db *c.DB) {
+		require.NoError(t, loadFromJson(db, todosPath, &TodoModel{}))
+
+		newCollection := "todos_copy"
+		criteria := q.Field("completed").Eq(true)
+		err := db.CreateCollectionByQuery(newCollection, q.NewQuery("todos").Where(criteria))
+		require.NoError(t, err)
+
+		hasNewColltion, err := db.HasCollection(newCollection)
+		require.True(t, hasNewColltion)
+		require.NoError(t, err)
+
+		docs, err := db.FindAll(q.NewQuery(newCollection))
+		require.NoError(t, err)
+
+		for _, doc := range docs {
+			completed, _ := doc.Get("completed").(bool)
+			require.True(t, completed)
+		}
+	})
+}
+
 /*
 func TestInMemoryMode(t *testing.T) {
 	db, err := c.Open("clover-db", c.InMemoryMode(true))

@@ -65,6 +65,22 @@ func (db *DB) CreateCollection(name string) error {
 	return tx.Commit()
 }
 
+func (db *DB) CreateCollectionByQuery(name string, q *query.Query) error {
+	err := db.CreateCollection(name)
+	if err != nil {
+		return err
+	}
+	docs, err := db.FindAll(q)
+	if err != nil {
+		return err
+	}
+	if len(docs) == 0 { // just an empty collection
+		return nil
+	} else {
+		return db.Insert(name, docs...)
+	}
+}
+
 func (db *DB) saveCollectionMetadata(collection string, meta *collectionMetadata, tx store.Tx) error {
 	rawMeta, err := json.Marshal(meta)
 	if err != nil {
