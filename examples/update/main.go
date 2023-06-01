@@ -49,5 +49,4 @@ func main() {
 	for _, todo := range todos {
 		fmt.Printf("title: %v, userId: %v\n", todo.Get("title"), todo.Get("userId"))
 	}
-
 }

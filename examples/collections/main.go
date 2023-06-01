@@ -8,11 +8,17 @@ import (
 )
 
 func main() {
-	db, _ := c.Open("clover-db")
+	db, err := c.Open("clover-db")
+	if err != nil {
+		log.Panicf("Failed to open db: %v", err)
+	}
 	defer db.Close()
 
 	// Check if collection already exists
-	collectionExists, _ := db.HasCollection("todos")
+	collectionExists, err := db.HasCollection("todos")
+	if err != nil {
+		log.Panicf("Failed to check collection: %v", err)
+	}
 
 	if !collectionExists {
 		// Create a collection named 'todos'
@@ -20,7 +26,7 @@ func main() {
 	}
 
 	// Delete collection
-	err := db.DropCollection("todos")
+	err = db.DropCollection("todos")
 	if err != nil {
 		log.Panicf("Failed to delete collection: %v", err)
 	}
