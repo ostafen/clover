@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"time"
 
 	c "github.com/ostafen/clover/v2"
@@ -10,8 +11,20 @@ import (
 )
 
 func main() {
-	db, _ := c.Open("clover-db")
+	db, err := c.Open("clover-db")
+	if err != nil {
+		log.Panicf("Failed to open db: %v", err)
+	}
+	defer db.Close()
+
 	db.CreateCollection("todos")
+	collectionExists, err := db.HasCollection("todos")
+	if err != nil {
+		log.Panicf("Failed to check collection: %v", err)
+	}
+	if collectionExists {
+		db.Delete(query.NewQuery("todos"))
+	}
 
 	// Create todos
 	todo1 := d.NewDocument()
@@ -37,15 +50,15 @@ func main() {
 		fmt.Printf("title: %s\n", doc.Get("title"))
 	}
 
-	// Sort 'date' field in ascending order (-1 for descending)
-	docs, _ = db.FindAll(query.NewQuery("todos").Sort(query.SortOption{"date", 1}))
+	// Sort 'date' field in ascending order
+	docs, _ = db.FindAll(query.NewQuery("todos").Sort(query.SortOption{Field: "date", Direction: 1}))
 
 	for _, doc := range docs {
 		fmt.Printf("date: %v\n", doc.Get("date"))
 	}
 
-	// Sort by number of tasks
-	docs, _ = db.FindAll(query.NewQuery("airlines").Sort(query.SortOption{"tasks", -1}))
+	// Sort by number of tasks (-1 for descending)
+	docs, _ = db.FindAll(query.NewQuery("todos").Sort(query.SortOption{Field: "tasks", Direction: -1}))
 
 	for _, doc := range docs {
 		fmt.Printf("tasks: %v\n", doc.Get("tasks"))
