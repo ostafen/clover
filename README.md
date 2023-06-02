@@ -10,6 +10,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Coverage Status](https://coveralls.io/repos/github/ostafen/clover/badge.svg)](https://coveralls.io/github/ostafen/clover)
 [![Join the chat at https://gitter.im/cloverDB/community](https://badges.gitter.im/cloverDB/community.svg)](https://gitter.im/cloverDB/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![All Contributors](https://img.shields.io/github/all-contributors/ostafen/clover/all-contributors?color=ee8449&style=flat-square)](#contributors)
 
 > 🇬🇧 English | [🇨🇳 简体中文](README-CN.md) | [🇪🇸 Spanish](README-ES.md)
 
@@ -279,3 +280,4 @@ log.Println(doc.Has("myField")) // will output false
 <!-- prettier-ignore-end -->
 
 <!-- ALL-CONTRIBUTORS-LIST:END -->
+
