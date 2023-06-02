@@ -269,12 +269,13 @@ doc.Set("myField", make(chan struct{}))
 log.Println(doc.Has("myField")) // will output false
 ```
 
-## Contributing
+## Contributors
 
-**CloverDB** is actively developed. Any contribution, in the form of a suggestion, bug report or pull request, is well accepted :blush:
+<!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
+<!-- prettier-ignore-start -->
+<!-- markdownlint-disable -->
 
-Major contributions and suggestions have been gratefully received from (in alphabetical order):
+<!-- markdownlint-restore -->
+<!-- prettier-ignore-end -->
 
-- [ASWLaunchs](https://github.com/ASWLaunchs)
-- [jsgm](https://github.com/jsgm)
-- [segfault99](https://github.com/segfault99)
+<!-- ALL-CONTRIBUTORS-LIST:END -->
