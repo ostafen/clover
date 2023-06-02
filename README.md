@@ -268,6 +268,7 @@ doc := c.NewDocument()
 doc.Set("myField", make(chan struct{}))
 
 log.Println(doc.Has("myField")) // will output false
+
 ```
 
 ## Contributors
