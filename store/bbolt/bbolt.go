@@ -41,6 +41,10 @@ func (store *boltStore) createRootBucketIfNotExists() error {
 	return tx.Commit()
 }
 
+func (store *boltStore) BeginWithUpdateBatch() (store.UpdateTx, error) {
+	return store.Begin(true) // not implemented, temporarily use the normal update transaction
+}
+
 func (store *boltStore) Begin(update bool) (store.Tx, error) {
 	tx, err := store.db.Begin(update)
 	return &boltTx{Tx: tx}, err

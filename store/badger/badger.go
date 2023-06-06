@@ -16,6 +16,11 @@ type badgerStore struct {
 	chQuit chan struct{}
 }
 
+func (store *badgerStore) BeginWithUpdateBatch() (store.UpdateTx, error) {
+	tx := store.db.NewWriteBatch()
+	return &badgerUpdateBatchTx{WriteBatch: tx}, nil
+}
+
 func (store *badgerStore) Begin(update bool) (store.Tx, error) {
 	tx := store.db.NewTransaction(update)
 	return &badgerTx{Txn: tx}, nil
@@ -146,4 +151,25 @@ func (store *badgerStore) stopGC() {
 	store.chQuit <- struct{}{}
 	store.chWg.Wait()
 	close(store.chQuit)
+}
+
+type badgerUpdateBatchTx struct {
+	*badger.WriteBatch
+}
+
+func (t *badgerUpdateBatchTx) Set(key, value []byte) error {
+	return t.WriteBatch.Set(key, value)
+}
+
+func (t *badgerUpdateBatchTx) Delete(key []byte) error {
+	return t.WriteBatch.Delete(key)
+}
+
+func (t *badgerUpdateBatchTx) Commit() error {
+	return t.WriteBatch.Flush()
+}
+
+func (t *badgerUpdateBatchTx) Rollback() error {
+	t.WriteBatch.Cancel()
+	return nil
 }

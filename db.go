@@ -81,7 +81,7 @@ func (db *DB) CreateCollectionByQuery(name string, q *query.Query) error {
 	}
 }
 
-func (db *DB) saveCollectionMetadata(collection string, meta *collectionMetadata, tx store.Tx) error {
+func (db *DB) saveCollectionMetadata(collection string, meta *collectionMetadata, tx store.UpdateTx) error {
 	rawMeta, err := json.Marshal(meta)
 	if err != nil {
 		return err
@@ -139,6 +139,54 @@ func (db *DB) HasCollection(name string) (bool, error) {
 
 func NewObjectId() string {
 	return uuid.NewV4().String()
+}
+
+// This provides a way to conveniently do a lot of writes, batching them up as
+// tightly as possible in a single transaction. Unlike Insert opertaion, this
+// opertaion will not check the uniqueness of the data, it will overwrite the
+// data with the same _id.
+func (db *DB) InsertBatch(collectionName string, docs ...*d.Document) error {
+	for _, doc := range docs {
+		if !doc.Has(d.ObjectIdField) {
+			objectId := NewObjectId()
+			doc.Set(d.ObjectIdField, objectId)
+		}
+	}
+	tx, err := db.store.Begin(false)
+	if err != nil {
+		return err
+	}
+	meta, err := db.getCollectionMeta(collectionName, tx)
+	if err != nil {
+		return err
+	}
+	indexes := db.getIndexes(tx, collectionName, meta)
+	tx.Rollback()
+
+	updateTx, err := db.store.BeginWithUpdateBatch()
+	if err != nil {
+		return err
+	}
+	defer updateTx.Rollback()
+
+	for _, doc := range docs {
+		if err := db.addDocToIndexes(updateTx, indexes, doc); err != nil {
+			return err
+		}
+
+		key := []byte(getDocumentKey(collectionName, doc.ObjectId()))
+
+		if err := saveDocument(doc, key, updateTx); err != nil {
+			return err
+		}
+	}
+
+	meta.Size += len(docs)
+	if err := db.saveCollectionMetadata(collectionName, meta, updateTx); err != nil {
+		return err
+	}
+
+	return updateTx.Commit()
 }
 
 // Insert adds the supplied documents to a collection.
@@ -200,7 +248,7 @@ func (db *DB) getIndexes(tx store.Tx, collection string, meta *collectionMetadat
 	return indexes
 }
 
-func saveDocument(doc *d.Document, key []byte, tx store.Tx) error {
+func saveDocument(doc *d.Document, key []byte, tx store.UpdateTx) error {
 	if err := d.Validate(doc); err != nil {
 		return err
 	}
@@ -212,7 +260,7 @@ func saveDocument(doc *d.Document, key []byte, tx store.Tx) error {
 	return tx.Set(key, data)
 }
 
-func (db *DB) addDocToIndexes(tx store.Tx, indexes []index.Index, doc *d.Document) error {
+func (db *DB) addDocToIndexes(tx store.UpdateTx, indexes []index.Index, doc *d.Document) error {
 	// update indexes
 	for _, idx := range indexes {
 		fieldVal := doc.Get(idx.Field()) // missing fields are treated as null

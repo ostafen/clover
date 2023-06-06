@@ -2,16 +2,22 @@ package store
 
 type Store interface {
 	Begin(update bool) (Tx, error)
+	BeginWithUpdateBatch() (UpdateTx, error)
 	Close() error
 }
 
-type Tx interface {
+// updateTx only supports update and delete operations
+type UpdateTx interface {
 	Set(key, value []byte) error
-	Get(key []byte) ([]byte, error)
 	Delete(key []byte) error
-	Cursor(forward bool) (Cursor, error)
 	Commit() error
 	Rollback() error
+}
+
+type Tx interface {
+	UpdateTx
+	Get(key []byte) ([]byte, error)
+	Cursor(forward bool) (Cursor, error)
 }
 
 type Cursor interface {
