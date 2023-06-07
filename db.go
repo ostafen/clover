@@ -152,16 +152,11 @@ func (db *DB) InsertBatch(collectionName string, docs ...*d.Document) error {
 			doc.Set(d.ObjectIdField, objectId)
 		}
 	}
-	tx, err := db.store.Begin(false)
+
+	meta, indexes, err := db.getCollectionMetaAndIndexes(collectionName)
 	if err != nil {
 		return err
 	}
-	meta, err := db.getCollectionMeta(collectionName, tx)
-	if err != nil {
-		return err
-	}
-	indexes := db.getIndexes(tx, collectionName, meta)
-	tx.Rollback()
 
 	updateTx, err := db.store.BeginWithUpdateBatch()
 	if err != nil {
@@ -237,6 +232,21 @@ func (db *DB) Insert(collectionName string, docs ...*d.Document) error {
 	}
 
 	return tx.Commit()
+}
+
+func (db *DB) getCollectionMetaAndIndexes(collectionName string) (*collectionMetadata, []index.Index, error) {
+	tx, err := db.store.Begin(false)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer tx.Rollback()
+
+	meta, err := db.getCollectionMeta(collectionName, tx)
+	if err != nil {
+		return nil, nil, err
+	}
+	indexes := db.getIndexes(tx, collectionName, meta)
+	return meta, indexes, nil
 }
 
 func (db *DB) getIndexes(tx store.Tx, collection string, meta *collectionMetadata) []index.Index {
