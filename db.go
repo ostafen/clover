@@ -77,7 +77,7 @@ func (db *DB) CreateCollectionByQuery(name string, q *query.Query) error {
 	if len(docs) == 0 { // just an empty collection
 		return nil
 	} else {
-		return db.Insert(name, docs...)
+		return db.InsertBatch(name, docs...)
 	}
 }
 

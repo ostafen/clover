@@ -173,6 +173,19 @@ func TestInsert(t *testing.T) {
 	})
 }
 
+func TestInsertBatch(t *testing.T) {
+	runCloverTest(t, func(t *testing.T, db *c.DB) {
+		err := db.CreateCollection("myCollection")
+		require.NoError(t, err)
+
+		doc := d.NewDocument()
+		doc.Set("hello", "clover")
+
+		require.NoError(t, db.InsertBatch("myCollection", doc))
+		require.Equal(t, db.InsertBatch("myOtherCollection"), c.ErrCollectionNotExist)
+	})
+}
+
 func TestSaveDocument(t *testing.T) {
 	runCloverTest(t, func(t *testing.T, db *c.DB) {
 		err := db.CreateCollection("myCollection")
@@ -233,6 +246,38 @@ func TestInsertAndGet(t *testing.T) {
 	})
 }
 
+func TestInsertBatchAndGet(t *testing.T) {
+	runCloverTest(t, func(t *testing.T, db *c.DB) {
+		err := db.CreateCollection("myCollection")
+		require.NoError(t, err)
+
+		nInserts := 100
+		docs := make([]*d.Document, 0, nInserts)
+		for i := 0; i < nInserts; i++ {
+			doc := d.NewDocument()
+			doc.Set("myField", i)
+			docs = append(docs, doc)
+		}
+
+		require.NoError(t, db.InsertBatch("myCollection", docs...))
+		n, err := db.Count(q.NewQuery("myCollection"))
+		require.NoError(t, err)
+		require.Equal(t, nInserts, n)
+
+		q := q.NewQuery("myCollection").MatchFunc(func(doc *d.Document) bool {
+			require.True(t, doc.Has("myField"))
+
+			v, _ := doc.Get("myField").(int64)
+			return int(v)%2 == 0
+		})
+		n, err = db.Count(q)
+
+		require.NoError(t, err)
+
+		require.Equal(t, nInserts/2, n)
+	})
+}
+
 func loadFromJson(db *c.DB, filename string, model interface{}) error {
 	var objects []interface{}
 
@@ -271,7 +316,7 @@ func loadFromJson(db *c.DB, filename string, model interface{}) error {
 		doc := d.NewDocumentOf(fields)
 		docs = append(docs, doc)
 	}
-	return db.Insert(collectionName, docs...)
+	return db.InsertBatch(collectionName, docs...)
 }
 
 func TestUpdateCollection(t *testing.T) {
