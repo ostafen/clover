@@ -273,8 +273,11 @@ log.Println(doc.Has("myField")) // will output false
 
 **CloverDB** is actively developed. Any contribution, in the form of a suggestion, bug report or pull request, is well accepted :blush:
 
-Major contributions and suggestions have been gratefully received from (in alphabetical order):
+Contributions and suggestions have been gratefully received from the following users:
 
-- [ASWLaunchs](https://github.com/ASWLaunchs)
-- [jsgm](https://github.com/jsgm)
-- [segfault99](https://github.com/segfault99)
+<a href="https://github.com/ostafen/clover/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=ostafen/clover" />
+</a>
+
+Made with [contrib.rocks](https://contrib.rocks).
+
