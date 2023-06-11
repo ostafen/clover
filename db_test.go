@@ -380,6 +380,9 @@ func TestOpenExisting(t *testing.T) {
 	defer os.RemoveAll(dir)
 	require.NoError(t, err)
 
+	err = os.RemoveAll(dir)
+	require.NoError(t, err)
+
 	db, err := c.Open(dir)
 	require.NoError(t, err)
 
