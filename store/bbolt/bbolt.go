@@ -2,9 +2,11 @@ package bbolt
 
 import (
 	"bytes"
+	"os"
 	"path/filepath"
 
 	"github.com/ostafen/clover/v2/store"
+	"github.com/ostafen/clover/v2/util"
 	"go.etcd.io/bbolt"
 )
 
@@ -18,6 +20,16 @@ const (
 )
 
 func Open(dir string) (store.Store, error) {
+	dirExists, err := util.PathExists(dir)
+	if err != nil {
+		return nil, err
+	}
+	if !dirExists {
+		err = os.MkdirAll(dir, 0700)
+		if err != nil {
+			return nil, err
+		}
+	}
 	db, err := bbolt.Open(filepath.Join(dir, dbFileName), 0600, nil)
 	if err != nil {
 		return nil, err
