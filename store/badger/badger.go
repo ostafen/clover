@@ -99,8 +99,11 @@ func (cursor *badgerCursor) Close() error {
 	return nil
 }
 
-func Open(opts badger.Options) (store.Store, error) {
-	db, err := badger.Open(opts)
+func Open(dir string, inMemory bool) (store.Store, error) {
+	opt := badger.DefaultOptions("")
+	opt = opt.WithLoggingLevel(badger.ERROR)
+	opt = opt.WithDir(dir).WithValueDir(dir).WithInMemory(inMemory)
+	db, err := badger.Open(opt)
 	if err != nil {
 		return nil, err
 	}

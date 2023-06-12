@@ -2,6 +2,7 @@ package bbolt
 
 import (
 	"bytes"
+	"log"
 	"path/filepath"
 
 	"github.com/ostafen/clover/v2/store"
@@ -17,7 +18,10 @@ const (
 	rootBucket = "root"
 )
 
-func Open(dir string) (store.Store, error) {
+func Open(dir string, inMemory bool) (store.Store, error) {
+	if inMemory {
+		log.Fatalln("'bblot' store so far did not support 'inMemory'")
+	}
 	db, err := bbolt.Open(filepath.Join(dir, dbFileName), 0600, nil)
 	if err != nil {
 		return nil, err
