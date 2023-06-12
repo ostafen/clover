@@ -18,7 +18,7 @@ const (
 )
 
 func Open(dir string) (store.Store, error) {
-	db, err := bbolt.Open(filepath.Join(dir, dbFileName), 0666, nil)
+	db, err := bbolt.Open(filepath.Join(dir, dbFileName), 0600, nil)
 	if err != nil {
 		return nil, err
 	}
