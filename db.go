@@ -12,6 +12,7 @@ import (
 	"github.com/ostafen/clover/v2/internal"
 	"github.com/ostafen/clover/v2/query"
 	"github.com/ostafen/clover/v2/store"
+	"github.com/ostafen/clover/v2/store/badger"
 	"github.com/ostafen/clover/v2/store/bbolt"
 	uuid "github.com/satori/go.uuid"
 )
@@ -262,17 +263,34 @@ func (db *DB) InsertOne(collectionName string, doc *d.Document) (string, error) 
 	return doc.ObjectId(), err
 }
 
-// Open opens a new clover database on the supplied path. If such a folder doesn't exist, it is automatically created.
-func Open(dir string) (*DB, error) {
-	store, err := bbolt.Open(dir)
-	if err != nil {
+// Open opens a new clover database on the supplied path,
+// if such a folder doesn't exist, it is automatically created.
+// Also it can pass {"inMemory": false, "dbStore": "bbolt"} options,
+// or if not, the default is {"inMemory": false, "dbStore": "bbolt"}
+func Open(dir string, opt ...map[string]interface{}) (*DB, error) {
+	inMemory := false
+	dbStore := "bbolt"
+	if len(opt) > 0 {
+		if v, ok := opt[0]["inMemory"]; ok {
+			inMemory = v.(bool)
+		}
+		if v, ok := opt[0]["dbStore"]; ok {
+			dbStore = v.(string)
+		}
+	}
+
+	var store store.Store = nil
+	var err error = nil
+	switch dbStore {
+	case "bbolt":
+		store, err = bbolt.Open(dir, inMemory)
+	case "badger":
+		store, err = badger.Open(dir, inMemory)
+	}
+	if store == nil || err != nil {
 		return nil, err
 	}
-	return OpenWithStore(store)
-}
 
-// OpenWithStore opens a new clover database using the provided store.
-func OpenWithStore(store store.Store) (*DB, error) {
 	return &DB{store: store}, nil
 }
 
