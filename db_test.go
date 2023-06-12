@@ -15,15 +15,12 @@ import (
 	"time"
 
 	"github.com/brianvoe/gofakeit/v6"
-	"github.com/dgraph-io/badger/v3"
 	"github.com/stretchr/testify/require"
 
 	c "github.com/ostafen/clover/v2"
 	d "github.com/ostafen/clover/v2/document"
 	"github.com/ostafen/clover/v2/index"
 	q "github.com/ostafen/clover/v2/query"
-	badgerstore "github.com/ostafen/clover/v2/store/badger"
-	"github.com/ostafen/clover/v2/store/bbolt"
 )
 
 const (
@@ -44,19 +41,11 @@ type TodoModel struct {
 type dbFactory func(string) (*c.DB, error)
 
 func getBadgerDB(dir string) (*c.DB, error) {
-	store, err := badgerstore.Open(badger.DefaultOptions("").WithInMemory(true).WithLoggingLevel(badger.ERROR))
-	if err != nil {
-		return nil, err
-	}
-	return c.OpenWithStore(store)
+	return c.Open(dir, map[string]interface{}{"dbStore": "badger"})
 }
 
 func getBBoltDB(dir string) (*c.DB, error) {
-	store, err := bbolt.Open(dir)
-	if err != nil {
-		return nil, err
-	}
-	return c.OpenWithStore(store)
+	return c.Open(dir, map[string]interface{}{"dbStore": "bbolt"})
 }
 
 func getDBFactories() []dbFactory {
