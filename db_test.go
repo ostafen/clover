@@ -217,7 +217,6 @@ func TestSaveDocumentObject(t *testing.T) {
 
 		savedDoc, err := db.FindFirst(q.NewQuery("myCollection"))
 		require.NoError(t, err)
-		fmt.Println()
 		require.Equal(t, savedDoc.Get("Hello"), "clover")
 
 		id := savedDoc.ObjectId()
