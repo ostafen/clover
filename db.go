@@ -249,7 +249,8 @@ func (db *DB) getCollectionMeta(collection string, tx store.Tx) (*collectionMeta
 }
 
 // Save or update a document
-func (db *DB) Save(collectionName string, doc *d.Document) error {
+func (db *DB) Save(collectionName string, data interface{}) error {
+	doc := d.NewDocumentOf(data)
 	if !doc.Has(d.ObjectIdField) {
 		return db.Insert(collectionName, doc)
 	}

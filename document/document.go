@@ -2,6 +2,7 @@ package document
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 	"time"
 
@@ -14,6 +15,17 @@ const (
 	ObjectIdField  = "_id"
 	ExpiresAtField = "_expiresAt"
 )
+
+var (
+	DocumentType       = reflect.ValueOf(&Document{}).Type()
+	DocumentObjectType = reflect.ValueOf(DocumentObject{}).Type()
+)
+
+// DocumentObject is another form of document, You can assign its Data to your structure
+type DocumentObject struct {
+	DocumentId string
+	Data       interface{}
+}
 
 // Document represents a document as a map.
 type Document struct {
@@ -34,8 +46,26 @@ func NewDocument() *Document {
 }
 
 // NewDocumentOf creates a new document and initializes it with the content of the provided object.
-// It returns nil if the object cannot be converted to a valid Document.
-func NewDocumentOf(o interface{}) *Document {
+// It returns nil if the object cannot be converted to a valid Document. it's necessary to specify
+// DocumentId if you want through youselft structure to update the internal document directly
+func NewDocumentOf(o interface{}) (doc *Document) {
+	dataType := reflect.ValueOf(o).Type()
+	switch dataType {
+	case DocumentType:
+		doc, _ = o.(*Document)
+	case DocumentObjectType:
+		obj, _ := o.(DocumentObject)
+		doc = newDocumentOf(obj.Data)
+		if obj.DocumentId != "" {
+			doc.Set(ObjectIdField, obj.DocumentId)
+		}
+	default:
+		doc = newDocumentOf(o)
+	}
+	return
+}
+
+func newDocumentOf(o interface{}) *Document {
 	normalized, _ := internal.Normalize(o)
 	fields, _ := normalized.(map[string]interface{})
 	if fields == nil {
