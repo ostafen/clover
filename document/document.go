@@ -15,12 +15,6 @@ const (
 	ExpiresAtField = "_expiresAt"
 )
 
-// DocumentObject is another form of document, You can assign its Data to your structure
-type DocumentObject struct {
-	DocumentId string
-	Data       interface{}
-}
-
 // Document represents a document as a map.
 type Document struct {
 	fields map[string]interface{}
@@ -45,14 +39,6 @@ func NewDocument() *Document {
 func NewDocumentOf(o interface{}) *Document {
 	doc, isDoc := o.(*Document)
 	if isDoc {
-		return doc
-	}
-	obj, isDocObj := o.(DocumentObject)
-	if isDocObj {
-		doc = newDocumentOf(obj.Data)
-		if doc != nil && obj.DocumentId != "" {
-			doc.Set(ObjectIdField, obj.DocumentId)
-		}
 		return doc
 	}
 	return newDocumentOf(o)

@@ -207,23 +207,21 @@ func TestSaveDocumentObject(t *testing.T) {
 		require.NoError(t, err)
 
 		data := struct {
-			Hello string `json:"hello"`
+			Id    string `clover:"_id"`
+			Hello string `clover:"hello"`
 		}{
 			Hello: "clover",
 		}
-		documentObj := d.DocumentObject{Data: data}
-		require.NoError(t, db.Save("myCollection", documentObj))
-		d.NewDocumentOf(d.DocumentObject{Data: data})
+		require.NoError(t, db.Save("myCollection", data))
 
 		savedDoc, err := db.FindFirst(q.NewQuery("myCollection"))
 		require.NoError(t, err)
-		require.Equal(t, savedDoc.Get("Hello"), "clover")
+		require.Equal(t, savedDoc.Get("hello"), "clover")
 
 		id := savedDoc.ObjectId()
-		documentObj.DocumentId = id
+		data.Id = id
 		data.Hello = "clover-updated!"
-		documentObj.Data = data
-		require.NoError(t, db.Save("myCollection", documentObj))
+		require.NoError(t, db.Save("myCollection", data))
 
 		n, err := db.Count(q.NewQuery("myCollection"))
 		require.NoError(t, err)
@@ -231,7 +229,7 @@ func TestSaveDocumentObject(t *testing.T) {
 
 		docUpdated, err := db.FindById("myCollection", id)
 		require.NoError(t, err)
-		require.Equal(t, docUpdated.Get("Hello"), "clover-updated!")
+		require.Equal(t, docUpdated.Get("hello"), "clover-updated!")
 	})
 }
 

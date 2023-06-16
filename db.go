@@ -144,7 +144,7 @@ func NewObjectId() string {
 // Insert adds the supplied documents to a collection.
 func (db *DB) Insert(collectionName string, docs ...*d.Document) error {
 	for _, doc := range docs {
-		if !doc.Has(d.ObjectIdField) {
+		if !doc.Has(d.ObjectIdField) || doc.Get(d.ObjectIdField) == "" {
 			objectId := NewObjectId()
 			doc.Set(d.ObjectIdField, objectId)
 		}
@@ -251,7 +251,7 @@ func (db *DB) getCollectionMeta(collection string, tx store.Tx) (*collectionMeta
 // Save or update a document
 func (db *DB) Save(collectionName string, data interface{}) error {
 	doc := d.NewDocumentOf(data)
-	if !doc.Has(d.ObjectIdField) {
+	if !doc.Has(d.ObjectIdField) || doc.Get(d.ObjectIdField) == "" {
 		return db.Insert(collectionName, doc)
 	}
 	return db.ReplaceById(collectionName, doc.ObjectId(), doc)
