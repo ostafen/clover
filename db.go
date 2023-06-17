@@ -248,7 +248,8 @@ func (db *DB) getCollectionMeta(collection string, tx store.Tx) (*collectionMeta
 	return m, err
 }
 
-// Save or update a document
+// Save or update a document, If you pass in a custom struct instead of a Document object,
+// it is recommended to specify the _id field using struct tags.
 func (db *DB) Save(collectionName string, data interface{}) error {
 	doc := d.NewDocumentOf(data)
 	if !doc.Has(d.ObjectIdField) || doc.Get(d.ObjectIdField) == "" {

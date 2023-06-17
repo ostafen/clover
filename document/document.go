@@ -34,8 +34,7 @@ func NewDocument() *Document {
 }
 
 // NewDocumentOf creates a new document and initializes it with the content of the provided object.
-// It returns nil if the object cannot be converted to a valid Document. it's necessary to specify
-// DocumentId if you want through youselft structure to update the internal document directly
+// It returns nil if the object cannot be converted to a valid Document.
 func NewDocumentOf(o interface{}) *Document {
 	doc, isDoc := o.(*Document)
 	if isDoc {
