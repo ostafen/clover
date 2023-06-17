@@ -36,6 +36,14 @@ func NewDocument() *Document {
 // NewDocumentOf creates a new document and initializes it with the content of the provided object.
 // It returns nil if the object cannot be converted to a valid Document.
 func NewDocumentOf(o interface{}) *Document {
+	doc, isDoc := o.(*Document)
+	if isDoc {
+		return doc
+	}
+	return newDocumentOf(o)
+}
+
+func newDocumentOf(o interface{}) *Document {
 	normalized, _ := internal.Normalize(o)
 	fields, _ := normalized.(map[string]interface{})
 	if fields == nil {

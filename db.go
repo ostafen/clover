@@ -144,7 +144,7 @@ func NewObjectId() string {
 // Insert adds the supplied documents to a collection.
 func (db *DB) Insert(collectionName string, docs ...*d.Document) error {
 	for _, doc := range docs {
-		if !doc.Has(d.ObjectIdField) {
+		if !doc.Has(d.ObjectIdField) || doc.Get(d.ObjectIdField) == "" {
 			objectId := NewObjectId()
 			doc.Set(d.ObjectIdField, objectId)
 		}
@@ -248,9 +248,11 @@ func (db *DB) getCollectionMeta(collection string, tx store.Tx) (*collectionMeta
 	return m, err
 }
 
-// Save or update a document
-func (db *DB) Save(collectionName string, doc *d.Document) error {
-	if !doc.Has(d.ObjectIdField) {
+// Save or update a document, If you pass in a custom struct instead of a Document object,
+// it is recommended to specify the _id field using struct tags.
+func (db *DB) Save(collectionName string, data interface{}) error {
+	doc := d.NewDocumentOf(data)
+	if !doc.Has(d.ObjectIdField) || doc.Get(d.ObjectIdField) == "" {
 		return db.Insert(collectionName, doc)
 	}
 	return db.ReplaceById(collectionName, doc.ObjectId(), doc)

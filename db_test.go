@@ -201,6 +201,38 @@ func TestSaveDocument(t *testing.T) {
 	})
 }
 
+func TestSaveDocumentObject(t *testing.T) {
+	runCloverTest(t, func(t *testing.T, db *c.DB) {
+		err := db.CreateCollection("myCollection")
+		require.NoError(t, err)
+
+		data := struct {
+			Id    string `clover:"_id"`
+			Hello string `clover:"hello"`
+		}{
+			Hello: "clover",
+		}
+		require.NoError(t, db.Save("myCollection", data))
+
+		savedDoc, err := db.FindFirst(q.NewQuery("myCollection"))
+		require.NoError(t, err)
+		require.Equal(t, savedDoc.Get("hello"), "clover")
+
+		id := savedDoc.ObjectId()
+		data.Id = id
+		data.Hello = "clover-updated!"
+		require.NoError(t, db.Save("myCollection", data))
+
+		n, err := db.Count(q.NewQuery("myCollection"))
+		require.NoError(t, err)
+		require.Equal(t, 1, n)
+
+		docUpdated, err := db.FindById("myCollection", id)
+		require.NoError(t, err)
+		require.Equal(t, docUpdated.Get("hello"), "clover-updated!")
+	})
+}
+
 func TestInsertAndGet(t *testing.T) {
 	runCloverTest(t, func(t *testing.T, db *c.DB) {
 		err := db.CreateCollection("myCollection")
