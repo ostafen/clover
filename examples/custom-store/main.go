@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	store, err := badgerstore.Open(badger.DefaultOptions("").WithInMemory(true))
+	store, err := badgerstore.OpenWithOptions(badger.DefaultOptions("").WithInMemory(true))
 	if err != nil {
 		log.Fatal(err)
 	}

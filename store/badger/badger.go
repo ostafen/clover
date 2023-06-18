@@ -99,7 +99,11 @@ func (cursor *badgerCursor) Close() error {
 	return nil
 }
 
-func Open(opts badger.Options) (store.Store, error) {
+func Open(dir string) (store.Store, error) {
+	return OpenWithOptions(badger.DefaultOptions(dir))
+}
+
+func OpenWithOptions(opts badger.Options) (store.Store, error) {
 	db, err := badger.Open(opts)
 	if err != nil {
 		return nil, err
