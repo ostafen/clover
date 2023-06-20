@@ -3,7 +3,6 @@ package clover
 import (
 	"bufio"
 	"encoding/json"
-	"io/ioutil"
 	"os"
 
 	d "github.com/ostafen/clover/v2/document"
@@ -19,23 +18,34 @@ func (db *DB) ExportCollection(collectionName string, exportPath string) error {
 	if !exists {
 		return ErrCollectionNotExist
 	}
-
-	result, err := db.FindAll(query.NewQuery(collectionName))
+	q := query.NewQuery(collectionName)
+	collectionCount, err := db.Count(q)
 	if err != nil {
 		return err
 	}
 
-	docs := make([]map[string]interface{}, 0)
-	for _, doc := range result {
-		docs = append(docs, doc.AsMap())
-	}
-
-	jsonString, err := json.Marshal(docs)
+	f, err := os.Create(exportPath)
 	if err != nil {
 		return err
 	}
+	f.WriteString("[")
 
-	return ioutil.WriteFile(exportPath, jsonString, os.ModePerm)
+	n := 0
+	err = db.ForEach(q, func(doc *d.Document) bool {
+		n++
+		jsonByte, err := json.Marshal(doc.AsMap())
+		if err != nil {
+			return false
+		}
+		jsonString := string(jsonByte)
+		if n != collectionCount {
+			jsonString += ","
+		}
+		_, err = f.WriteString(jsonString)
+		return err == nil
+	})
+	f.WriteString("]")
+	return err
 }
 
 // ImportCollection imports a collection from a JSON file.
