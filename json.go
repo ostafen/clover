@@ -28,7 +28,9 @@ func (db *DB) ExportCollection(collectionName string, exportPath string) error {
 	if err != nil {
 		return err
 	}
-	f.WriteString("[")
+	if _, err = f.WriteString("["); err != nil {
+		return err
+	}
 
 	n := 0
 	err = db.ForEach(q, func(doc *d.Document) bool {
@@ -44,8 +46,13 @@ func (db *DB) ExportCollection(collectionName string, exportPath string) error {
 		_, err = f.WriteString(jsonString)
 		return err == nil
 	})
-	f.WriteString("]")
-	return err
+	if err != nil {
+		return err
+	}
+	if _, err = f.WriteString("]"); err != nil {
+		return err
+	}
+	return nil
 }
 
 // ImportCollection imports a collection from a JSON file.
