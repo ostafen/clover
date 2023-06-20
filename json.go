@@ -28,6 +28,7 @@ func (db *DB) ExportCollection(collectionName string, exportPath string) error {
 	if err != nil {
 		return err
 	}
+	defer f.Close()
 	if _, err = f.WriteString("["); err != nil {
 		return err
 	}
