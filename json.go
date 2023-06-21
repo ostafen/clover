@@ -3,6 +3,8 @@ package clover
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"os"
 
 	d "github.com/ostafen/clover/v2/document"
@@ -19,38 +21,48 @@ func (db *DB) ExportCollection(collectionName string, exportPath string) error {
 		return ErrCollectionNotExist
 	}
 	q := query.NewQuery(collectionName)
-	collectionCount, err := db.Count(q)
-	if err != nil {
-		return err
-	}
 
 	f, err := os.Create(exportPath)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
-	if _, err = f.WriteString("["); err != nil {
+	if _, err := f.WriteString("["); err != nil {
 		return err
 	}
 
-	n := 0
-	err = db.ForEach(q, func(doc *d.Document) bool {
-		n++
+	var internalErr error
+	isFirst := true
+	forEachError := db.ForEach(q, func(doc *d.Document) bool {
 		jsonByte, err := json.Marshal(doc.AsMap())
 		if err != nil {
+			internalErr = err
 			return false
 		}
 		jsonString := string(jsonByte)
-		if n != collectionCount {
-			jsonString += ","
+		if isFirst {
+			isFirst = false
+		} else {
+			jsonString = "," + jsonString
 		}
-		_, err = f.WriteString(jsonString)
-		return err == nil
+		if _, err := f.WriteString(jsonString); err != nil {
+			internalErr = err
+			return false
+		}
+		return true
 	})
-	if err != nil {
-		return err
+	exportErrorLog := ""
+	if forEachError != nil {
+		exportErrorLog += fmt.Sprintf("Export JSON file failed, Error from ForEach [%s]", forEachError.Error())
 	}
-	if _, err = f.WriteString("]"); err != nil {
+	if internalErr != nil {
+		exportErrorLog += fmt.Sprintf(", Error from internal [%s]", internalErr.Error())
+	}
+	if exportErrorLog != "" {
+		return errors.New(exportErrorLog)
+	}
+
+	if _, err := f.WriteString("]"); err != nil {
 		return err
 	}
 	return nil
