@@ -680,10 +680,6 @@ func iteratePrefix(prefix []byte, tx store.Tx, itemConsumer func(item store.Item
 		return err
 	}
 
-	if err := cursor.Seek(prefix); err != nil {
-		return err
-	}
-
 	for ; cursor.Valid(); cursor.Next() {
 		item, err := cursor.Item()
 		if err != nil {
