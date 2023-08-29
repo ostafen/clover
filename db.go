@@ -7,13 +7,13 @@ import (
 	"fmt"
 	"sync/atomic"
 
+	uuid "github.com/gofrs/uuid"
 	d "github.com/ostafen/clover/v2/document"
 	"github.com/ostafen/clover/v2/index"
 	"github.com/ostafen/clover/v2/internal"
 	"github.com/ostafen/clover/v2/query"
 	"github.com/ostafen/clover/v2/store"
 	"github.com/ostafen/clover/v2/store/bbolt"
-	uuid "github.com/satori/go.uuid"
 )
 
 // Collection creation errors
@@ -138,7 +138,8 @@ func (db *DB) HasCollection(name string) (bool, error) {
 }
 
 func NewObjectId() string {
-	return uuid.NewV4().String()
+	objId, _ := uuid.NewV4()
+	return objId.String()
 }
 
 // Insert adds the supplied documents to a collection.
