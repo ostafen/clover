@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"sync/atomic"
 
-	uuid "github.com/gofrs/uuid"
+	"github.com/gofrs/uuid"
 	d "github.com/ostafen/clover/v2/document"
 	"github.com/ostafen/clover/v2/index"
 	"github.com/ostafen/clover/v2/internal"

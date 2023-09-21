@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	uuid "github.com/gofrs/uuid"
+	"github.com/gofrs/uuid"
 	"github.com/ostafen/clover/v2/internal"
 	"github.com/ostafen/clover/v2/util"
 )
