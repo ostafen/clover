@@ -13,7 +13,7 @@ jobs:
   test:
     strategy:
       matrix:
-        go-version: [ 1.18.x ]
+        go-version: [ 1.21.x ]
         os: [ ubuntu-latest ]
     name: Checking
     runs-on: ${{ matrix.os }}
