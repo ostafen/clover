@@ -6,9 +6,11 @@ require (
 	github.com/brianvoe/gofakeit/v6 v6.23.2
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/dgraph-io/badger/v3 v3.2103.5
+	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/gofrs/uuid v4.4.0+incompatible
 	github.com/golang/glog v1.1.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
+	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/flatbuffers v23.5.26+incompatible // indirect
 	github.com/google/orderedcode v0.0.1
