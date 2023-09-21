@@ -122,7 +122,7 @@ func (doc *Document) SetAll(values map[string]interface{}) {
 	}
 }
 
-// ToMap returns a map of all available fields in the document. Nested fields are represented by sub-maps. This is a deep copy, but values are note cloned.
+// ToMap returns a map of all available fields in the document. Nested fields are represented by sub-maps. This is a deep copy, but values are not cloned.
 func (doc *Document) ToMap() map[string]interface{} {
 	return util.CopyMap(doc.fields)
 }

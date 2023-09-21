@@ -322,7 +322,7 @@ func (db *DB) FindFirst(q *query.Query) (*d.Document, error) {
 	return doc, err
 }
 
-// ForEach runs the consumer function for each document matching the provied query.
+// ForEach runs the consumer function for each document matching the provided query.
 // If false is returned from the consumer function, then the iteration is stopped.
 func (db *DB) ForEach(q *query.Query, consumer func(_ *d.Document) bool) error {
 	q, err := normalizeCriteria(q)
@@ -750,7 +750,7 @@ func (db *DB) createIndex(collection, field string, indexType index.IndexType) e
 	return tx.Commit()
 }
 
-// HasIndex returns true if an idex exists for the specified (index, collection) pair.
+// HasIndex returns true if an index exists for the specified (index, collection) pair.
 func (db *DB) HasIndex(collection, field string) (bool, error) {
 	tx, err := db.store.Begin(false)
 	if err != nil {
@@ -773,7 +773,7 @@ func (db *DB) hasIndex(tx store.Tx, collection, field string) (bool, error) {
 	return false, err
 }
 
-// DropIndex deletes the idex, is such index exists for the specified (index, collection) pair.
+// DropIndex deletes the index, is such index exists for the specified (index, collection) pair.
 func (db *DB) DropIndex(collection, field string) error {
 	txn, err := db.store.Begin(true)
 	if err != nil {

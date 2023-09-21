@@ -44,7 +44,7 @@ func (q *Query) MatchFunc(p func(doc *d.Document) bool) *Query {
 	return q.Where(newCriteria(FunctionOp, "", p))
 }
 
-// Where returns a new Query which select all the documents fullfilling the provided Criteria.
+// Where returns a new Query which select all the documents fulfilling the provided Criteria.
 func (q *Query) Where(c Criteria) *Query {
 	newQuery := q.copy()
 	newQuery.criteria = c

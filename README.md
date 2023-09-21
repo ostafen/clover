@@ -24,7 +24,7 @@
 
 ## Why CloverDB?
 
-**CloverDB** has been written for being easily maintenable. As such, it trades performance with simplicity, and is not intented to be an alternative to more performant databases such as **MongoDB** or **MySQL**.
+**CloverDB** has been written for being easily maintainable. As such, it trades performance with simplicity, and is not intended to be an alternative to more performant databases such as **MongoDB** or **MySQL**.
 However, there are projects where running a separate database server may result overkilled, and, for simple queries, network delay may be the major performance bottleneck.
 For such scenarios, **CloverDB** may be a more suitable alternative.
 
@@ -144,7 +144,7 @@ db.FindAll(c.NewQuery("todos").Where(c.Field("completed").Eq(true)))
 db.FindAll(c.NewQuery("todos").Where(c.Field("completed").IsTrue()))
 ```
 
-In order to build very complex queries, we chain multiple Criteria objects by using the `And()` and `Or()` methods, each returning a new Criteria obtained by appling the corresponding logical operator.
+In order to build very complex queries, we chain multiple Criteria objects by using the `And()` and `Or()` methods, each returning a new Criteria obtained by applying the corresponding logical operator.
 
 ```go
 // find all completed todos belonging to users with id 5 and 8
@@ -171,7 +171,7 @@ db.FindFirst(c.NewQuery("todos").Sort(c.SortOption{"userId", -1}))
 
 ### Skip/Limit Documents
 
-Sometimes, it can be useful to discard some documents from the output, or simply set a limit on the maximum number of results returned by a query. For this purpose, CloverDB provides the `Skip()` and `Limit()` functions, both accepting an interger $n$ as parameter.
+Sometimes, it can be useful to discard some documents from the output, or simply set a limit on the maximum number of results returned by a query. For this purpose, CloverDB provides the `Skip()` and `Limit()` functions, both accepting an integer $n$ as parameter.
 
 ```go
 // discard the first 10 documents from the output,
@@ -208,7 +208,7 @@ db.DeleteById("todos", docId)
 
 In CloverDB, indexes support the efficient execution of queries. Without indexes, a collection must be fully scanned to select those documents matching a given query. An index is a special data structure storing the values of a specific document field (or set of fields), sorted by the value of the field itself. This means that they can be exploited to supports efficient equality matches and range-based queries. 
 Moreover, when documents are iterated through an index, results can be returned in sorted order without performing any additional sorting step.
-Note however that using indexes is not completely for free. A part from increasing disk space, indexes require additional cpu-time during each insert and update/delete operation. Moreover, when accessing a document through an index, two disk reads must be performed, since indexes only store a reference (the document id) to the actual document. As a consequence, the speed-up is sensitive only when the specified criteria is used to access a restricted set of documents.
+Note however that using indexes is not completely for free. Apart from increasing disk space, indexes require additional cpu-time during each insert and update/delete operation. Moreover, when accessing a document through an index, two disk reads must be performed, since indexes only store a reference (the document id) to the actual document. As a consequence, the speed-up is sensitive only when the specified criteria is used to access a restricted set of documents.
 
 ### Creating an index
 

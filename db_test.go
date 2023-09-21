@@ -1620,8 +1620,8 @@ func TestCreateCollectionByQuery(t *testing.T) {
 		err := db.CreateCollectionByQuery(newCollection, q.NewQuery("todos").Where(criteria))
 		require.NoError(t, err)
 
-		hasNewColltion, err := db.HasCollection(newCollection)
-		require.True(t, hasNewColltion)
+		hasNewCollection, err := db.HasCollection(newCollection)
+		require.True(t, hasNewCollection)
 		require.NoError(t, err)
 
 		docs, err := db.FindAll(q.NewQuery(newCollection))
