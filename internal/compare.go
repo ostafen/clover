@@ -9,7 +9,7 @@ import (
 	"github.com/ostafen/clover/v2/util"
 )
 
-var typesMap map[string]int = map[string]int{
+var typesMap = map[string]int{
 	"nil":    0,
 	"number": 1,
 	"string": 2,

@@ -87,7 +87,7 @@ func TestDocumentSetFloat(t *testing.T) {
 func TestDocumentSetPointer(t *testing.T) {
 	doc := NewDocument()
 
-	var x int = 100
+	var x = 100
 	ptr := &x
 	dPtr := &ptr
 
@@ -110,7 +110,7 @@ func TestDocumentSetPointer(t *testing.T) {
 	require.Nil(t, doc.Get("intPtr"))
 
 	s := "hello"
-	var sPtr *string = &s
+	var sPtr = &s
 
 	doc.Set("string", &sPtr)
 

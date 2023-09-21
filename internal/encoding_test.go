@@ -29,7 +29,7 @@ type TestStruct struct {
 func TestNormalize(t *testing.T) {
 	date := time.Date(2020, 01, 1, 0, 0, 0, 0, time.UTC)
 
-	var x int = 100
+	var x = 100
 
 	s := &TestStruct{
 		BaseModel: BaseModel{
