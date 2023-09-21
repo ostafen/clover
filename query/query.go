@@ -11,7 +11,7 @@ type Query struct {
 	sortOpts   []SortOption
 }
 
-// Query simply returns the collection with the supplied name. Use it to initialize a new query.
+// NewQuery simply returns the collection with the supplied name. Use it to initialize a new query.
 func NewQuery(collection string) *Query {
 	return &Query{
 		collection: collection,
@@ -51,7 +51,7 @@ func (q *Query) Where(c Criteria) *Query {
 	return newQuery
 }
 
-// Skips sets the query so that the first n documents of the result set are discarded.
+// Skip sets the query so that the first n documents of the result set are discarded.
 func (q *Query) Skip(n int) *Query {
 	if n >= 0 {
 		newQuery := q.copy()

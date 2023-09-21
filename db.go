@@ -565,7 +565,7 @@ func (db *DB) Update(q *query.Query, updateMap map[string]interface{}) error {
 	})
 }
 
-// Update updates all the document selected by q using the provided function.
+// UpdateFunc updates all the document selected by q using the provided function.
 func (db *DB) UpdateFunc(q *query.Query, updateFunc func(doc *d.Document) *d.Document) error {
 	txn, err := db.store.Begin(true)
 	if err != nil {
