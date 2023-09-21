@@ -57,7 +57,7 @@ func TestDocumentSetInt(t *testing.T) {
 	doc := NewDocument()
 
 	// test int64 conversion
-	doc.Set("int", int(0))
+	doc.Set("int", 0)
 	require.IsType(t, int64(0), doc.Get("int"))
 
 	doc.Set("int8", int8(0))

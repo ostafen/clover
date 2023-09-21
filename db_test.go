@@ -632,7 +632,7 @@ func TestEqCriteriaWithDifferentTypes(t *testing.T) {
 	runCloverTest(t, func(t *testing.T, db *c.DB) {
 		require.NoError(t, loadFromJson(db, todosPath, &TodoModel{}))
 
-		count1, err := db.Count(q.NewQuery("todos").Where(q.Field("userId").Eq(int(1))))
+		count1, err := db.Count(q.NewQuery("todos").Where(q.Field("userId").Eq(1)))
 		require.NoError(t, err)
 
 		count2, err := db.Count(q.NewQuery("todos").Where(q.Field("userId").Eq(int8(1))))
@@ -1238,7 +1238,7 @@ func TestSliceCompare(t *testing.T) {
 			if title != "" {
 				s := make([]int, len(title))
 				for i := 0; i < len(title); i++ {
-					s[i] = int(byte(title[i]))
+					s[i] = int(title[i])
 				}
 				doc.Set("title", s)
 			}
