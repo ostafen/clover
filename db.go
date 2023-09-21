@@ -693,7 +693,7 @@ func iteratePrefix(prefix []byte, tx store.Tx, itemConsumer func(item store.Item
 		err = itemConsumer(item)
 
 		// do not propagate iteration stop error
-		if err == internal.ErrStopIteration {
+		if errors.Is(err, internal.ErrStopIteration) {
 			return nil
 		}
 
