@@ -2,6 +2,7 @@ package index
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"time"
 
@@ -210,7 +211,7 @@ func (idx *rangeIndex) IterateRange(vRange *Range, reverse bool, onValue func(do
 		}
 
 		if err := onValue(string(docId)); err != nil {
-			if err == internal.ErrStopIteration {
+			if errors.Is(err, internal.ErrStopIteration) {
 				return nil
 			}
 			return err
@@ -251,7 +252,7 @@ func (idx *rangeIndex) Iterate(reverse bool, onValue func(docId string) error) e
 
 		_, docId := extractDocId(key)
 		if err := onValue(string(docId)); err != nil {
-			if err == internal.ErrStopIteration {
+			if errors.Is(err, internal.ErrStopIteration) {
 				return nil
 			}
 			return err

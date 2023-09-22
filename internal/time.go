@@ -33,20 +33,20 @@ func replaceTimes(v interface{}) interface{} {
 
 	m, isMap := v.(map[string]interface{})
 	if isMap {
-		copy := util.CopyMap(m)
+		mapCopy := util.CopyMap(m)
 		for k, v := range m {
-			copy[k] = replaceTimes(v)
+			mapCopy[k] = replaceTimes(v)
 		}
-		return copy
+		return mapCopy
 	}
 
 	s, isSlice := v.([]interface{})
 	if isSlice {
-		copy := make([]interface{}, len(s))
+		sliceCopy := make([]interface{}, len(s))
 		for i, v := range s {
-			copy[i] = replaceTimes(v)
+			sliceCopy[i] = replaceTimes(v)
 		}
-		return copy
+		return sliceCopy
 	}
 	return v
 }

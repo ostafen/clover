@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"sync/atomic"
 
-	uuid "github.com/gofrs/uuid"
+	"github.com/gofrs/uuid"
 	d "github.com/ostafen/clover/v2/document"
 	"github.com/ostafen/clover/v2/index"
 	"github.com/ostafen/clover/v2/internal"
@@ -322,7 +322,7 @@ func (db *DB) FindFirst(q *query.Query) (*d.Document, error) {
 	return doc, err
 }
 
-// ForEach runs the consumer function for each document matching the provied query.
+// ForEach runs the consumer function for each document matching the provided query.
 // If false is returned from the consumer function, then the iteration is stopped.
 func (db *DB) ForEach(q *query.Query, consumer func(_ *d.Document) bool) error {
 	q, err := normalizeCriteria(q)
@@ -565,7 +565,7 @@ func (db *DB) Update(q *query.Query, updateMap map[string]interface{}) error {
 	})
 }
 
-// Update updates all the document selected by q using the provided function.
+// UpdateFunc updates all the document selected by q using the provided function.
 func (db *DB) UpdateFunc(q *query.Query, updateFunc func(doc *d.Document) *d.Document) error {
 	txn, err := db.store.Begin(true)
 	if err != nil {
@@ -693,7 +693,7 @@ func iteratePrefix(prefix []byte, tx store.Tx, itemConsumer func(item store.Item
 		err = itemConsumer(item)
 
 		// do not propagate iteration stop error
-		if err == internal.ErrStopIteration {
+		if errors.Is(err, internal.ErrStopIteration) {
 			return nil
 		}
 
@@ -750,7 +750,7 @@ func (db *DB) createIndex(collection, field string, indexType index.IndexType) e
 	return tx.Commit()
 }
 
-// HasIndex returns true if an idex exists for the specified (index, collection) pair.
+// HasIndex returns true if an index exists for the specified (index, collection) pair.
 func (db *DB) HasIndex(collection, field string) (bool, error) {
 	tx, err := db.store.Begin(false)
 	if err != nil {
@@ -773,7 +773,7 @@ func (db *DB) hasIndex(tx store.Tx, collection, field string) (bool, error) {
 	return false, err
 }
 
-// DropIndex deletes the idex, is such index exists for the specified (index, collection) pair.
+// DropIndex deletes the index, is such index exists for the specified (index, collection) pair.
 func (db *DB) DropIndex(collection, field string) error {
 	txn, err := db.store.Begin(true)
 	if err != nil {
