@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dgraph-io/badger/v3"
+	"github.com/dgraph-io/badger/v4"
 	"github.com/ostafen/clover/v2/store"
 )
 
@@ -109,12 +109,12 @@ func OpenWithOptions(opts badger.Options) (store.Store, error) {
 		return nil, err
 	}
 
-	store := &badgerStore{
+	badgerStore := &badgerStore{
 		db:     db,
 		chQuit: make(chan struct{}, 1),
 	}
-	store.startGC()
-	return store, nil
+	badgerStore.startGC()
+	return badgerStore, nil
 }
 
 const (

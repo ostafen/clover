@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/dgraph-io/badger/v3"
+	"github.com/dgraph-io/badger/v4"
 	"github.com/ostafen/clover/v2/internal"
 	"github.com/ostafen/clover/v2/store"
 )

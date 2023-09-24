@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 
-	"github.com/dgraph-io/badger/v3"
+	"github.com/dgraph-io/badger/v4"
 	c "github.com/ostafen/clover/v2"
 	badgerstore "github.com/ostafen/clover/v2/store/badger"
 )

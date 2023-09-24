@@ -50,7 +50,7 @@ To store documents inside collections, you have to open a Clover database using 
 ```go
 import (
   "log"
-  "github.com/dgraph-io/badger/v3"
+  "github.com/dgraph-io/badger/v4"
   c "github.com/ostafen/clover"
   badgerstore "github.com/ostafen/store/badger"
 )
