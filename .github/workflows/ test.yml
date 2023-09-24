@@ -25,4 +25,4 @@ jobs:
       - name: run tests
         run: |
           go get .
-          go test .
+          go test ./...
