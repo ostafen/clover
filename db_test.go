@@ -1338,7 +1338,7 @@ func TestCreateIndex(t *testing.T) {
 		indexes, err := db.ListIndexes("collection")
 		require.NoError(t, err)
 
-		require.Equal(t, []index.IndexInfo{{Field: "field", Type: index.IndexSingleField}}, indexes)
+		require.Equal(t, []index.Info{{Field: "field", Type: index.SingleField}}, indexes)
 	})
 }
 
@@ -1601,7 +1601,7 @@ func TestListIndexes(t *testing.T) {
 
 		indexes, err = db.ListIndexes("test")
 		require.NoError(t, err)
-		require.Equal(t, []index.IndexInfo{{Field: "index", Type: index.IndexSingleField}}, indexes)
+		require.Equal(t, []index.Info{{Field: "index", Type: index.SingleField}}, indexes)
 
 		require.NoError(t, db.DropIndex("test", "index"))
 

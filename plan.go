@@ -57,7 +57,7 @@ type iterNode struct {
 	//vRange     *valueRange
 	//index      RangeIndex
 
-	idxQuery index.IndexQuery
+	idxQuery index.Query
 	//iterIndexReverse bool
 }
 
@@ -103,14 +103,14 @@ func (nd *iterNode) Run(tx store.Tx) error {
 	return nd.iterateFullCollection(tx)
 }
 
-func getIndexQueries(q *query.Query, indexes []index.Index) []index.IndexQuery {
+func getIndexQueries(q *query.Query, indexes []index.Index) []index.Query {
 	if q.Criteria() == nil || len(indexes) == 0 {
 		return nil
 	}
 
-	info := make(map[string]*index.IndexInfo)
+	info := make(map[string]*index.Info)
 	for _, idx := range indexes {
-		info[idx.Field()] = &index.IndexInfo{
+		info[idx.Field()] = &index.Info{
 			Field: idx.Field(),
 			Type:  idx.Type(),
 		}
@@ -119,7 +119,7 @@ func getIndexQueries(q *query.Query, indexes []index.Index) []index.IndexQuery {
 	c := q.Criteria().Accept(&NotFlattenVisitor{}).(query.Criteria)
 	selectedFields := c.Accept(&IndexSelectVisitor{
 		Fields: info,
-	}).([]*index.IndexInfo)
+	}).([]*index.Info)
 
 	if len(selectedFields) == 0 {
 		return nil
@@ -132,7 +132,7 @@ func getIndexQueries(q *query.Query, indexes []index.Index) []index.IndexQuery {
 
 	fieldRanges := c.Accept(NewFieldRangeVisitor([]string{selectedFields[0].Field})).(map[string]*index.Range)
 
-	queries := make([]index.IndexQuery, 0)
+	queries := make([]index.Query, 0)
 	for field, vRange := range fieldRanges {
 		queries = append(queries, &index.RangeIndexQuery{
 			Range: vRange,
@@ -165,7 +165,7 @@ func tryToSelectIndex(q *query.Query, indexes []index.Index) (*iterNode, bool) {
 
 	if len(q.SortOptions()) == 1 {
 		for _, idx := range indexes {
-			if idx.Type() == index.IndexSingleField && idx.Field() == q.SortOptions()[0].Field {
+			if idx.Type() == index.SingleField && idx.Field() == q.SortOptions()[0].Field {
 				return &iterNode{
 					filter:     q.Criteria(),
 					collection: q.Collection(),
