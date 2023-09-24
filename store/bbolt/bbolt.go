@@ -22,9 +22,9 @@ func Open(dir string) (store.Store, error) {
 	if err != nil {
 		return nil, err
 	}
-	store := &boltStore{db: db}
-	err = store.createRootBucketIfNotExists()
-	return store, err
+	dataStore := &boltStore{db: db}
+	err = dataStore.createRootBucketIfNotExists()
+	return dataStore, err
 }
 
 func (store *boltStore) createRootBucketIfNotExists() error {
