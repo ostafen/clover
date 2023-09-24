@@ -63,7 +63,7 @@ func getDBFactories() []dbFactory {
 
 func runCloverTest(t *testing.T, test func(t *testing.T, db *c.DB)) {
 	for _, createDB := range getDBFactories() {
-		dir, err := os.MkdirTemp("clover-test", "")
+		dir, err := os.MkdirTemp(os.TempDir(), "clover-test")
 		require.NoError(t, err)
 
 		db, err := createDB(dir)
@@ -1192,8 +1192,9 @@ func TestExportAndImportCollection(t *testing.T) {
 
 		require.NoError(t, loadFromJson(db, todosPath, &TodoModel{}))
 
-		exportPath := os.TempDir()
+		exportPath, err := os.MkdirTemp(os.TempDir(), "")
 		defer os.RemoveAll(exportPath)
+		require.NoError(t, err)
 
 		exportFilePath := exportPath + "todos.json"
 		err = db.ExportCollection("todos", exportFilePath)
