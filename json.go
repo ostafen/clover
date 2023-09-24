@@ -3,7 +3,6 @@ package clover
 import (
 	"bufio"
 	"encoding/json"
-	"io/ioutil"
 	"os"
 
 	d "github.com/ostafen/clover/v2/document"
@@ -35,7 +34,7 @@ func (db *DB) ExportCollection(collectionName string, exportPath string) error {
 		return err
 	}
 
-	return ioutil.WriteFile(exportPath, jsonString, os.ModePerm)
+	return os.WriteFile(exportPath, jsonString, os.ModePerm)
 }
 
 // ImportCollection imports a collection from a JSON file.

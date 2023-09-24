@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -64,8 +63,7 @@ func getDBFactories() []dbFactory {
 
 func runCloverTest(t *testing.T, test func(t *testing.T, db *c.DB)) {
 	for _, createDB := range getDBFactories() {
-		dir, err := ioutil.TempDir("", "clover-test")
-		require.NoError(t, err)
+		dir := os.TempDir()
 
 		db, err := createDB(dir)
 		require.NoError(t, err)
@@ -267,7 +265,7 @@ func TestInsertAndGet(t *testing.T) {
 func loadFromJson(db *c.DB, filename string, model interface{}) error {
 	var objects []interface{}
 
-	data, err := ioutil.ReadFile(filename)
+	data, err := os.ReadFile(filename)
 	if err != nil {
 		return err
 	}
@@ -407,9 +405,8 @@ func TestInsertAndDelete(t *testing.T) {
 }
 
 func TestOpenExisting(t *testing.T) {
-	dir, err := ioutil.TempDir("", "clover-test")
+	dir := os.TempDir()
 	defer os.RemoveAll(dir)
-	require.NoError(t, err)
 
 	db, err := c.Open(dir)
 	require.NoError(t, err)
@@ -430,14 +427,13 @@ func TestOpenExisting(t *testing.T) {
 }
 
 func TestReloadIndex(t *testing.T) {
-	dir, err := ioutil.TempDir("", "clover-test")
+	dir := os.TempDir()
 	defer os.RemoveAll(dir)
-	require.NoError(t, err)
 
 	db, err := c.Open(dir)
 	require.NoError(t, err)
 
-	db.CreateCollection("myCollection")
+	_ = db.CreateCollection("myCollection")
 
 	doc := d.NewDocument()
 	doc.Set("hello", "clover!")
@@ -1191,10 +1187,11 @@ func TestListCollections(t *testing.T) {
 
 func TestExportAndImportCollection(t *testing.T) {
 	runCloverTest(t, func(t *testing.T, db *c.DB) {
+		var err error
+
 		require.NoError(t, loadFromJson(db, todosPath, &TodoModel{}))
 
-		exportPath, err := ioutil.TempDir("", "export-dir")
-		require.NoError(t, err)
+		exportPath := os.TempDir()
 		defer os.RemoveAll(exportPath)
 
 		exportFilePath := exportPath + "todos.json"
