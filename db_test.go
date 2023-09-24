@@ -63,7 +63,8 @@ func getDBFactories() []dbFactory {
 
 func runCloverTest(t *testing.T, test func(t *testing.T, db *c.DB)) {
 	for _, createDB := range getDBFactories() {
-		dir := os.TempDir()
+		dir, err := os.MkdirTemp("clover-test", "")
+		require.NoError(t, err)
 
 		db, err := createDB(dir)
 		require.NoError(t, err)
