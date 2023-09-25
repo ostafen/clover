@@ -63,7 +63,7 @@ func getDBFactories() []dbFactory {
 
 func runCloverTest(t *testing.T, test func(t *testing.T, db *c.DB)) {
 	for _, createDB := range getDBFactories() {
-		dir, err := os.MkdirTemp(os.TempDir(), "clover-test")
+		dir, err := os.MkdirTemp("", "clover-test")
 		require.NoError(t, err)
 
 		db, err := createDB(dir)
@@ -406,8 +406,9 @@ func TestInsertAndDelete(t *testing.T) {
 }
 
 func TestOpenExisting(t *testing.T) {
-	dir := os.TempDir()
+	dir, err := os.MkdirTemp("", "clover-test")
 	defer os.RemoveAll(dir)
+	require.NoError(t, err)
 
 	db, err := c.Open(dir)
 	require.NoError(t, err)
@@ -428,13 +429,14 @@ func TestOpenExisting(t *testing.T) {
 }
 
 func TestReloadIndex(t *testing.T) {
-	dir := os.TempDir()
+	dir, err := os.MkdirTemp("", "clover-test")
 	defer os.RemoveAll(dir)
+	require.NoError(t, err)
 
 	db, err := c.Open(dir)
 	require.NoError(t, err)
 
-	_ = db.CreateCollection("myCollection")
+	db.CreateCollection("myCollection")
 
 	doc := d.NewDocument()
 	doc.Set("hello", "clover!")
@@ -1188,13 +1190,11 @@ func TestListCollections(t *testing.T) {
 
 func TestExportAndImportCollection(t *testing.T) {
 	runCloverTest(t, func(t *testing.T, db *c.DB) {
-		var err error
-
 		require.NoError(t, loadFromJson(db, todosPath, &TodoModel{}))
 
-		exportPath, err := os.MkdirTemp(os.TempDir(), "")
-		defer os.RemoveAll(exportPath)
+		exportPath, err := os.MkdirTemp("", "export-dir")
 		require.NoError(t, err)
+		defer os.RemoveAll(exportPath)
 
 		exportFilePath := exportPath + "todos.json"
 		err = db.ExportCollection("todos", exportFilePath)
