@@ -2,7 +2,7 @@ name: Linux Build & Unit tests
 
 on:
   push:
-    branches: [ "v2", "v2-improvements-base" ]
+    branches: [ "v2" ]
   pull_request:
     types: [ opened, synchronize, reopened, ready_for_review ]
 
