@@ -1,0 +1,31 @@
+name: Linux Build & Unit tests
+
+on:
+  push:
+    branches: [ "v2", "v2-improvements-base" ]
+  pull_request:
+    types: [ opened, synchronize, reopened, ready_for_review ]
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        go-version: [ 1.20.x ]
+        os: [ windows-latest ]
+
+    name: Checking
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Setup Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ matrix.go-version }}
+
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: run tests
+        run: go build -v ./...
+
+      - name: run tests
+        run: go test -v ./...
