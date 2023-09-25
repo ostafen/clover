@@ -109,12 +109,12 @@ func OpenWithOptions(opts badger.Options) (store.Store, error) {
 		return nil, err
 	}
 
-	store := &badgerStore{
+	dataStore := &badgerStore{
 		db:     db,
 		chQuit: make(chan struct{}, 1),
 	}
-	store.startGC()
-	return store, nil
+	dataStore.startGC()
+	return dataStore, nil
 }
 
 const (

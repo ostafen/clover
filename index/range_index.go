@@ -261,6 +261,6 @@ func (idx *rangeIndex) Iterate(reverse bool, onValue func(docId string) error) e
 	return nil
 }
 
-func (idx *rangeIndex) Type() IndexType {
-	return IndexSingleField
+func (idx *rangeIndex) Type() Type {
+	return SingleField
 }
