@@ -22,12 +22,12 @@ func (r *Range) IsNil() bool {
 	return r.Start == nil && r.End == nil && r.StartIncluded && r.EndIncluded
 }
 
-func (r1 *Range) Intersect(r2 *Range) *Range {
+func (r *Range) Intersect(r2 *Range) *Range {
 	intersection := &Range{
-		Start:         r1.Start,
-		End:           r1.End,
-		StartIncluded: r1.StartIncluded,
-		EndIncluded:   r1.EndIncluded,
+		Start:         r.Start,
+		End:           r.End,
+		StartIncluded: r.StartIncluded,
+		EndIncluded:   r.EndIncluded,
 	}
 
 	res := internal.Compare(r2.Start, intersection.Start)

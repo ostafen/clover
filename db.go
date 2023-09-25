@@ -267,11 +267,11 @@ func (db *DB) InsertOne(collectionName string, doc *d.Document) (string, error) 
 
 // Open opens a new clover database on the supplied path. If such a folder doesn't exist, it is automatically created.
 func Open(dir string) (*DB, error) {
-	store, err := bbolt.Open(dir)
+	dataStore, err := bbolt.Open(dir)
 	if err != nil {
 		return nil, err
 	}
-	return OpenWithStore(store)
+	return OpenWithStore(dataStore)
 }
 
 // OpenWithStore opens a new clover database using the provided store.

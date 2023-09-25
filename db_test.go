@@ -79,20 +79,20 @@ func runCloverTest(t *testing.T, test func(t *testing.T, db *c.DB)) {
 
 func TestErrCollectionNotExist(t *testing.T) {
 	runCloverTest(t, func(t *testing.T, db *c.DB) {
-		q := q.NewQuery("myCollection")
-		_, err := db.Count(q)
+		query := q.NewQuery("myCollection")
+		_, err := db.Count(query)
 		require.Equal(t, c.ErrCollectionNotExist, err)
 
 		_, err = db.FindById("myCollection", "objectId")
 		require.Equal(t, c.ErrCollectionNotExist, err)
 
-		_, err = db.FindAll(q)
+		_, err = db.FindAll(query)
 		require.Equal(t, c.ErrCollectionNotExist, err)
 
-		err = db.Update(q, nil)
+		err = db.Update(query, nil)
 		require.Equal(t, c.ErrCollectionNotExist, err)
 
-		err = db.Delete(q)
+		err = db.Delete(query)
 		require.Equal(t, c.ErrCollectionNotExist, err)
 
 		err = db.DeleteById("myCollection", "objectId")
@@ -250,13 +250,13 @@ func TestInsertAndGet(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, nInserts, n)
 
-		q := q.NewQuery("myCollection").MatchFunc(func(doc *d.Document) bool {
+		query := q.NewQuery("myCollection").MatchFunc(func(doc *d.Document) bool {
 			require.True(t, doc.Has("myField"))
 
 			v, _ := doc.Get("myField").(int64)
 			return int(v)%2 == 0
 		})
-		n, err = db.Count(q)
+		n, err = db.Count(query)
 
 		require.NoError(t, err)
 
@@ -1475,13 +1475,13 @@ func TestIndexQueryWithSort(t *testing.T) {
 		require.NoError(t, loadFromJson(db, airlinesPath, nil))
 
 		criteria := q.Field("Statistics.Flights.Cancelled").Gt(100).And(q.Field("Statistics.Flights.Cancelled").Lt(200))
-		q := q.NewQuery("airlines").Where(criteria).Sort(q.SortOption{Field: "Statistics.Flights.Cancelled", Direction: -1})
-		docs, err := db.FindAll(q)
+		query := q.NewQuery("airlines").Where(criteria).Sort(q.SortOption{Field: "Statistics.Flights.Cancelled", Direction: -1})
+		docs, err := db.FindAll(query)
 		require.NoError(t, err)
 
 		require.NoError(t, db.CreateIndex("airlines", "Statistics.Flights.Cancelled"))
 
-		indexDocs, err := db.FindAll(q)
+		indexDocs, err := db.FindAll(query)
 		require.NoError(t, err)
 
 		require.Equal(t, len(docs), len(indexDocs))
