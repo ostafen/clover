@@ -6,15 +6,15 @@ import (
 	"github.com/ostafen/clover/v2/store"
 )
 
-type IndexType int
+type Type int
 
 const (
-	IndexSingleField IndexType = iota
+	SingleField Type = iota
 )
 
-type IndexInfo struct {
+type Info struct {
 	Field string
-	Type  IndexType
+	Type  Type
 }
 
 type Index interface {
@@ -22,7 +22,7 @@ type Index interface {
 	Remove(docId string, v interface{}) error
 	Iterate(reverse bool, onValue func(docId string) error) error
 	Drop() error
-	Type() IndexType
+	Type() Type
 	Collection() string
 	Field() string
 }
@@ -39,14 +39,14 @@ func (idx *indexBase) Field() string {
 	return idx.field
 }
 
-type IndexQuery interface {
+type Query interface {
 	Run(onValue func(docId string) error) error
 }
 
-func CreateIndex(collection, field string, idxType IndexType, tx store.Tx) Index {
+func CreateIndex(collection, field string, idxType Type, tx store.Tx) Index {
 	indexBase := indexBase{collection: collection, field: field}
 	switch idxType {
-	case IndexSingleField:
+	case SingleField:
 		return &rangeIndex{
 			indexBase: indexBase,
 			tx:        tx,

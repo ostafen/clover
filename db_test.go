@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -64,7 +63,7 @@ func getDBFactories() []dbFactory {
 
 func runCloverTest(t *testing.T, test func(t *testing.T, db *c.DB)) {
 	for _, createDB := range getDBFactories() {
-		dir, err := ioutil.TempDir("", "clover-test")
+		dir, err := os.MkdirTemp("", "clover-test")
 		require.NoError(t, err)
 
 		db, err := createDB(dir)
@@ -79,20 +78,20 @@ func runCloverTest(t *testing.T, test func(t *testing.T, db *c.DB)) {
 
 func TestErrCollectionNotExist(t *testing.T) {
 	runCloverTest(t, func(t *testing.T, db *c.DB) {
-		q := q.NewQuery("myCollection")
-		_, err := db.Count(q)
+		query := q.NewQuery("myCollection")
+		_, err := db.Count(query)
 		require.Equal(t, c.ErrCollectionNotExist, err)
 
 		_, err = db.FindById("myCollection", "objectId")
 		require.Equal(t, c.ErrCollectionNotExist, err)
 
-		_, err = db.FindAll(q)
+		_, err = db.FindAll(query)
 		require.Equal(t, c.ErrCollectionNotExist, err)
 
-		err = db.Update(q, nil)
+		err = db.Update(query, nil)
 		require.Equal(t, c.ErrCollectionNotExist, err)
 
-		err = db.Delete(q)
+		err = db.Delete(query)
 		require.Equal(t, c.ErrCollectionNotExist, err)
 
 		err = db.DeleteById("myCollection", "objectId")
@@ -250,13 +249,13 @@ func TestInsertAndGet(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, nInserts, n)
 
-		q := q.NewQuery("myCollection").MatchFunc(func(doc *d.Document) bool {
+		query := q.NewQuery("myCollection").MatchFunc(func(doc *d.Document) bool {
 			require.True(t, doc.Has("myField"))
 
 			v, _ := doc.Get("myField").(int64)
 			return int(v)%2 == 0
 		})
-		n, err = db.Count(q)
+		n, err = db.Count(query)
 
 		require.NoError(t, err)
 
@@ -267,7 +266,7 @@ func TestInsertAndGet(t *testing.T) {
 func loadFromJson(db *c.DB, filename string, model interface{}) error {
 	var objects []interface{}
 
-	data, err := ioutil.ReadFile(filename)
+	data, err := os.ReadFile(filename)
 	if err != nil {
 		return err
 	}
@@ -407,7 +406,7 @@ func TestInsertAndDelete(t *testing.T) {
 }
 
 func TestOpenExisting(t *testing.T) {
-	dir, err := ioutil.TempDir("", "clover-test")
+	dir, err := os.MkdirTemp("", "clover-test")
 	defer os.RemoveAll(dir)
 	require.NoError(t, err)
 
@@ -430,7 +429,7 @@ func TestOpenExisting(t *testing.T) {
 }
 
 func TestReloadIndex(t *testing.T) {
-	dir, err := ioutil.TempDir("", "clover-test")
+	dir, err := os.MkdirTemp("", "clover-test")
 	defer os.RemoveAll(dir)
 	require.NoError(t, err)
 
@@ -1193,7 +1192,7 @@ func TestExportAndImportCollection(t *testing.T) {
 	runCloverTest(t, func(t *testing.T, db *c.DB) {
 		require.NoError(t, loadFromJson(db, todosPath, &TodoModel{}))
 
-		exportPath, err := ioutil.TempDir("", "export-dir")
+		exportPath, err := os.MkdirTemp("", "export-dir")
 		require.NoError(t, err)
 		defer os.RemoveAll(exportPath)
 
@@ -1338,7 +1337,7 @@ func TestCreateIndex(t *testing.T) {
 		indexes, err := db.ListIndexes("collection")
 		require.NoError(t, err)
 
-		require.Equal(t, []index.IndexInfo{{Field: "field", Type: index.IndexSingleField}}, indexes)
+		require.Equal(t, []index.Info{{Field: "field", Type: index.SingleField}}, indexes)
 	})
 }
 
@@ -1475,13 +1474,13 @@ func TestIndexQueryWithSort(t *testing.T) {
 		require.NoError(t, loadFromJson(db, airlinesPath, nil))
 
 		criteria := q.Field("Statistics.Flights.Cancelled").Gt(100).And(q.Field("Statistics.Flights.Cancelled").Lt(200))
-		q := q.NewQuery("airlines").Where(criteria).Sort(q.SortOption{Field: "Statistics.Flights.Cancelled", Direction: -1})
-		docs, err := db.FindAll(q)
+		query := q.NewQuery("airlines").Where(criteria).Sort(q.SortOption{Field: "Statistics.Flights.Cancelled", Direction: -1})
+		docs, err := db.FindAll(query)
 		require.NoError(t, err)
 
 		require.NoError(t, db.CreateIndex("airlines", "Statistics.Flights.Cancelled"))
 
-		indexDocs, err := db.FindAll(q)
+		indexDocs, err := db.FindAll(query)
 		require.NoError(t, err)
 
 		require.Equal(t, len(docs), len(indexDocs))
@@ -1601,7 +1600,7 @@ func TestListIndexes(t *testing.T) {
 
 		indexes, err = db.ListIndexes("test")
 		require.NoError(t, err)
-		require.Equal(t, []index.IndexInfo{{Field: "index", Type: index.IndexSingleField}}, indexes)
+		require.Equal(t, []index.Info{{Field: "index", Type: index.SingleField}}, indexes)
 
 		require.NoError(t, db.DropIndex("test", "index"))
 
