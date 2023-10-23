@@ -2,8 +2,6 @@
 package bitcask
 
 import (
-	"path/filepath"
-
 	"git.mills.io/prologic/bitcask"
 	"github.com/ostafen/clover/v2/store"
 )
@@ -12,13 +10,9 @@ type bitcaskStore struct {
 	db *bitcask.Bitcask
 }
 
-const (
-	dbFileName = "data.db"
-)
-
 // Open ...
 func Open(dir string) (store.Store, error) {
-	db, err := bitcask.Open(filepath.Join(dir, dbFileName))
+	db, err := bitcask.Open(dir)
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +36,12 @@ func (tx *bitcaskTx) Set(key, value []byte) error {
 }
 
 func (tx *bitcaskTx) Get(key []byte) ([]byte, error) {
-	return tx.Bitcask.Get(key)
+	value, err := tx.Bitcask.Get(key)
+	// XXX: Clover assumes non-nil errors even for "Key Not Found" (which Bitcask considers an error)
+	if err == bitcask.ErrKeyExpired {
+		return nil, nil
+	}
+	return value, nil
 }
 
 func (tx *bitcaskTx) Delete(key []byte) error {
