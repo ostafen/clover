@@ -73,7 +73,7 @@ func (c *bitcaskCursor) Seek(seek []byte) error {
 	item, err := c.Iterator.SeekPrefix(seek)
 	if err != nil || err == bitcask.ErrStopIteration {
 		c.currItem = nil
-		return err
+		return nil
 	}
 
 	c.currItem = &store.Item{
