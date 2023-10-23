@@ -22,6 +22,7 @@ import (
 	q "github.com/ostafen/clover/v2/query"
 	badgerstore "github.com/ostafen/clover/v2/store/badger"
 	"github.com/ostafen/clover/v2/store/bbolt"
+	bitcaskstore "github.com/ostafen/clover/v2/store/bitcask"
 )
 
 const (
@@ -49,6 +50,14 @@ func getBadgerDB(dir string) (*c.DB, error) {
 	return c.OpenWithStore(store)
 }
 
+func getBitcaskDB(dir string) (*c.DB, error) {
+	store, err := bitcaskstore.Open(dir)
+	if err != nil {
+		return nil, err
+	}
+	return c.OpenWithStore(store)
+}
+
 func getBBoltDB(dir string) (*c.DB, error) {
 	store, err := bbolt.Open(dir)
 	if err != nil {
@@ -58,7 +67,7 @@ func getBBoltDB(dir string) (*c.DB, error) {
 }
 
 func getDBFactories() []dbFactory {
-	return []dbFactory{getBadgerDB, getBBoltDB}
+	return []dbFactory{getBadgerDB, getBBoltDB, getBitcaskDB}
 }
 
 func runCloverTest(t *testing.T, test func(t *testing.T, db *c.DB)) {
