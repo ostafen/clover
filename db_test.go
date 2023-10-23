@@ -66,22 +66,28 @@ func getBBoltDB(dir string) (*c.DB, error) {
 	return c.OpenWithStore(store)
 }
 
-func getDBFactories() []dbFactory {
-	return []dbFactory{getBadgerDB, getBBoltDB, getBitcaskDB}
+func getDBFactories() map[string]dbFactory {
+	return map[string]dbFactory{
+		"badger":  getBadgerDB,
+		"bbolt":   getBBoltDB,
+		"bitcask": getBitcaskDB,
+	}
 }
 
 func runCloverTest(t *testing.T, test func(t *testing.T, db *c.DB)) {
-	for _, createDB := range getDBFactories() {
-		dir, err := os.MkdirTemp("", "clover-test")
-		require.NoError(t, err)
+	for name, createDB := range getDBFactories() {
+		t.Run(name, func(t *testing.T) {
+			dir, err := os.MkdirTemp("", "clover-test")
+			require.NoError(t, err)
 
-		db, err := createDB(dir)
-		require.NoError(t, err)
+			db, err := createDB(dir)
+			require.NoError(t, err)
 
-		test(t, db)
+			test(t, db)
 
-		require.NoError(t, db.Close())
-		require.NoError(t, os.RemoveAll(dir))
+			require.NoError(t, db.Close())
+			require.NoError(t, os.RemoveAll(dir))
+		})
 	}
 }
 
