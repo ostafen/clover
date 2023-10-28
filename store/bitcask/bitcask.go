@@ -7,12 +7,12 @@ import (
 )
 
 type bitcaskStore struct {
-	db *bitcask.Bitcask
+	db bitcask.DB
 }
 
 // Open ...
 func Open(dir string) (store.Store, error) {
-	db, err := bitcask.Open(dir)
+	db, err := bitcask.Open(dir, bitcask.WithMaxKeySize(256), bitcask.WithMaxValueSize(1<<20))
 	if err != nil {
 		return nil, err
 	}
@@ -28,15 +28,15 @@ func (store *bitcaskStore) Close() error {
 }
 
 type bitcaskTx struct {
-	*bitcask.Bitcask
+	bitcask.DB
 }
 
 func (tx *bitcaskTx) Set(key, value []byte) error {
-	return tx.Bitcask.Put(key, value)
+	return tx.DB.Put(key, value)
 }
 
 func (tx *bitcaskTx) Get(key []byte) ([]byte, error) {
-	value, err := tx.Bitcask.Get(key)
+	value, err := tx.DB.Get(key)
 	// XXX: Clover assumes non-nil errors even for "Key Not Found" (which Bitcask considers an error)
 	if err == bitcask.ErrKeyExpired {
 		return nil, nil
@@ -45,7 +45,7 @@ func (tx *bitcaskTx) Get(key []byte) ([]byte, error) {
 }
 
 func (tx *bitcaskTx) Delete(key []byte) error {
-	return tx.Bitcask.Delete(key)
+	return tx.DB.Delete(key)
 }
 
 func (tx *bitcaskTx) Cursor(forward bool) (store.Cursor, error) {
@@ -53,7 +53,7 @@ func (tx *bitcaskTx) Cursor(forward bool) (store.Cursor, error) {
 	if !forward {
 		opts = append(opts, bitcask.Reverse())
 	}
-	return &bitcaskCursor{Iterator: tx.Bitcask.Iterator(opts...)}, nil
+	return &bitcaskCursor{Iterator: tx.DB.Iterator(opts...)}, nil
 }
 
 func (tx *bitcaskTx) Commit() error {
@@ -65,7 +65,7 @@ func (tx *bitcaskTx) Rollback() error {
 }
 
 type bitcaskCursor struct {
-	*bitcask.Iterator
+	bitcask.Iterator
 	currItem *store.Item
 }
 
