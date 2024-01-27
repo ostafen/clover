@@ -52,7 +52,7 @@ import (
   "log"
   "github.com/dgraph-io/badger/v4"
   c "github.com/ostafen/clover"
-  badgerstore "github.com/ostafen/store/badger"
+  badgerstore "github.com/ostafen/clover/v2/store/badger"
 )
 
 ...
@@ -63,9 +63,6 @@ db, _ := c.Open("clover-db")
 // use OpenWithStore() if you want to select a different storage backend
 store, _ := badgerstore.Open(badger.DefaultOptions("").WithInMemory(true)) // opens a badger in memory database
 db, _ := c.OpenWithStore(store)
-
-// or, if you don't need persistency
-db, _ := c.Open("", c.InMemoryMode(true))
 
 defer db.Close() // remember to close the db when you have done
 ```
