@@ -3,11 +3,13 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
 
 	c "github.com/ostafen/clover/v2"
 )
 
 func main() {
+	_ = os.RemoveAll("clover-db")
 	db, err := c.Open("clover-db")
 	if err != nil {
 		log.Panicf("Failed to open db: %v", err)
