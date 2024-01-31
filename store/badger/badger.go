@@ -139,7 +139,7 @@ func (store *badgerStore) startGC() {
 			case <-ticker.C:
 				err := store.db.RunValueLogGC(GCDiscardRatio)
 				if err != nil && errors.Is(err, badger.ErrNoRewrite) {
-					log.Fatalf("RunValueLogGC(): %s\n", err.Error())
+					log.Printf("RunValueLogGC(): %s\n", err.Error())
 				}
 			}
 		}
