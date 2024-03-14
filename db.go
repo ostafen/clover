@@ -7,13 +7,13 @@ import (
 	"fmt"
 	"sync/atomic"
 
+	"github.com/gofrs/uuid/v5"
 	d "github.com/ostafen/clover/v2/document"
 	"github.com/ostafen/clover/v2/index"
 	"github.com/ostafen/clover/v2/internal"
 	"github.com/ostafen/clover/v2/query"
 	"github.com/ostafen/clover/v2/store"
 	"github.com/ostafen/clover/v2/store/bbolt"
-	uuid "github.com/satori/go.uuid"
 )
 
 // Collection creation errors
@@ -38,7 +38,7 @@ type DB struct {
 
 type collectionMetadata struct {
 	Size    int
-	Indexes []index.IndexInfo
+	Indexes []index.Info
 }
 
 // CreateCollection creates a new empty collection with the given name.
@@ -138,7 +138,8 @@ func (db *DB) HasCollection(name string) (bool, error) {
 }
 
 func NewObjectId() string {
-	return uuid.NewV4().String()
+	objId, _ := uuid.NewV4()
+	return objId.String()
 }
 
 // Insert adds the supplied documents to a collection.
@@ -266,11 +267,11 @@ func (db *DB) InsertOne(collectionName string, doc *d.Document) (string, error) 
 
 // Open opens a new clover database on the supplied path. If such a folder doesn't exist, it is automatically created.
 func Open(dir string) (*DB, error) {
-	store, err := bbolt.Open(dir)
+	dataStore, err := bbolt.Open(dir)
 	if err != nil {
 		return nil, err
 	}
-	return OpenWithStore(store)
+	return OpenWithStore(dataStore)
 }
 
 // OpenWithStore opens a new clover database using the provided store.
@@ -321,7 +322,7 @@ func (db *DB) FindFirst(q *query.Query) (*d.Document, error) {
 	return doc, err
 }
 
-// ForEach runs the consumer function for each document matching the provied query.
+// ForEach runs the consumer function for each document matching the provided query.
 // If false is returned from the consumer function, then the iteration is stopped.
 func (db *DB) ForEach(q *query.Query, consumer func(_ *d.Document) bool) error {
 	q, err := normalizeCriteria(q)
@@ -564,7 +565,7 @@ func (db *DB) Update(q *query.Query, updateMap map[string]interface{}) error {
 	})
 }
 
-// Update updates all the document selected by q using the provided function.
+// UpdateFunc updates all the document selected by q using the provided function.
 func (db *DB) UpdateFunc(q *query.Query, updateFunc func(doc *d.Document) *d.Document) error {
 	txn, err := db.store.Begin(true)
 	if err != nil {
@@ -680,10 +681,6 @@ func iteratePrefix(prefix []byte, tx store.Tx, itemConsumer func(item store.Item
 		return err
 	}
 
-	if err := cursor.Seek(prefix); err != nil {
-		return err
-	}
-
 	for ; cursor.Valid(); cursor.Next() {
 		item, err := cursor.Item()
 		if err != nil {
@@ -696,7 +693,7 @@ func iteratePrefix(prefix []byte, tx store.Tx, itemConsumer func(item store.Item
 		err = itemConsumer(item)
 
 		// do not propagate iteration stop error
-		if err == internal.ErrStopIteration {
+		if errors.Is(err, internal.ErrStopIteration) {
 			return nil
 		}
 
@@ -709,10 +706,10 @@ func iteratePrefix(prefix []byte, tx store.Tx, itemConsumer func(item store.Item
 
 // CreateIndex creates an index for the specified for the specified (index, collection) pair.
 func (db *DB) CreateIndex(collection, field string) error {
-	return db.createIndex(collection, field, index.IndexSingleField)
+	return db.createIndex(collection, field, index.SingleField)
 }
 
-func (db *DB) createIndex(collection, field string, indexType index.IndexType) error {
+func (db *DB) createIndex(collection, field string, indexType index.Type) error {
 	tx, err := db.store.Begin(true)
 	if err != nil {
 		return err
@@ -731,9 +728,9 @@ func (db *DB) createIndex(collection, field string, indexType index.IndexType) e
 	}
 
 	if meta.Indexes == nil {
-		meta.Indexes = make([]index.IndexInfo, 0)
+		meta.Indexes = make([]index.Info, 0)
 	}
-	meta.Indexes = append(meta.Indexes, index.IndexInfo{Field: field, Type: indexType})
+	meta.Indexes = append(meta.Indexes, index.Info{Field: field, Type: indexType})
 
 	idx := index.CreateIndex(collection, field, indexType, tx)
 
@@ -753,7 +750,7 @@ func (db *DB) createIndex(collection, field string, indexType index.IndexType) e
 	return tx.Commit()
 }
 
-// HasIndex returns true if an idex exists for the specified (index, collection) pair.
+// HasIndex returns true if an index exists for the specified (index, collection) pair.
 func (db *DB) HasIndex(collection, field string) (bool, error) {
 	tx, err := db.store.Begin(false)
 	if err != nil {
@@ -776,7 +773,7 @@ func (db *DB) hasIndex(tx store.Tx, collection, field string) (bool, error) {
 	return false, err
 }
 
-// DropIndex deletes the idex, is such index exists for the specified (index, collection) pair.
+// DropIndex deletes the index, is such index exists for the specified (index, collection) pair.
 func (db *DB) DropIndex(collection, field string) error {
 	txn, err := db.store.Begin(true)
 	if err != nil {
@@ -818,7 +815,7 @@ func (db *DB) DropIndex(collection, field string) error {
 }
 
 // ListIndexes returns a list containing the names of all the indexes for the specified collection.
-func (db *DB) ListIndexes(collection string) ([]index.IndexInfo, error) {
+func (db *DB) ListIndexes(collection string) ([]index.Info, error) {
 	txn, err := db.store.Begin(false)
 	if err != nil {
 		return nil, err
@@ -828,7 +825,7 @@ func (db *DB) ListIndexes(collection string) ([]index.IndexInfo, error) {
 	return db.listIndexes(collection, txn)
 }
 
-func (db *DB) listIndexes(collection string, tx store.Tx) ([]index.IndexInfo, error) {
+func (db *DB) listIndexes(collection string, tx store.Tx) ([]index.Info, error) {
 	meta, err := db.getCollectionMeta(collection, tx)
 	return meta.Indexes, err
 }

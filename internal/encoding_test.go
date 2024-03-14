@@ -26,10 +26,21 @@ type TestStruct struct {
 	Data        []byte                 `clover:",omitempty"`
 }
 
+type TestStruct2 struct {
+	BaseModel
+	IntField    int  `clover:"int_field,omitempty"`
+	UintField   uint `clover:"uint,omitempty" json:"uint_field"`
+	StringField string
+	FloatField  float32   `clover:",omitempty" json:"float_field"`
+	BoolField   bool      `clover:"bool_field,omitempty" json:"bool_field"`
+	TimeField   time.Time `clover:",omitempty"`
+	Data        []byte    `clover:",omitempty"`
+}
+
 func TestNormalize(t *testing.T) {
 	date := time.Date(2020, 01, 1, 0, 0, 0, 0, time.UTC)
 
-	var x int = 100
+	var x = 100
 
 	s := &TestStruct{
 		BaseModel: BaseModel{
@@ -131,4 +142,30 @@ func TestEncodeDecode(t *testing.T) {
 	require.NoError(t, Decode(data, &m))
 
 	require.Equal(t, m, norm)
+}
+
+func TestJsonTag(t *testing.T) {
+	date := time.Date(2020, 01, 1, 0, 0, 0, 0, time.UTC)
+
+	s := &TestStruct2{
+		TimeField:   date,
+		UintField:   100,
+		IntField:    200,
+		FloatField:  300,
+		StringField: "json",
+		BoolField:   true,
+	}
+
+	normalized, err := Normalize(s)
+	require.NoError(t, err)
+
+	require.IsType(t, normalized, map[string]interface{}{})
+	fields, _ := normalized.(map[string]interface{})
+	require.NotNil(t, fields)
+
+	var ns TestStruct2
+	err = Convert(fields, &ns)
+	require.NoError(t, err)
+
+	require.Equal(t, s, &ns)
 }

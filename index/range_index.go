@@ -2,10 +2,11 @@ package index
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"time"
 
-	"github.com/dgraph-io/badger/v3"
+	"github.com/dgraph-io/badger/v4"
 	"github.com/ostafen/clover/v2/internal"
 	"github.com/ostafen/clover/v2/store"
 )
@@ -210,7 +211,7 @@ func (idx *rangeIndex) IterateRange(vRange *Range, reverse bool, onValue func(do
 		}
 
 		if err := onValue(string(docId)); err != nil {
-			if err == internal.ErrStopIteration {
+			if errors.Is(err, internal.ErrStopIteration) {
 				return nil
 			}
 			return err
@@ -251,7 +252,7 @@ func (idx *rangeIndex) Iterate(reverse bool, onValue func(docId string) error) e
 
 		_, docId := extractDocId(key)
 		if err := onValue(string(docId)); err != nil {
-			if err == internal.ErrStopIteration {
+			if errors.Is(err, internal.ErrStopIteration) {
 				return nil
 			}
 			return err
@@ -260,6 +261,6 @@ func (idx *rangeIndex) Iterate(reverse bool, onValue func(docId string) error) e
 	return nil
 }
 
-func (idx *rangeIndex) Type() IndexType {
-	return IndexSingleField
+func (idx *rangeIndex) Type() Type {
+	return SingleField
 }

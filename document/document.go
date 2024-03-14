@@ -5,9 +5,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gofrs/uuid/v5"
 	"github.com/ostafen/clover/v2/internal"
 	"github.com/ostafen/clover/v2/util"
-	uuid "github.com/satori/go.uuid"
 )
 
 const (
@@ -122,7 +122,7 @@ func (doc *Document) SetAll(values map[string]interface{}) {
 	}
 }
 
-// GetAll returns a map of all available fields in the document. Nested fields are represented by sub-maps. This is a deep copy, but values are note cloned.
+// ToMap returns a map of all available fields in the document. Nested fields are represented by sub-maps. This is a deep copy, but values are not cloned.
 func (doc *Document) ToMap() map[string]interface{} {
 	return util.CopyMap(doc.fields)
 }
@@ -142,7 +142,7 @@ func (doc *Document) ExpiresAt() *time.Time {
 	return &exp
 }
 
-// ExpiresAt sets document expiration
+// SetExpiresAt sets document expiration
 func (doc *Document) SetExpiresAt(expiration time.Time) {
 	doc.Set(ExpiresAtField, expiration)
 }

@@ -65,23 +65,23 @@ func TestSelectIndexes(t *testing.T) {
 	c = c.Accept(&CriteriaNormalizeVisitor{}).(q.Criteria)
 	c = c.Accept(&NotFlattenVisitor{}).(q.Criteria)
 
-	s := c.Accept(&IndexSelectVisitor{Fields: map[string]*index.IndexInfo{
+	s := c.Accept(&IndexSelectVisitor{Fields: map[string]*index.Info{
 		"a": {Field: "a"},
-	}}).([]*index.IndexInfo)
+	}}).([]*index.Info)
 	require.Len(t, s, 0)
 
-	s = c.Accept(&IndexSelectVisitor{Fields: map[string]*index.IndexInfo{
+	s = c.Accept(&IndexSelectVisitor{Fields: map[string]*index.Info{
 		"b": {Field: "b"},
-	}}).([]*index.IndexInfo)
+	}}).([]*index.Info)
 	require.Len(t, s, 0)
 
-	s = c.Accept(&IndexSelectVisitor{Fields: map[string]*index.IndexInfo{
+	s = c.Accept(&IndexSelectVisitor{Fields: map[string]*index.Info{
 		"a": {Field: "a"},
 		"b": {Field: "b"},
-	}}).([]*index.IndexInfo)
+	}}).([]*index.Info)
 
 	require.Len(t, s, 2)
 
-	require.Equal(t, s[0], &index.IndexInfo{Field: "a"})
-	require.Equal(t, s[1], &index.IndexInfo{Field: "b"})
+	require.Equal(t, s[0], &index.Info{Field: "a"})
+	require.Equal(t, s[1], &index.Info{Field: "b"})
 }

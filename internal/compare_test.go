@@ -9,7 +9,7 @@ import (
 
 func TestCompareDifferentTypes(t *testing.T) {
 	require.Negative(t, Compare(nil, uint64(10)))
-	require.Negative(t, Compare(nil, float64(10.10)))
+	require.Negative(t, Compare(nil, 10.10))
 	require.Negative(t, Compare(nil, true))
 	require.Negative(t, Compare(nil, "10"))
 
@@ -23,8 +23,8 @@ func TestCompareDifferentTypes(t *testing.T) {
 
 func TestCompareNumbers(t *testing.T) {
 	require.Zero(t, Compare(uint64(10), int64(10)))
-	require.Zero(t, Compare(uint64(10), float64(10.0)))
-	require.Zero(t, Compare(int64(10), float64(10.0)))
+	require.Zero(t, Compare(uint64(10), 10.0))
+	require.Zero(t, Compare(int64(10), 10.0))
 }
 
 func TestCompareBooleans(t *testing.T) {
@@ -44,7 +44,7 @@ func TestCompareTimes(t *testing.T) {
 }
 
 func TestCompareSlices(t *testing.T) {
-	s := []interface{}{float64(10.0), map[string]interface{}{"hello": "clover"}, "clover", true, []interface{}{}}
+	s := []interface{}{10.0, map[string]interface{}{"hello": "clover"}, "clover", true, []interface{}{}}
 	require.Zero(t, Compare(s, s))
 }
 

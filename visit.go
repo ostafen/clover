@@ -96,20 +96,20 @@ func (v *NotFlattenVisitor) removeNotCriteria(c *query.NotCriteria) query.Criter
 }
 
 type IndexSelectVisitor struct {
-	Fields map[string]*index.IndexInfo
+	Fields map[string]*index.Info
 }
 
 func (v *IndexSelectVisitor) VisitUnaryCriteria(c *query.UnaryCriteria) interface{} {
 	info := v.Fields[c.Field]
 	if info != nil {
-		return []*index.IndexInfo{info}
+		return []*index.Info{info}
 	}
-	return []*index.IndexInfo{}
+	return []*index.Info{}
 }
 
 func (v *IndexSelectVisitor) VisitBinaryCriteria(c *query.BinaryCriteria) interface{} {
-	leftIndexes := c.C1.Accept(v).([]*index.IndexInfo)
-	rightIndexes := c.C2.Accept(v).([]*index.IndexInfo)
+	leftIndexes := c.C1.Accept(v).([]*index.Info)
+	rightIndexes := c.C2.Accept(v).([]*index.Info)
 
 	if c.OpType == query.LogicalAnd { // select the indexes with the lowest number of queries
 		if len(leftIndexes) > 0 && len(leftIndexes) < len(rightIndexes) {
@@ -119,10 +119,10 @@ func (v *IndexSelectVisitor) VisitBinaryCriteria(c *query.BinaryCriteria) interf
 	}
 
 	if len(leftIndexes) == 0 || len(rightIndexes) == 0 {
-		return []*index.IndexInfo{}
+		return []*index.Info{}
 	}
 
-	res := make([]*index.IndexInfo, 0, len(leftIndexes)+len(rightIndexes))
+	res := make([]*index.Info, 0, len(leftIndexes)+len(rightIndexes))
 	res = append(res, leftIndexes...)
 	res = append(res, rightIndexes...)
 	return res

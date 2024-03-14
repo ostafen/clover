@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dgraph-io/badger/v3"
+	"github.com/dgraph-io/badger/v4"
 	"github.com/ostafen/clover/v2/store"
 )
 
@@ -109,12 +109,12 @@ func OpenWithOptions(opts badger.Options) (store.Store, error) {
 		return nil, err
 	}
 
-	store := &badgerStore{
+	dataStore := &badgerStore{
 		db:     db,
 		chQuit: make(chan struct{}, 1),
 	}
-	store.startGC()
-	return store, nil
+	dataStore.startGC()
+	return dataStore, nil
 }
 
 const (
@@ -139,7 +139,7 @@ func (store *badgerStore) startGC() {
 			case <-ticker.C:
 				err := store.db.RunValueLogGC(GCDiscardRatio)
 				if err != nil && errors.Is(err, badger.ErrNoRewrite) {
-					log.Fatalf("RunValueLogGC(): %s\n", err.Error())
+					log.Printf("RunValueLogGC(): %s\n", err.Error())
 				}
 			}
 		}

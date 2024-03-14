@@ -173,10 +173,27 @@ func createRenameMap(rv reflect.Value) map[string]string {
 	for i := 0; i < rv.NumField(); i++ {
 		fieldType := rv.Type().Field(i)
 
+		renameTo := fieldType.Name
+		renameFrom := fieldType.Name
+
+		jsonTagStr, found := fieldType.Tag.Lookup("json")
+		if found {
+			name, _ := processStructTag(jsonTagStr)
+			if name != "" {
+				renameTo = name
+			}
+		}
+
 		tagStr, found := fieldType.Tag.Lookup("clover")
 		if found {
 			name, _ := processStructTag(tagStr)
-			renameMap[name] = fieldType.Name
+			if name != "" {
+				renameFrom = name
+			}
+		}
+
+		if renameFrom != renameTo {
+			renameMap[renameFrom] = renameTo
 		}
 	}
 	return renameMap
