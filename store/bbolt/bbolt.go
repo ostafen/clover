@@ -20,6 +20,10 @@ const (
 )
 
 func Open(dir string) (store.Store, error) {
+	return OpenWithOptions(dir, nil)
+}
+
+func OpenWithOptions(dir string, opts *bbolt.Options) (store.Store, error) {
 	dirExists, err := util.PathExists(dir)
 	if err != nil {
 		return nil, err
@@ -30,7 +34,7 @@ func Open(dir string) (store.Store, error) {
 			return nil, err
 		}
 	}
-	db, err := bbolt.Open(filepath.Join(dir, dbFileName), 0600, nil)
+	db, err := bbolt.Open(filepath.Join(dir, dbFileName), 0600, opts)
 	if err != nil {
 		return nil, err
 	}
