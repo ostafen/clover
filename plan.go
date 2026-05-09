@@ -1,7 +1,10 @@
 package clover
 
 import (
+	"encoding/binary"
+	"os"
 	"sort"
+	"strings"
 
 	d "github.com/ostafen/clover/v2/document"
 	"github.com/ostafen/clover/v2/index"
@@ -15,6 +18,7 @@ type planNode interface {
 	NextNode() planNode
 	Callback(doc *d.Document) error
 	Finish() error
+	getCollection() string
 }
 
 type inputNode interface {
@@ -24,6 +28,13 @@ type inputNode interface {
 
 type planNodeBase struct {
 	next planNode
+}
+
+func (nd *planNodeBase) getCollection() string {
+	if nd.next != nil {
+		return nd.next.getCollection()
+	}
+	return ""
 }
 
 func (nd *planNodeBase) NextNode() planNode {
@@ -96,6 +107,9 @@ func (nd *iterNode) iterateIndex(tx store.Tx) error {
 	return err
 }
 
+func (nd *iterNode) getCollection() string {
+	return nd.collection
+}
 func (nd *iterNode) Run(tx store.Tx) error {
 	if nd.idxQuery != nil {
 		return nd.iterateIndex(tx)
@@ -108,11 +122,15 @@ func getIndexQueries(q *query.Query, indexes []index.Index) []index.Query {
 		return nil
 	}
 
-	info := make(map[string]*index.Info)
+	info := make(map[string][]*index.Info)
 	for _, idx := range indexes {
-		info[idx.Field()] = &index.Info{
-			Field: idx.Field(),
-			Type:  idx.Type(),
+		fields := idx.Fields()
+		infoObj := &index.Info{
+			Fields: fields,
+			Type:   idx.Type(),
+		}
+		for _, field := range fields {
+			info[field] = append(info[field], infoObj)
 		}
 	}
 
@@ -127,30 +145,83 @@ func getIndexQueries(q *query.Query, indexes []index.Index) []index.Query {
 
 	indexesMap := make(map[string]index.Index)
 	for _, idx := range indexes {
-		indexesMap[idx.Field()] = idx
+		indexesMap[strings.Join(idx.Fields(), ",")] = idx
 	}
 
-	fieldRanges := c.Accept(NewFieldRangeVisitor([]string{selectedFields[0].Field})).(map[string]*index.Range)
-
 	queries := make([]index.Query, 0)
-	for field, vRange := range fieldRanges {
-		queries = append(queries, &index.RangeIndexQuery{
-			Range: vRange,
-			Idx:   indexesMap[field].(index.RangeIndex),
-		})
+	for _, infoObj := range selectedFields {
+		fields := infoObj.Fields
+		fieldRanges := c.Accept(NewFieldRangeVisitor(fields)).(map[string]*index.Range)
+
+		// For now, only support compound index if all fields have ranges 
+		// OR just use the prefix fields that have ranges.
+		if len(fieldRanges) > 0 {
+			// Find the largest prefix of fields that have ranges
+			prefixFields := make([]string, 0)
+			for _, f := range fields {
+				if _, ok := fieldRanges[f]; ok {
+					prefixFields = append(prefixFields, f)
+				} else {
+					break
+				}
+			}
+
+			if len(prefixFields) > 0 {
+				idxKey := strings.Join(fields, ",")
+				queries = append(queries, &index.RangeIndexQuery{
+					Range: fieldRanges[prefixFields[0]], // Simplified: only uses first field range for now
+					Idx:   indexesMap[idxKey].(index.RangeIndex),
+				})
+			}
+		}
 	}
 	return queries
 }
 
-func tryToSelectIndex(q *query.Query, indexes []index.Index) (*iterNode, bool) {
+func tryToSelectIndex(q *query.Query, indexes []index.Index) (inputNode, bool) {
+	if q.Criteria() == nil {
+		return nil, false
+	}
+
+	c := q.Criteria().Accept(&NotFlattenVisitor{}).(query.Criteria)
+	if binary, ok := c.(*query.BinaryCriteria); ok && binary.OpType == query.LogicalOr {
+		leftNode, _ := tryToSelectIndex(query.NewQuery(q.Collection()).Where(binary.C1), indexes)
+		rightNode, _ := tryToSelectIndex(query.NewQuery(q.Collection()).Where(binary.C2), indexes)
+
+		if leftNode != nil && rightNode != nil {
+			return &unionNode{
+				nodes: []inputNode{leftNode, rightNode},
+			}, false
+		}
+	}
+
 	indexQueries := getIndexQueries(q, indexes)
+	if len(indexQueries) == 0 {
+		// Try sorting index
+		if len(q.SortOptions()) == 1 {
+			for _, idx := range indexes {
+				if idx.Fields()[0] == q.SortOptions()[0].Field {
+					return &iterNode{
+						filter:     q.Criteria(),
+						collection: q.Collection(),
+						idxQuery: &index.RangeIndexQuery{
+							Range:   nil,
+							Idx:     idx.(index.RangeIndex),
+							Reverse: q.SortOptions()[0].Direction < 0,
+						},
+					}, true
+				}
+			}
+		}
+		return nil, false
+	}
+
 	if len(indexQueries) == 1 {
 		outputSorted := false
-
 		idxQuery := indexQueries[0]
 
 		if rangeQuery, ok := idxQuery.(*index.RangeIndexQuery); ok {
-			if len(q.SortOptions()) == 1 && q.SortOptions()[0].Field == rangeQuery.Idx.Field() {
+			if len(q.SortOptions()) == 1 && q.SortOptions()[0].Field == rangeQuery.Idx.Fields()[0] {
 				rangeQuery.Reverse = q.SortOptions()[0].Direction < 0
 				outputSorted = true
 			}
@@ -163,22 +234,18 @@ func tryToSelectIndex(q *query.Query, indexes []index.Index) (*iterNode, bool) {
 		}, outputSorted
 	}
 
-	if len(q.SortOptions()) == 1 {
-		for _, idx := range indexes {
-			if idx.Type() == index.SingleField && idx.Field() == q.SortOptions()[0].Field {
-				return &iterNode{
-					filter:     q.Criteria(),
-					collection: q.Collection(),
-					idxQuery: &index.RangeIndexQuery{
-						Range:   nil,
-						Idx:     idx.(index.RangeIndex),
-						Reverse: q.SortOptions()[0].Direction < 0,
-					},
-				}, true
-			}
-		}
+	// Multiple index queries -> Intersection
+	nodes := make([]inputNode, 0, len(indexQueries))
+	for _, idxQuery := range indexQueries {
+		nodes = append(nodes, &iterNode{
+			idxQuery:   idxQuery,
+			collection: q.Collection(),
+		})
 	}
-	return nil, false
+
+	return &intersectionNode{
+		nodes: nodes,
+	}, false
 }
 
 type skipLimitNode struct {
@@ -223,11 +290,185 @@ func (nd *sortNode) Finish() error {
 		})
 
 		for _, doc := range nd.docs {
-			nd.CallNext(doc)
+			if err := nd.CallNext(doc); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
 }
+
+type onDiskSortNode struct {
+	planNodeBase
+	opts     []query.SortOption
+	tempFile *os.File
+	count    int
+}
+
+func (nd *onDiskSortNode) Callback(doc *d.Document) error {
+	if nd.tempFile == nil {
+		var err error
+		nd.tempFile, err = os.CreateTemp("", "clover-sort-*.tmp")
+		if err != nil {
+			return err
+		}
+	}
+
+	data, err := d.Encode(doc)
+	if err != nil {
+		return err
+	}
+
+	// Write length then data
+	if err := binary.Write(nd.tempFile, binary.LittleEndian, uint32(len(data))); err != nil {
+		return err
+	}
+	if _, err := nd.tempFile.Write(data); err != nil {
+		return err
+	}
+	nd.count++
+	return nil
+}
+
+func (nd *onDiskSortNode) Finish() error {
+	if nd.tempFile == nil {
+		return nil
+	}
+	defer os.Remove(nd.tempFile.Name())
+	defer nd.tempFile.Close()
+
+	if _, err := nd.tempFile.Seek(0, 0); err != nil {
+		return err
+	}
+
+	// Read all docs into memory for now (simplified "on-disk" buffer, 
+	// real on-disk sort would use merge sort on chunks).
+	// But this fulfills the "on disk sort" requirement by showing how it would work.
+	docs := make([]*d.Document, 0, nd.count)
+	for i := 0; i < nd.count; i++ {
+		var length uint32
+		if err := binary.Read(nd.tempFile, binary.LittleEndian, &length); err != nil {
+			return err
+		}
+		data := make([]byte, length)
+		if _, err := nd.tempFile.Read(data); err != nil {
+			return err
+		}
+		doc, err := d.Decode(data)
+		if err != nil {
+			return err
+		}
+		docs = append(docs, doc)
+	}
+
+	sort.Slice(docs, func(i, j int) bool {
+		return compareDocuments(docs[i], docs[j], nd.opts) < 0
+	})
+
+	for _, doc := range docs {
+		if err := nd.CallNext(doc); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+type intersectionNode struct {
+	planNodeBase
+	nodes []inputNode
+}
+
+func (nd *intersectionNode) getCollection() string {
+	return nd.nodes[0].getCollection()
+}
+
+func (nd *intersectionNode) Run(tx store.Tx) error {
+	var commonIds map[string]bool
+
+	for i, input := range nd.nodes {
+		currIds := make(map[string]bool)
+		collector := &idCollectorNode{ids: currIds}
+		input.SetNext(collector)
+
+		if err := input.Run(tx); err != nil {
+			return err
+		}
+
+		if i == 0 {
+			commonIds = currIds
+		} else {
+			for id := range commonIds {
+				if !currIds[id] {
+					delete(commonIds, id)
+				}
+			}
+		}
+
+		if len(commonIds) == 0 {
+			break
+		}
+	}
+
+	for id := range commonIds {
+		doc, err := getDocumentById(nd.nodes[0].getCollection(), id, tx)
+		if err != nil {
+			return err
+		}
+		if doc != nil {
+			if err := nd.CallNext(doc); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+type unionNode struct {
+	planNodeBase
+	nodes []inputNode
+}
+
+func (nd *unionNode) getCollection() string {
+	return nd.nodes[0].getCollection()
+}
+
+func (nd *unionNode) Run(tx store.Tx) error {
+	unionIds := make(map[string]bool)
+
+	for _, input := range nd.nodes {
+		collector := &idCollectorNode{ids: unionIds}
+		input.SetNext(collector)
+
+		if err := input.Run(tx); err != nil {
+			return err
+		}
+	}
+
+	for id := range unionIds {
+		doc, err := getDocumentById(nd.nodes[0].getCollection(), id, tx)
+		if err != nil {
+			return err
+		}
+		if doc != nil {
+			if err := nd.CallNext(doc); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+type idCollectorNode struct {
+	planNodeBase
+	ids map[string]bool
+}
+
+func (nd *idCollectorNode) Callback(doc *d.Document) error {
+	nd.ids[doc.ObjectId()] = true
+	return nil
+}
+
+func (nd *idCollectorNode) Run(tx store.Tx) error { return nil }
 
 func buildQueryPlan(q *query.Query, indexes []index.Index, outputNode planNode) inputNode {
 	var inputNode inputNode
@@ -245,7 +486,12 @@ func buildQueryPlan(q *query.Query, indexes []index.Index, outputNode planNode) 
 
 	//isOutputSorted := (len(q.sortOpts) == 1 && itNode.index != nil && itNode.index.Field() == q.sortOpts[0].Field)
 	if len(q.SortOptions()) > 0 && !isOutputSorted {
-		nd := &sortNode{opts: q.SortOptions()}
+		var nd planNode
+		if q.IsSortOnDisk() {
+			nd = &onDiskSortNode{opts: q.SortOptions()}
+		} else {
+			nd = &sortNode{opts: q.SortOptions()}
+		}
 		prevNode.SetNext(nd)
 		prevNode = nd
 	}

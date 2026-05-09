@@ -89,6 +89,17 @@ func (tx *boltTx) Delete(key []byte) error {
 	return bucket.Delete(key)
 }
 
+func (tx *boltTx) DeletePrefix(prefix []byte) error {
+	bucket := tx.bucket()
+	c := bucket.Cursor()
+	for k, _ := c.Seek(prefix); k != nil && bytes.HasPrefix(k, prefix); k, _ = c.Next() {
+		if err := bucket.Delete(k); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (tx *boltTx) Cursor(forward bool) (store.Cursor, error) {
 	bucket := tx.bucket()
 	cursor := bucket.Cursor()

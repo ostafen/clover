@@ -67,6 +67,19 @@ func (doc *Document) AsMap() map[string]interface{} {
 }
 
 func lookupField(name string, fieldMap map[string]interface{}, force bool) (map[string]interface{}, interface{}, string) {
+	if !strings.Contains(name, ".") {
+		f, exists := fieldMap[name]
+		if !exists && !force {
+			return nil, nil, ""
+		}
+		if force && !exists {
+			// If force is true and we are at the last element (which is the only element),
+			// we don't necessarily create intermediate maps, just return current map
+			// and let the caller set the value on it.
+		}
+		return fieldMap, f, name
+	}
+
 	fields := strings.Split(name, ".")
 
 	var exists bool
@@ -112,6 +125,14 @@ func (doc *Document) Set(name string, value interface{}) {
 	if err == nil {
 		m, _, fieldName := lookupField(name, doc.fields, true)
 		m[fieldName] = normalizedValue
+	}
+}
+
+// Remove deletes a field from the document. Nested fields can be accessed using dot.
+func (doc *Document) Remove(name string) {
+	m, _, fieldName := lookupField(name, doc.fields, false)
+	if m != nil {
+		delete(m, fieldName)
 	}
 }
 

@@ -9,6 +9,7 @@ type Query struct {
 	limit      int
 	skip       int
 	sortOpts   []SortOption
+	sortOnDisk bool
 }
 
 // NewQuery simply returns the collection with the supplied name. Use it to initialize a new query.
@@ -19,6 +20,7 @@ func NewQuery(collection string) *Query {
 		limit:      -1,
 		skip:       0,
 		sortOpts:   nil,
+		sortOnDisk: false,
 	}
 }
 
@@ -29,6 +31,7 @@ func (q *Query) copy() *Query {
 		limit:      q.limit,
 		skip:       q.skip,
 		sortOpts:   q.sortOpts,
+		sortOnDisk: q.sortOnDisk,
 	}
 }
 
@@ -122,4 +125,14 @@ func (q *Query) GetSkip() int {
 
 func (q *Query) SortOptions() []SortOption {
 	return q.sortOpts
+}
+
+func (q *Query) SortOnDisk() *Query {
+	newQuery := q.copy()
+	newQuery.sortOnDisk = true
+	return newQuery
+}
+
+func (q *Query) IsSortOnDisk() bool {
+	return q.sortOnDisk
 }

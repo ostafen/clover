@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/dgraph-io/badger/v4"
@@ -42,20 +43,21 @@ func extractDocId(key []byte) ([]byte, []byte) {
 }
 
 func (idx *rangeIndex) getKeyPrefix() []byte {
-	return []byte(fmt.Sprintf("c:%s;i:%s", idx.collection, idx.field))
+	return []byte(fmt.Sprintf("c:%s;i:%s", idx.collection, strings.Join(idx.fields, ",")))
 }
 
-func (idx *rangeIndex) getKeyPrefixForType(typeId int) []byte {
-	return []byte(fmt.Sprintf("%s;t:%d;v:", idx.getKeyPrefix(), typeId))
+func (idx *rangeIndex) getKey(value interface{}) ([]byte, error) {
+	var values []interface{}
+	if s, ok := value.([]interface{}); ok {
+		values = s
+	} else if value != nil {
+		values = []interface{}{value}
+	}
+	return internal.OrderedCode(idx.getKeyPrefix(), true, values...)
 }
 
-func (idx *rangeIndex) getKey(v interface{}) ([]byte, error) {
-	prefix := idx.getKeyPrefixForType(internal.TypeId(v))
-	return internal.OrderedCode(prefix, v)
-}
-
-func (idx *rangeIndex) encodeValueAndId(value interface{}, docId string) ([]byte, error) {
-	encodedKey, err := idx.getKey(value)
+func (idx *rangeIndex) encodeValueAndId(values []interface{}, docId string) ([]byte, error) {
+	encodedKey, err := idx.getKey(values)
 	if err != nil {
 		return nil, err
 	}
@@ -63,16 +65,16 @@ func (idx *rangeIndex) encodeValueAndId(value interface{}, docId string) ([]byte
 	return encodedKey, nil
 }
 
-func (idx *rangeIndex) Add(docId string, v interface{}, ttl time.Duration) error {
-	encodedKey, err := idx.encodeValueAndId(v, docId)
+func (idx *rangeIndex) Add(docId string, values []interface{}, ttl time.Duration) error {
+	encodedKey, err := idx.encodeValueAndId(values, docId)
 	if err != nil {
 		return err
 	}
 	return idx.tx.Set(encodedKey, nil)
 }
 
-func (idx *rangeIndex) Remove(docId string, value interface{}) error {
-	encodedKey, err := idx.encodeValueAndId(value, docId)
+func (idx *rangeIndex) Remove(docId string, values []interface{}) error {
+	encodedKey, err := idx.encodeValueAndId(values, docId)
 	if err != nil {
 		return err
 	}
@@ -80,29 +82,7 @@ func (idx *rangeIndex) Remove(docId string, value interface{}) error {
 }
 
 func (idx *rangeIndex) Drop() error {
-	cursor, err := idx.tx.Cursor(true)
-	if err != nil {
-		return err
-	}
-	defer cursor.Close()
-
-	prefix := idx.getKeyPrefix()
-	cursor.Seek(prefix)
-	for ; cursor.Valid(); cursor.Next() {
-		item, err := cursor.Item()
-		if err != nil {
-			return err
-		}
-
-		if !bytes.HasPrefix(item.Key, prefix) {
-			return nil
-		}
-
-		if err := idx.tx.Delete(item.Key); err != nil {
-			return err
-		}
-	}
-	return nil
+	return idx.tx.DeletePrefix(idx.getKeyPrefix())
 }
 
 func (idx *rangeIndex) encodeRange(vRange *Range) ([]byte, []byte, error) {
@@ -262,5 +242,8 @@ func (idx *rangeIndex) Iterate(reverse bool, onValue func(docId string) error) e
 }
 
 func (idx *rangeIndex) Type() Type {
+	if len(idx.fields) > 1 {
+		return Compound
+	}
 	return SingleField
 }

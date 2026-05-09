@@ -34,6 +34,23 @@ func (tx *badgerTx) Set(key, value []byte) error {
 	return tx.Txn.Set(key, value)
 }
 
+func (tx *badgerTx) Delete(key []byte) error {
+	return tx.Txn.Delete(key)
+}
+
+func (tx *badgerTx) DeletePrefix(prefix []byte) error {
+	it := tx.Txn.NewIterator(badger.DefaultIteratorOptions)
+	defer it.Close()
+
+	for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
+		err := tx.Txn.Delete(it.Item().Key())
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func getItemValue(item *badger.Item) ([]byte, error) {
 	var value []byte
 	err := item.Value(func(val []byte) error {

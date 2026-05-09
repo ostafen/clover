@@ -25,9 +25,9 @@ func TestOrderedCodeObject(t *testing.T) {
 		b, err := Normalize(gofakeit.Map())
 		require.NoError(t, err)
 
-		aEncoded, err := OrderedCode(make([]byte, 0), a)
+		aEncoded, err := OrderedCode(nil, false, a)
 		require.NoError(t, err)
-		bEncoded, err := OrderedCode(make([]byte, 0), b)
+		bEncoded, err := OrderedCode(nil, false, b)
 		require.NoError(t, err)
 
 		require.Equal(t, getSign(Compare(a, b)),

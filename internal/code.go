@@ -44,8 +44,15 @@ func orderedCodePrimitive(buf []byte, value interface{}, includeType bool) ([]by
 	return buf, nil
 }
 
-func OrderedCode(buf []byte, v interface{}) ([]byte, error) {
-	return orderedCode(buf, v, false)
+func OrderedCode(buf []byte, includeType bool, values ...interface{}) ([]byte, error) {
+	var err error
+	for _, v := range values {
+		buf, err = orderedCode(buf, v, includeType)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return buf, nil
 }
 
 func orderedCode(buf []byte, v interface{}, includeType bool) ([]byte, error) {

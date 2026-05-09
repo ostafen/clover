@@ -12,11 +12,27 @@ func IsNumber(v interface{}) bool {
 
 func ToFloat64(v interface{}) float64 {
 	switch vType := v.(type) {
+	case int:
+		return float64(vType)
+	case int8:
+		return float64(vType)
+	case int16:
+		return float64(vType)
+	case int32:
+		return float64(vType)
+	case int64:
+		return float64(vType)
+	case uint:
+		return float64(vType)
+	case uint8:
+		return float64(vType)
+	case uint16:
+		return float64(vType)
 	case uint32:
 		return float64(vType)
 	case uint64:
 		return float64(vType)
-	case int64:
+	case float32:
 		return float64(vType)
 	case float64:
 		return vType
@@ -26,10 +42,30 @@ func ToFloat64(v interface{}) float64 {
 
 func ToInt64(v interface{}) int64 {
 	switch vType := v.(type) {
-	case uint64:
+	case int:
+		return int64(vType)
+	case int8:
+		return int64(vType)
+	case int16:
+		return int64(vType)
+	case int32:
 		return int64(vType)
 	case int64:
-		return vType
+		return int64(vType)
+	case uint:
+		return int64(vType)
+	case uint8:
+		return int64(vType)
+	case uint16:
+		return int64(vType)
+	case uint32:
+		return int64(vType)
+	case uint64:
+		return int64(vType)
+	case float32:
+		return int64(vType)
+	case float64:
+		return int64(vType)
 	}
 	panic("not a number")
 }

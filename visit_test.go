@@ -65,23 +65,27 @@ func TestSelectIndexes(t *testing.T) {
 	c = c.Accept(&CriteriaNormalizeVisitor{}).(q.Criteria)
 	c = c.Accept(&NotFlattenVisitor{}).(q.Criteria)
 
-	s := c.Accept(&IndexSelectVisitor{Fields: map[string]*index.Info{
-		"a": {Field: "a"},
+	infoA := &index.Info{Fields: []string{"a"}}
+	infoB := &index.Info{Fields: []string{"b"}}
+
+	s := c.Accept(&IndexSelectVisitor{Fields: map[string][]*index.Info{
+		"a": {infoA},
 	}}).([]*index.Info)
 	require.Len(t, s, 0)
 
-	s = c.Accept(&IndexSelectVisitor{Fields: map[string]*index.Info{
-		"b": {Field: "b"},
+	s = c.Accept(&IndexSelectVisitor{Fields: map[string][]*index.Info{
+		"b": {infoB},
 	}}).([]*index.Info)
 	require.Len(t, s, 0)
 
-	s = c.Accept(&IndexSelectVisitor{Fields: map[string]*index.Info{
-		"a": {Field: "a"},
-		"b": {Field: "b"},
+	s = c.Accept(&IndexSelectVisitor{Fields: map[string][]*index.Info{
+		"a": {infoA},
+		"b": {infoB},
 	}}).([]*index.Info)
 
-	require.Len(t, s, 2)
+	require.Len(t, s, 3)
 
-	require.Equal(t, s[0], &index.Info{Field: "a"})
-	require.Equal(t, s[1], &index.Info{Field: "b"})
+	require.Equal(t, s[0], infoA)
+	require.Equal(t, s[1], infoA)
+	require.Equal(t, s[2], infoB)
 }

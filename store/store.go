@@ -9,6 +9,7 @@ type Tx interface {
 	Set(key, value []byte) error
 	Get(key []byte) ([]byte, error)
 	Delete(key []byte) error
+	DeletePrefix(prefix []byte) error
 	Cursor(forward bool) (Cursor, error)
 	Commit() error
 	Rollback() error

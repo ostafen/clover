@@ -14,6 +14,7 @@ import (
 	"github.com/ostafen/clover/v2/query"
 	"github.com/ostafen/clover/v2/store"
 	"github.com/ostafen/clover/v2/store/bbolt"
+	"github.com/ostafen/clover/v2/util"
 )
 
 // Collection creation errors
@@ -34,6 +35,58 @@ type docConsumer func(doc *d.Document) error
 type DB struct {
 	store  store.Store
 	closed uint32
+}
+
+// Tx represents a clover database transaction.
+type Tx struct {
+	db *DB
+	tx store.Tx
+}
+
+// Begin starts a new transaction.
+func (db *DB) Begin(update bool) (*Tx, error) {
+	tx, err := db.store.Begin(update)
+	if err != nil {
+		return nil, err
+	}
+	return &Tx{db: db, tx: tx}, nil
+}
+
+func (tx *Tx) Commit() error {
+	return tx.tx.Commit()
+}
+
+func (tx *Tx) Rollback() error {
+	return tx.tx.Rollback()
+}
+
+func (tx *Tx) Insert(collectionName string, docs ...*d.Document) error {
+	return tx.db.insert(tx.tx, collectionName, docs...)
+}
+
+func (tx *Tx) Update(q *query.Query, updaters ...interface{}) error {
+	q, err := normalizeCriteria(q)
+	if err != nil {
+		return err
+	}
+
+	updateFunc := func(doc *d.Document) *d.Document {
+		newDoc := doc.Copy()
+		for _, updater := range updaters {
+			if updateMap, ok := updater.(map[string]interface{}); ok {
+				newDoc.SetAll(updateMap)
+			} else if op, ok := updater.(UpdateOp); ok {
+				newDoc = op.Apply(newDoc)
+			} else if ops, ok := updater.([]UpdateOp); ok {
+				for _, op := range ops {
+					newDoc = op.Apply(newDoc)
+				}
+			}
+		}
+		return newDoc
+	}
+
+	return tx.db.replaceDocs(tx.tx, q, updateFunc)
 }
 
 type collectionMetadata struct {
@@ -138,24 +191,31 @@ func (db *DB) HasCollection(name string) (bool, error) {
 }
 
 func NewObjectId() string {
-	objId, _ := uuid.NewV4()
+	objId, _ := uuid.NewV7()
 	return objId.String()
 }
 
 // Insert adds the supplied documents to a collection.
 func (db *DB) Insert(collectionName string, docs ...*d.Document) error {
+	tx, err := db.store.Begin(true)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if err := db.insert(tx, collectionName, docs...); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+func (db *DB) insert(tx store.Tx, collectionName string, docs ...*d.Document) error {
 	for _, doc := range docs {
 		if !doc.Has(d.ObjectIdField) || doc.Get(d.ObjectIdField) == "" {
 			objectId := NewObjectId()
 			doc.Set(d.ObjectIdField, objectId)
 		}
 	}
-
-	tx, err := db.store.Begin(true)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
 
 	meta, err := db.getCollectionMeta(collectionName, tx)
 	if err != nil {
@@ -185,18 +245,14 @@ func (db *DB) Insert(collectionName string, docs ...*d.Document) error {
 	}
 
 	meta.Size += len(docs)
-	if err := db.saveCollectionMetadata(collectionName, meta, tx); err != nil {
-		return err
-	}
-
-	return tx.Commit()
+	return db.saveCollectionMetadata(collectionName, meta, tx)
 }
 
 func (db *DB) getIndexes(tx store.Tx, collection string, meta *collectionMetadata) []index.Index {
 	indexes := make([]index.Index, 0)
 
 	for _, info := range meta.Indexes {
-		indexes = append(indexes, index.CreateIndex(collection, info.Field, info.Type, tx))
+		indexes = append(indexes, index.CreateIndex(collection, info.Fields, info.Type, tx))
 	}
 	return indexes
 }
@@ -216,9 +272,13 @@ func saveDocument(doc *d.Document, key []byte, tx store.Tx) error {
 func (db *DB) addDocToIndexes(tx store.Tx, indexes []index.Index, doc *d.Document) error {
 	// update indexes
 	for _, idx := range indexes {
-		fieldVal := doc.Get(idx.Field()) // missing fields are treated as null
+		fields := idx.Fields()
+		values := make([]interface{}, len(fields))
+		for i, field := range fields {
+			values[i] = doc.Get(field)
+		}
 
-		err := idx.Add(doc.ObjectId(), fieldVal, doc.TTL())
+		err := idx.Add(doc.ObjectId(), values, doc.TTL())
 		if err != nil {
 			return err
 		}
@@ -465,8 +525,13 @@ func (db *DB) getDocAndDeleteFromIndexes(tx store.Tx, indexes []index.Index, col
 	}
 
 	for _, idx := range indexes {
-		value := doc.Get(idx.Field())
-		if err := idx.Remove(doc.ObjectId(), value); err != nil {
+		fields := idx.Fields()
+		values := make([]interface{}, len(fields))
+		for i, field := range fields {
+			values[i] = doc.Get(field)
+		}
+
+		if err := idx.Remove(doc.ObjectId(), values); err != nil {
 			return err
 		}
 	}
@@ -531,8 +596,13 @@ func (db *DB) updateIndexesOnDocUpdate(tx store.Tx, indexes []index.Index, oldDo
 
 func (db *DB) deleteDocFromIndexes(indexes []index.Index, doc *d.Document) error {
 	for _, idx := range indexes {
-		value := doc.Get(idx.Field())
-		if err := idx.Remove(doc.ObjectId(), value); err != nil {
+		fields := idx.Fields()
+		values := make([]interface{}, len(fields))
+		for i, field := range fields {
+			values[i] = doc.Get(field)
+		}
+
+		if err := idx.Remove(doc.ObjectId(), values); err != nil {
 			return err
 		}
 	}
@@ -550,19 +620,30 @@ func (db *DB) ReplaceById(collection, docId string, doc *d.Document) error {
 	})
 }
 
-// Update updates all the document selected by q using the provided updateMap.
-// Each update is specified by a mapping fieldName -> newValue.
-func (db *DB) Update(q *query.Query, updateMap map[string]interface{}) error {
+// Update updates all the document selected by q using the provided updateMap or update operators.
+func (db *DB) Update(q *query.Query, updaters ...interface{}) error {
 	q, err := normalizeCriteria(q)
 	if err != nil {
 		return err
 	}
 
-	return db.UpdateFunc(q, func(doc *d.Document) *d.Document {
+	updateFunc := func(doc *d.Document) *d.Document {
 		newDoc := doc.Copy()
-		newDoc.SetAll(updateMap)
+		for _, updater := range updaters {
+			if updateMap, ok := updater.(map[string]interface{}); ok {
+				newDoc.SetAll(updateMap)
+			} else if op, ok := updater.(UpdateOp); ok {
+				newDoc = op.Apply(newDoc)
+			} else if ops, ok := updater.([]UpdateOp); ok {
+				for _, op := range ops {
+					newDoc = op.Apply(newDoc)
+				}
+			}
+		}
 		return newDoc
-	})
+	}
+
+	return db.UpdateFunc(q, updateFunc)
 }
 
 // UpdateFunc updates all the document selected by q using the provided function.
@@ -705,11 +786,11 @@ func iteratePrefix(prefix []byte, tx store.Tx, itemConsumer func(item store.Item
 }
 
 // CreateIndex creates an index for the specified for the specified (index, collection) pair.
-func (db *DB) CreateIndex(collection, field string) error {
-	return db.createIndex(collection, field, index.SingleField)
+func (db *DB) CreateIndex(collection string, fields ...string) error {
+	return db.createIndex(collection, fields, index.SingleField)
 }
 
-func (db *DB) createIndex(collection, field string, indexType index.Type) error {
+func (db *DB) createIndex(collection string, fields []string, indexType index.Type) error {
 	tx, err := db.store.Begin(true)
 	if err != nil {
 		return err
@@ -722,7 +803,7 @@ func (db *DB) createIndex(collection, field string, indexType index.Type) error 
 	}
 
 	for i := 0; i < len(meta.Indexes); i++ {
-		if meta.Indexes[i].Field == field {
+		if util.StringSliceEqual(meta.Indexes[i].Fields, fields) {
 			return ErrIndexExist
 		}
 	}
@@ -730,13 +811,16 @@ func (db *DB) createIndex(collection, field string, indexType index.Type) error 
 	if meta.Indexes == nil {
 		meta.Indexes = make([]index.Info, 0)
 	}
-	meta.Indexes = append(meta.Indexes, index.Info{Field: field, Type: indexType})
+	meta.Indexes = append(meta.Indexes, index.Info{Fields: fields, Type: indexType})
 
-	idx := index.CreateIndex(collection, field, indexType, tx)
+	idx := index.CreateIndex(collection, fields, indexType, tx)
 
 	err = db.iterateDocs(tx, query.NewQuery(collection), func(doc *d.Document) error {
-		value := doc.Get(field)
-		return idx.Add(doc.ObjectId(), value, doc.TTL())
+		values := make([]interface{}, len(fields))
+		for i, field := range fields {
+			values[i] = doc.Get(field)
+		}
+		return idx.Add(doc.ObjectId(), values, doc.TTL())
 	})
 
 	if err != nil {
@@ -751,21 +835,21 @@ func (db *DB) createIndex(collection, field string, indexType index.Type) error 
 }
 
 // HasIndex returns true if an index exists for the specified (index, collection) pair.
-func (db *DB) HasIndex(collection, field string) (bool, error) {
+func (db *DB) HasIndex(collection string, fields ...string) (bool, error) {
 	tx, err := db.store.Begin(false)
 	if err != nil {
 		return false, err
 	}
 	defer tx.Rollback()
 
-	return db.hasIndex(tx, collection, field)
+	return db.hasIndex(tx, collection, fields)
 }
 
-func (db *DB) hasIndex(tx store.Tx, collection, field string) (bool, error) {
+func (db *DB) hasIndex(tx store.Tx, collection string, fields []string) (bool, error) {
 	meta, err := db.getCollectionMeta(collection, tx)
 	if err == nil {
 		for _, idx := range meta.Indexes {
-			if idx.Field == field {
+			if util.StringSliceEqual(idx.Fields, fields) {
 				return true, nil
 			}
 		}
@@ -774,7 +858,7 @@ func (db *DB) hasIndex(tx store.Tx, collection, field string) (bool, error) {
 }
 
 // DropIndex deletes the index, is such index exists for the specified (index, collection) pair.
-func (db *DB) DropIndex(collection, field string) error {
+func (db *DB) DropIndex(collection string, fields ...string) error {
 	txn, err := db.store.Begin(true)
 	if err != nil {
 		return err
@@ -788,7 +872,7 @@ func (db *DB) DropIndex(collection, field string) error {
 
 	j := -1
 	for i := 0; i < len(meta.Indexes); i++ {
-		if meta.Indexes[i].Field == field {
+		if util.StringSliceEqual(meta.Indexes[i].Fields, fields) {
 			j = i
 		}
 	}
@@ -802,7 +886,7 @@ func (db *DB) DropIndex(collection, field string) error {
 	meta.Indexes[j] = meta.Indexes[0]
 	meta.Indexes = meta.Indexes[1:]
 
-	idx := index.CreateIndex(collection, field, idxType, txn)
+	idx := index.CreateIndex(collection, fields, idxType, txn)
 
 	if err := idx.Drop(); err != nil {
 		return err
