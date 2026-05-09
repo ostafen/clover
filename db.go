@@ -60,14 +60,14 @@ func (tx *Tx) Rollback() error {
 	return tx.tx.Rollback()
 }
 
-func (tx *Tx) Insert(collectionName string, docs ...*d.Document) error {
+func (tx *Tx) Insert(collectionName string, docs ...*d.Document) ([]string, error) {
 	return tx.db.insert(tx.tx, collectionName, docs...)
 }
 
-func (tx *Tx) Update(q *query.Query, updaters ...interface{}) error {
+func (tx *Tx) Update(q *query.Query, updaters ...interface{}) ([]string, int, error) {
 	q, err := normalizeCriteria(q)
 	if err != nil {
-		return err
+		return nil, 0, err
 	}
 
 	updateFunc := func(doc *d.Document) *d.Document {
@@ -130,7 +130,8 @@ func (db *DB) CreateCollectionByQuery(name string, q *query.Query) error {
 	if len(docs) == 0 { // just an empty collection
 		return nil
 	} else {
-		return db.Insert(name, docs...)
+		_, err := db.Insert(name, docs...)
+		return err
 	}
 }
 
@@ -175,9 +176,10 @@ func (db *DB) DropCollection(name string) error {
 }
 
 func (db *DB) deleteAll(tx store.Tx, collName string) error {
-	return db.replaceDocs(tx, query.NewQuery(collName), func(_ *d.Document) *d.Document {
+	_, _, err := db.replaceDocs(tx, query.NewQuery(collName), func(_ *d.Document) *d.Document {
 		return nil
 	})
+	return err
 }
 
 // HasCollection returns true if and only if the database contains a collection with the given name.
@@ -196,56 +198,59 @@ func NewObjectId() string {
 }
 
 // Insert adds the supplied documents to a collection.
-func (db *DB) Insert(collectionName string, docs ...*d.Document) error {
+func (db *DB) Insert(collectionName string, docs ...*d.Document) ([]string, error) {
 	tx, err := db.store.Begin(true)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer tx.Rollback()
 
-	if err := db.insert(tx, collectionName, docs...); err != nil {
-		return err
+	ids, err := db.insert(tx, collectionName, docs...)
+	if err != nil {
+		return nil, err
 	}
-	return tx.Commit()
+	return ids, tx.Commit()
 }
 
-func (db *DB) insert(tx store.Tx, collectionName string, docs ...*d.Document) error {
+func (db *DB) insert(tx store.Tx, collectionName string, docs ...*d.Document) ([]string, error) {
+	ids := make([]string, 0, len(docs))
 	for _, doc := range docs {
 		if !doc.Has(d.ObjectIdField) || doc.Get(d.ObjectIdField) == "" {
 			objectId := NewObjectId()
 			doc.Set(d.ObjectIdField, objectId)
 		}
+		ids = append(ids, doc.ObjectId())
 	}
 
 	meta, err := db.getCollectionMeta(collectionName, tx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	indexes := db.getIndexes(tx, collectionName, meta)
 
 	for _, doc := range docs {
 		if err := db.addDocToIndexes(tx, indexes, doc); err != nil {
-			return err
+			return nil, err
 		}
 
 		key := []byte(getDocumentKey(collectionName, doc.ObjectId()))
 		value, err := tx.Get(key)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		if value != nil {
-			return ErrDuplicateKey
+			return nil, ErrDuplicateKey
 		}
 
 		if err := saveDocument(doc, key, tx); err != nil {
-			return err
+			return nil, err
 		}
 	}
 
 	meta.Size += len(docs)
-	return db.saveCollectionMetadata(collectionName, meta, tx)
+	return ids, db.saveCollectionMetadata(collectionName, meta, tx)
 }
 
 func (db *DB) getIndexes(tx store.Tx, collection string, meta *collectionMetadata) []index.Index {
@@ -314,15 +319,19 @@ func (db *DB) getCollectionMeta(collection string, tx store.Tx) (*collectionMeta
 func (db *DB) Save(collectionName string, data interface{}) error {
 	doc := d.NewDocumentOf(data)
 	if !doc.Has(d.ObjectIdField) || doc.Get(d.ObjectIdField) == "" {
-		return db.Insert(collectionName, doc)
+		_, err := db.Insert(collectionName, doc)
+		return err
 	}
 	return db.ReplaceById(collectionName, doc.ObjectId(), doc)
 }
 
 // InsertOne inserts a single document to an existing collection. It returns the id of the inserted document.
 func (db *DB) InsertOne(collectionName string, doc *d.Document) (string, error) {
-	err := db.Insert(collectionName, doc)
-	return doc.ObjectId(), err
+	ids, err := db.Insert(collectionName, doc)
+	if err != nil {
+		return "", err
+	}
+	return ids[0], nil
 }
 
 // Open opens a new clover database on the supplied path. If such a folder doesn't exist, it is automatically created.
@@ -621,10 +630,10 @@ func (db *DB) ReplaceById(collection, docId string, doc *d.Document) error {
 }
 
 // Update updates all the document selected by q using the provided updateMap or update operators.
-func (db *DB) Update(q *query.Query, updaters ...interface{}) error {
+func (db *DB) Update(q *query.Query, updaters ...interface{}) ([]string, int, error) {
 	q, err := normalizeCriteria(q)
 	if err != nil {
-		return err
+		return nil, 0, err
 	}
 
 	updateFunc := func(doc *d.Document) *d.Document {
@@ -647,34 +656,36 @@ func (db *DB) Update(q *query.Query, updaters ...interface{}) error {
 }
 
 // UpdateFunc updates all the document selected by q using the provided function.
-func (db *DB) UpdateFunc(q *query.Query, updateFunc func(doc *d.Document) *d.Document) error {
+func (db *DB) UpdateFunc(q *query.Query, updateFunc func(doc *d.Document) *d.Document) ([]string, int, error) {
 	txn, err := db.store.Begin(true)
 	if err != nil {
-		return err
+		return nil, 0, err
 	}
 	defer txn.Rollback()
 
 	q, err = normalizeCriteria(q)
 	if err != nil {
-		return err
+		return nil, 0, err
 	}
-	if err := db.replaceDocs(txn, q, updateFunc); err != nil {
-		return err
+	ids, count, err := db.replaceDocs(txn, q, updateFunc)
+	if err != nil {
+		return nil, 0, err
 	}
-	return txn.Commit()
+	return ids, count, txn.Commit()
 }
 
 type docUpdater func(doc *d.Document) *d.Document
 
-func (db *DB) replaceDocs(tx store.Tx, q *query.Query, updater docUpdater) error {
+func (db *DB) replaceDocs(tx store.Tx, q *query.Query, updater docUpdater) ([]string, int, error) {
 	meta, err := db.getCollectionMeta(q.Collection(), tx)
 	if err != nil {
-		return err
+		return nil, 0, err
 	}
 
 	indexes := db.getIndexes(tx, q.Collection(), meta)
 
 	deletedDocs := 0
+	updatedIds := make([]string, 0)
 	err = db.iterateDocs(tx, q, func(doc *d.Document) error {
 		docKey := []byte(getDocumentKey(q.Collection(), doc.ObjectId()))
 		newDoc := updater(doc)
@@ -685,23 +696,29 @@ func (db *DB) replaceDocs(tx store.Tx, q *query.Query, updater docUpdater) error
 
 		if newDoc == nil {
 			deletedDocs++
-			return tx.Delete(docKey)
+			if err := tx.Delete(docKey); err != nil {
+				return err
+			}
+		} else {
+			if err := saveDocument(newDoc, docKey, tx); err != nil {
+				return err
+			}
 		}
-
-		return saveDocument(newDoc, docKey, tx)
+		updatedIds = append(updatedIds, doc.ObjectId())
+		return nil
 	})
 
 	if err != nil {
-		return err
+		return nil, 0, err
 	}
 
 	if deletedDocs > 0 {
 		meta.Size -= deletedDocs
 		if err := db.saveCollectionMetadata(q.Collection(), meta, tx); err != nil {
-			return err
+			return nil, 0, err
 		}
 	}
-	return nil
+	return updatedIds, len(updatedIds), nil
 }
 
 func (db *DB) iterateDocs(tx store.Tx, q *query.Query, consumer docConsumer) error {
@@ -726,7 +743,7 @@ func (db *DB) Delete(q *query.Query) error {
 	}
 	defer tx.Rollback()
 
-	if err := db.replaceDocs(tx, q, func(_ *d.Document) *d.Document { return nil }); err != nil {
+	if _, _, err := db.replaceDocs(tx, q, func(_ *d.Document) *d.Document { return nil }); err != nil {
 		return err
 	}
 	return tx.Commit()

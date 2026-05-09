@@ -88,7 +88,7 @@ func TestErrCollectionNotExist(t *testing.T) {
 		_, err = db.FindAll(query)
 		require.Equal(t, c.ErrCollectionNotExist, err)
 
-		err = db.Update(query, nil)
+		_, _, err = db.Update(query, nil)
 		require.Equal(t, c.ErrCollectionNotExist, err)
 
 		err = db.Delete(query)
@@ -166,8 +166,11 @@ func TestInsert(t *testing.T) {
 		doc := d.NewDocument()
 		doc.Set("hello", "clover")
 
-		require.NoError(t, db.Insert("myCollection", doc))
-		require.Equal(t, db.Insert("myOtherCollection"), c.ErrCollectionNotExist)
+		_, err = db.Insert("myCollection", doc)
+		require.NoError(t, err)
+
+		_, err = db.Insert("myOtherCollection")
+		require.Equal(t, err, c.ErrCollectionNotExist)
 	})
 }
 
@@ -244,7 +247,8 @@ func TestInsertAndGet(t *testing.T) {
 			docs = append(docs, doc)
 		}
 
-		require.NoError(t, db.Insert("myCollection", docs...))
+		_, err = db.Insert("myCollection", docs...)
+		require.NoError(t, err)
 		n, err := db.Count(q.NewQuery("myCollection"))
 		require.NoError(t, err)
 		require.Equal(t, nInserts, n)
@@ -301,7 +305,8 @@ func loadFromJson(db *c.DB, filename string, model interface{}) error {
 		doc := d.NewDocumentOf(fields)
 		docs = append(docs, doc)
 	}
-	return db.Insert(collectionName, docs...)
+	_, err = db.Insert(collectionName, docs...)
+	return err
 }
 
 func TestUpdateCollection(t *testing.T) {
@@ -315,7 +320,7 @@ func TestUpdateCollection(t *testing.T) {
 		docs, err := db.FindAll(q.NewQuery("todos").Where(criteria))
 		require.NoError(t, err)
 
-		err = db.Update(q.NewQuery("todos").Where(criteria), updates)
+		_, _, err = db.Update(q.NewQuery("todos").Where(criteria), updates)
 		require.NoError(t, err)
 
 		n, err := db.Count(q.NewQuery("todos").Where(criteria))
@@ -828,7 +833,8 @@ func TestContainsCriteria(t *testing.T) {
 			doc.Set("myField", val)
 			docs = append(docs, doc)
 		}
-		require.NoError(t, db.Insert("myCollection", docs...))
+		_, err = db.Insert("myCollection", docs...)
+		require.NoError(t, err)
 
 		testElement := 4
 		docs, err = db.FindAll(q.NewQuery("myCollection").Where(q.Field("myField").Contains(testElement)))
@@ -1245,7 +1251,7 @@ func TestSliceCompare(t *testing.T) {
 				doc.Set("title", s)
 			}
 		}
-		err = db.Insert("todos.copy", allDocs...)
+		_, err = db.Insert("todos.copy", allDocs...)
 		require.NoError(t, err)
 
 		sort1, err := db.FindAll(q.NewQuery("todos").Sort(q.SortOption{Field: "title"}))
@@ -1410,7 +1416,8 @@ func TestIndexWithMixedTypes(t *testing.T) {
 			}
 
 			doc.Set("myField", value)
-			require.NoError(t, db.Insert("test", doc))
+			_, err := db.Insert("test", doc)
+			require.NoError(t, err)
 		}
 
 		criteria := q.Field("myField").Lt(true)
@@ -1436,7 +1443,7 @@ func TestIndexUpdate(t *testing.T) {
 		n, err := db.Count(q.NewQuery("airlines").Where(criteria))
 		require.NoError(t, err)
 
-		err = db.Update(q.NewQuery("airlines").Where(criteria), map[string]interface{}{
+		_, _, err = db.Update(q.NewQuery("airlines").Where(criteria), map[string]interface{}{
 			"Statistics.Flights.Cancelled": 99999999,
 		})
 		require.NoError(t, err)
@@ -1512,7 +1519,7 @@ func TestPagedQueryUsingIndex(t *testing.T) {
 			doc.Set("timestamp", time.Now().Add(time.Duration(i)*time.Nanosecond))
 
 			if len(docs) == 1024 {
-				err := db.Insert("test", docs...)
+				_, err := db.Insert("test", docs...)
 				require.NoError(t, err)
 
 				docs = make([]*d.Document, 0, 1024)
@@ -1525,7 +1532,7 @@ func TestPagedQueryUsingIndex(t *testing.T) {
 		}
 
 		if len(docs) > 0 {
-			err := db.Insert("test", docs...)
+			_, err := db.Insert("test", docs...)
 			require.NoError(t, err)
 		}
 

@@ -59,5 +59,6 @@ func (db *DB) ImportCollection(collectionName string, importPath string) error {
 	for _, doc := range jsonObjects {
 		docs = append(docs, d.NewDocumentOf(*doc))
 	}
-	return db.Insert(collectionName, docs...)
+	_, err = db.Insert(collectionName, docs...)
+	return err
 }
