@@ -181,12 +181,20 @@ func (idx *rangeIndex) IterateRange(vRange *Range, reverse bool, onValue func(do
 		if !reverse {
 			endCmp := bytes.Compare(p, endKey)
 			if (vRange.End != nil || vRange.IsNil()) && (endCmp > 0 || (endCmp == 0 && !vRange.EndIncluded)) {
-				break
+				if bytes.HasPrefix(p, endKey) && vRange.EndIncluded {
+					// Do not break; p is an extension of endKey and End is included.
+				} else {
+					break
+				}
 			}
 		} else {
 			startCmp := bytes.Compare(p, startKey)
 			if (vRange.Start != nil || vRange.IsNil()) && (startCmp < 0 || (startCmp == 0 && !vRange.StartIncluded)) {
-				break
+				if bytes.HasPrefix(p, startKey) && vRange.StartIncluded {
+					// Do not break; p is an extension of startKey and Start is included.
+				} else {
+					break
+				}
 			}
 		}
 
