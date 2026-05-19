@@ -190,7 +190,8 @@ func tryToSelectIndex(q *query.Query, indexes []index.Index) (inputNode, bool) {
 
 		if leftNode != nil && rightNode != nil {
 			return &unionNode{
-				nodes: []inputNode{leftNode, rightNode},
+				nodes:  []inputNode{leftNode, rightNode},
+				filter: q.Criteria(),
 			}, false
 		}
 	}
@@ -244,7 +245,8 @@ func tryToSelectIndex(q *query.Query, indexes []index.Index) (inputNode, bool) {
 	}
 
 	return &intersectionNode{
-		nodes: nodes,
+		nodes:  nodes,
+		filter: q.Criteria(),
 	}, false
 }
 
@@ -375,7 +377,8 @@ func (nd *onDiskSortNode) Finish() error {
 
 type intersectionNode struct {
 	planNodeBase
-	nodes []inputNode
+	nodes  []inputNode
+	filter query.Criteria
 }
 
 func (nd *intersectionNode) getCollection() string {
@@ -415,8 +418,10 @@ func (nd *intersectionNode) Run(tx store.Tx) error {
 			return err
 		}
 		if doc != nil {
-			if err := nd.CallNext(doc); err != nil {
-				return err
+			if nd.filter == nil || nd.filter.Satisfy(doc) {
+				if err := nd.CallNext(doc); err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -425,7 +430,8 @@ func (nd *intersectionNode) Run(tx store.Tx) error {
 
 type unionNode struct {
 	planNodeBase
-	nodes []inputNode
+	nodes  []inputNode
+	filter query.Criteria
 }
 
 func (nd *unionNode) getCollection() string {
@@ -450,8 +456,10 @@ func (nd *unionNode) Run(tx store.Tx) error {
 			return err
 		}
 		if doc != nil {
-			if err := nd.CallNext(doc); err != nil {
-				return err
+			if nd.filter == nil || nd.filter.Satisfy(doc) {
+				if err := nd.CallNext(doc); err != nil {
+					return err
+				}
 			}
 		}
 	}

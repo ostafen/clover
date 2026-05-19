@@ -118,14 +118,13 @@ func (idx *rangeIndex) IterateRange(vRange *Range, reverse bool, onValue func(do
 
 	seekPrefix := startKey
 	if reverse {
-		seekPrefix = endKey
-	}
-
-	if seekPrefix == nil {
-		seekPrefix = idx.getKeyPrefix()
-		if reverse {
-			seekPrefix = append(seekPrefix, 255)
+		if endKey != nil {
+			seekPrefix = append(append([]byte(nil), endKey...), 255)
+		} else {
+			seekPrefix = append(idx.getKeyPrefix(), 255)
 		}
+	} else if seekPrefix == nil {
+		seekPrefix = idx.getKeyPrefix()
 	}
 
 	cursor, err := idx.tx.Cursor(!reverse)

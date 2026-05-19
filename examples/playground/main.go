@@ -40,11 +40,12 @@ func main() {
 		"tags":    []string{"golang", "database"},
 	})
 
-	err = db.Insert(collectionName, doc)
+	ids, err := db.Insert(collectionName, doc)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("Inserted document with ID: %s\n", doc.ObjectId())
+
+	fmt.Printf("Inserted document with ID: %s (returned ids: %v)\n", doc.ObjectId(), ids)
 
 	// 4. Query the data
 	fmt.Println("--- Querying Users ---")
@@ -59,7 +60,7 @@ func main() {
 
 	// 5. Use the new Variadic Update API
 	fmt.Println("\n--- Updating Alice (Atomic) ---")
-	err = db.Update(query.NewQuery(collectionName).Where(query.Field("name").Eq("Alice")),
+	ids, count, err := db.Update(query.NewQuery(collectionName).Where(query.Field("name").Eq("Alice")),
 		clover.Inc("age", 1),            // Increment age
 		clover.Set("status", "premium"), // Set status
 		clover.Push("tags", "atomic"),   // Push to array
@@ -68,6 +69,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	fmt.Printf("Update results: ids=%v, count=%d\n", ids, count)
 
 	// 6. Verify update
 	updatedDoc, _ := db.FindFirst(query.NewQuery(collectionName).Where(query.Field("name").Eq("Alice")))
