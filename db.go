@@ -751,7 +751,7 @@ func (db *DB) Delete(q *query.Query) error {
 
 // ListCollections returns a slice of strings containing the name of each collection stored in the db.
 func (db *DB) ListCollections() ([]string, error) {
-	tx, err := db.store.Begin(true)
+	tx, err := db.store.Begin(false)
 	if err != nil {
 		return nil, err
 	}

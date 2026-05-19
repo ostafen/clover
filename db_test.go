@@ -22,6 +22,9 @@ import (
 	q "github.com/ostafen/clover/v2/query"
 	badgerstore "github.com/ostafen/clover/v2/store/badger"
 	"github.com/ostafen/clover/v2/store/bbolt"
+
+	"github.com/dgraph-io/badger/v4"
+	bolt "go.etcd.io/bbolt"
 )
 
 const (
@@ -42,7 +45,10 @@ type TodoModel struct {
 type dbFactory func(string) (*c.DB, error)
 
 func getBadgerDB(dir string) (*c.DB, error) {
-	store, err := badgerstore.Open(dir)
+	opts := badger.DefaultOptions(dir)
+	opts.SyncWrites = false
+	opts.Logger = nil
+	store, err := badgerstore.OpenWithOptions(opts)
 	if err != nil {
 		return nil, err
 	}
@@ -50,7 +56,7 @@ func getBadgerDB(dir string) (*c.DB, error) {
 }
 
 func getBBoltDB(dir string) (*c.DB, error) {
-	store, err := bbolt.Open(dir)
+	store, err := bbolt.OpenWithOptions(dir, &bolt.Options{NoSync: true})
 	if err != nil {
 		return nil, err
 	}
@@ -1586,12 +1592,17 @@ func TestDeleteByIdWithIndex(t *testing.T) {
 		err = db.CreateIndex("airlines", "Statistics.Flights.Cancelled")
 		require.NoError(t, err)
 
+		var ids []string
 		err = db.ForEach(q.NewQuery("airlines").Where(criteria), func(doc *d.Document) bool {
-			err := db.DeleteById("airlines", doc.ObjectId())
-			require.NoError(t, err)
+			ids = append(ids, doc.ObjectId())
 			return true
 		})
 		require.NoError(t, err)
+
+		for _, id := range ids {
+			err := db.DeleteById("airlines", id)
+			require.NoError(t, err)
+		}
 
 		n, err = db.Count(q.NewQuery("airlines").Where(criteria))
 		require.NoError(t, err)

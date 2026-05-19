@@ -2,6 +2,7 @@ package clover
 
 import (
 	"encoding/binary"
+	"errors"
 	"os"
 	"sort"
 	"strings"
@@ -518,16 +519,25 @@ func buildQueryPlan(q *query.Query, indexes []index.Index, outputNode planNode) 
 }
 
 func execPlan(nd inputNode, tx store.Tx) error {
-	if err := nd.Run(tx); err != nil {
+	err := nd.Run(tx)
+	if err != nil && !errors.Is(err, internal.ErrStopIteration) {
 		return err
 	}
 
 	for curr := nd.(planNode); curr != nil; curr = curr.NextNode() {
-		if err := curr.Finish(); err != nil {
-			return err
+		if fErr := curr.Finish(); fErr != nil {
+			if errors.Is(fErr, internal.ErrStopIteration) {
+				err = fErr
+				continue
+			}
+			return fErr
 		}
 	}
-	return nil
+
+	if errors.Is(err, internal.ErrStopIteration) {
+		return nil
+	}
+	return err
 }
 
 type consumerNode struct {
