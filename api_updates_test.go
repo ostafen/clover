@@ -87,10 +87,10 @@ func TestCompoundIndexIteration(t *testing.T) {
 		query := q.NewQuery("points").Where(q.Field("x").LtEq(2)).Sort(q.SortOption{Field: "x", Direction: -1})
 		resultDocs, err := db.FindAll(query)
 		require.NoError(t, err)
-		
+
 		// Expected x = 2, 1, 0, with 5 items each = 15 items total.
 		require.Len(t, resultDocs, 15)
-		
+
 		// Verify first 5 are x=2
 		for i := 0; i < 5; i++ {
 			require.Equal(t, int64(2), resultDocs[i].Get("x"))

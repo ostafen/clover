@@ -223,9 +223,26 @@ func tryToSelectIndex(q *query.Query, indexes []index.Index) (inputNode, bool) {
 		idxQuery := indexQueries[0]
 
 		if rangeQuery, ok := idxQuery.(*index.RangeIndexQuery); ok {
-			if len(q.SortOptions()) == 1 && q.SortOptions()[0].Field == rangeQuery.Idx.Fields()[0] {
-				rangeQuery.Reverse = q.SortOptions()[0].Direction < 0
-				outputSorted = true
+			if len(q.SortOptions()) == 1 {
+				sortOpt := q.SortOptions()[0]
+				idxFields := rangeQuery.Idx.Fields()
+
+				if sortOpt.Field == idxFields[0] {
+					rangeQuery.Reverse = sortOpt.Direction < 0
+					outputSorted = true
+				} else if len(idxFields) > 1 {
+					sortPos := findSortFieldPosition(sortOpt.Field, idxFields)
+					if sortPos > 0 {
+						c := q.Criteria().Accept(&NotFlattenVisitor{}).(query.Criteria)
+						fieldRanges := c.Accept(NewFieldRangeVisitor(idxFields)).(map[string]*index.Range)
+						if allPrecedingFieldsHaveEquality(fieldRanges, idxFields, sortPos) {
+							storedAsc := rangeQuery.Idx.Directions()[sortPos]
+							queryAsc := sortOpt.Direction >= 0
+							rangeQuery.Reverse = storedAsc != queryAsc
+							outputSorted = true
+						}
+					}
+				}
 			}
 		}
 
@@ -573,4 +590,30 @@ func compareDocuments(first *d.Document, second *d.Document, sortOpts []query.So
 		}
 	}
 	return 0
+}
+
+func findSortFieldPosition(field string, fields []string) int {
+	for i, f := range fields {
+		if f == field {
+			return i
+		}
+	}
+	return -1
+}
+
+func allPrecedingFieldsHaveEquality(ranges map[string]*index.Range, fields []string, pos int) bool {
+	for i := 0; i < pos; i++ {
+		r, ok := ranges[fields[i]]
+		if !ok || r == nil {
+			return false
+		}
+		// A range is an equality if Start == End, and both are included.
+		if r.Start == nil || r.End == nil || !r.StartIncluded || !r.EndIncluded {
+			return false
+		}
+		if internal.Compare(r.Start, r.End) != 0 {
+			return false
+		}
+	}
+	return true
 }

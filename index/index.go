@@ -26,11 +26,15 @@ type Index interface {
 	Type() Type
 	Collection() string
 	Fields() []string
+	Directions() []bool
 }
 
 type indexBase struct {
 	collection string
 	fields     []string
+	// directions holds per‑field sort direction: true = ascending, false = descending.
+	// If nil, all fields are treated as ascending (default behavior).
+	directions []bool
 }
 
 func (idx *indexBase) Collection() string {
@@ -39,6 +43,17 @@ func (idx *indexBase) Collection() string {
 
 func (idx *indexBase) Fields() []string {
 	return idx.fields
+}
+
+func (idx *indexBase) Directions() []bool {
+	if idx.directions != nil {
+		return idx.directions
+	}
+	dirs := make([]bool, len(idx.fields))
+	for i := range dirs {
+		dirs[i] = true
+	}
+	return dirs
 }
 
 type Query interface {
@@ -55,4 +70,20 @@ func CreateIndex(collection string, fields []string, idxType Type, tx store.Tx) 
 		}
 	}
 	return nil
+}
+
+// CreateIndexWithDirections creates a compound index where each field can be
+// individually ascending (true) or descending (false). The length of `asc`
+// must match the number of `fields`. If the lengths differ, the function panics
+// because this is a programmer error and should be caught during development.
+func CreateIndexWithDirections(collection string, fields []string, asc []bool, tx store.Tx) Index {
+	if len(fields) != len(asc) {
+		panic("CreateIndexWithDirections: fields and asc slices must have the same length")
+	}
+	indexBase := indexBase{collection: collection, fields: fields, directions: asc}
+	// Use Compound type for mixed direction indexes.
+	return &rangeIndex{
+		indexBase: indexBase,
+		tx:        tx,
+	}
 }

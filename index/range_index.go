@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/dgraph-io/badger/v4"
+	"github.com/google/orderedcode"
 	"github.com/ostafen/clover/v2/internal"
 	"github.com/ostafen/clover/v2/store"
 )
@@ -52,6 +53,14 @@ func (idx *rangeIndex) getKey(value interface{}) ([]byte, error) {
 		values = s
 	} else if value != nil {
 		values = []interface{}{value}
+	}
+	// Apply per-field direction if specified in indexBase.
+	if idx.directions != nil && len(idx.directions) == len(values) {
+		for i, v := range values {
+			if !idx.directions[i] { // false = descending
+				values[i] = orderedcode.Decr(v)
+			}
+		}
 	}
 	return internal.OrderedCode(idx.getKeyPrefix(), true, values...)
 }
