@@ -19,22 +19,44 @@ func (db *DB) ExportCollection(collectionName string, exportPath string) error {
 		return ErrCollectionNotExist
 	}
 
-	result, err := db.FindAll(query.NewQuery(collectionName))
+	file, err := os.OpenFile(exportPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.ModePerm)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	writer := bufio.NewWriter(file)
+
+	// Stream one document at a time instead of loading the whole collection
+	// into memory, so exporting large collections stays cheap.
+	if _, err := writer.WriteString("["); err != nil {
+		return err
+	}
+
+	first := true
+	err = db.IterateDocs(query.NewQuery(collectionName), func(doc *d.Document) error {
+		jsonBytes, err := json.Marshal(doc.AsMap())
+		if err != nil {
+			return err
+		}
+		if !first {
+			if _, err := writer.WriteString(","); err != nil {
+				return err
+			}
+		}
+		first = false
+		_, err = writer.Write(jsonBytes)
+		return err
+	})
 	if err != nil {
 		return err
 	}
 
-	docs := make([]map[string]interface{}, 0)
-	for _, doc := range result {
-		docs = append(docs, doc.AsMap())
-	}
-
-	jsonString, err := json.Marshal(docs)
-	if err != nil {
+	if _, err := writer.WriteString("]"); err != nil {
 		return err
 	}
 
-	return os.WriteFile(exportPath, jsonString, os.ModePerm)
+	return writer.Flush()
 }
 
 // ImportCollection imports a collection from a JSON file.
