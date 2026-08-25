@@ -1226,6 +1226,48 @@ func TestExportAndImportCollection(t *testing.T) {
 	})
 }
 
+func TestExportCollectionStreaming(t *testing.T) {
+	runCloverTest(t, func(t *testing.T, db *c.DB) {
+		require.NoError(t, db.CreateCollection("numbers"))
+
+		nInserts := 100
+		docs := make([]*d.Document, 0, nInserts)
+		for i := 0; i < nInserts; i++ {
+			doc := d.NewDocument()
+			doc.Set("value", i)
+			docs = append(docs, doc)
+		}
+		require.NoError(t, db.Insert("numbers", docs...))
+
+		exportDir, err := os.MkdirTemp("", "export-dir")
+		require.NoError(t, err)
+		defer os.RemoveAll(exportDir)
+
+		exportFilePath := filepath.Join(exportDir, "numbers.json")
+		require.NoError(t, db.ExportCollection("numbers", exportFilePath))
+
+		// The export must be a well-formed JSON array holding every document.
+		content, err := os.ReadFile(exportFilePath)
+		require.NoError(t, err)
+
+		var exported []map[string]interface{}
+		require.NoError(t, json.Unmarshal(content, &exported))
+		require.Equal(t, nInserts, len(exported))
+
+		// An empty collection is exported as an empty array, not a broken one.
+		require.NoError(t, db.CreateCollection("empty"))
+		emptyPath := filepath.Join(exportDir, "empty.json")
+		require.NoError(t, db.ExportCollection("empty", emptyPath))
+
+		content, err = os.ReadFile(emptyPath)
+		require.NoError(t, err)
+
+		var emptyExport []map[string]interface{}
+		require.NoError(t, json.Unmarshal(content, &emptyExport))
+		require.Equal(t, 0, len(emptyExport))
+	})
+}
+
 func TestSliceCompare(t *testing.T) {
 	runCloverTest(t, func(t *testing.T, db *c.DB) {
 		require.NoError(t, loadFromJson(db, todosPath, nil))
