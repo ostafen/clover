@@ -233,20 +233,19 @@ func (f *field) Contains(elems ...interface{}) Criteria {
 	return newCriteria(ContainsOp, f.name, elems)
 }
 
-// getFieldOrValue returns dereferenced value if value denotes another document field,
-// otherwise returns the value itself directly
-func getFieldOrValue(doc *d.Document, value interface{}) interface{} {
+// getFieldOrValue resolves field references and normalizes the comparison value.
+func getFieldOrValue(doc *d.Document, value interface{}) (interface{}, error) {
 	if cmpField, ok := value.(*field); ok {
 		value = doc.Get(cmpField.name)
 	} else if fStr, ok := value.(string); ok && strings.HasPrefix(fStr, "$") {
 		fieldName := strings.TrimLeft(fStr, "$")
 		value = doc.Get(fieldName)
 	}
-	return value
+	return internal.Normalize(value)
 }
 
 func (c *UnaryCriteria) compare(doc *d.Document) bool {
-	normValue, err := internal.Normalize(getFieldOrValue(doc, c.Value))
+	normValue, err := getFieldOrValue(doc, c.Value)
 	if err != nil {
 		return false
 	}
@@ -271,9 +270,9 @@ func (c *UnaryCriteria) exist(doc *d.Document) bool {
 }
 
 func (c *UnaryCriteria) eq(doc *d.Document) bool {
-	value := getFieldOrValue(doc, c.Value)
+	value, err := getFieldOrValue(doc, c.Value)
 
-	if !doc.Has(c.Field) {
+	if err != nil || !doc.Has(c.Field) {
 		return false
 	}
 
@@ -285,7 +284,10 @@ func (c *UnaryCriteria) in(doc *d.Document) bool {
 
 	docValue := doc.Get(c.Field)
 	for _, value := range values {
-		actualValue := getFieldOrValue(doc, value)
+		actualValue, err := getFieldOrValue(doc, value)
+		if err != nil {
+			continue
+		}
 		if internal.Compare(actualValue, docValue) == 0 {
 			return true
 		}
@@ -305,7 +307,10 @@ func (c *UnaryCriteria) contains(doc *d.Document) bool {
 
 	for _, elem := range elems {
 		found := false
-		actualValue := getFieldOrValue(doc, elem)
+		actualValue, err := getFieldOrValue(doc, elem)
+		if err != nil {
+			return false
+		}
 
 		for _, val := range slice {
 			if internal.Compare(actualValue, val) == 0 {
